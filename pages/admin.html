@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>NexusKPI — Administración</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    .page{display:flex;flex-direction:column;min-height:100vh}
+    .content{flex:1;padding:1.5rem;max-width:1200px;margin:0 auto;width:100%}
+    .admin-hdr{margin-bottom:1.75rem}
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--warn);font-weight:600;margin-bottom:.3rem}
+    .admin-hdr h1{font-size:1.6rem;font-weight:800}
+    .admin-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem}
+    .grid-admin{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+    @media(max-width:800px){.grid-admin{grid-template-columns:1fr}}
+    .a-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.4rem;animation:fadeUp .4s ease both}
+    .a-card h2{font-size:1rem;font-weight:700;margin-bottom:.25rem;display:flex;align-items:center;gap:.5rem}
+    .a-card .desc{font-size:.78rem;color:var(--muted);margin-bottom:1.1rem}
+    /* Upload zone */
+    .drop-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:1.75rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:.85rem}
+    .drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:rgba(0,212,255,.04)}
+    .drop-zone input{display:none}
+    .drop-icon{font-size:1.8rem;margin-bottom:.4rem}
+    .drop-zone p{font-size:.8rem;color:var(--muted)}
+    .drop-zone .hint{font-size:.68rem;color:var(--dim);margin-top:.2rem}
+    .drop-zone .picked{font-size:.8rem;color:var(--accent);font-weight:600;margin-top:.4rem}
+    /* Meta row */
+    .meta-row{display:flex;gap:.65rem;align-items:center;flex-wrap:wrap;margin-bottom:.85rem}
+    .meta-row label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase}
+    .meta-sel,.meta-inp{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:.38rem .7rem;outline:none}
+    .meta-sel:focus,.meta-inp:focus{border-color:var(--accent)}
+    /* Progress */
+    .prog-box{display:none;background:var(--surface2);border-radius:var(--r-sm);padding:.7rem .9rem;margin-top:.7rem;font-size:.8rem}
+    .prog-box.show{display:block}
+    .prog-bar-wrap{height:5px;background:var(--surface3);border-radius:3px;margin-top:.4rem;overflow:hidden}
+    .prog-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .3s}
+    /* Result */
+    .result-box{display:none;border-radius:var(--r-sm);padding:.7rem .9rem;font-size:.8rem;margin-top:.7rem}
+    .result-box.show{display:block}
+    .result-box.ok  {background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);color:var(--ok)}
+    .result-box.warn{background:rgba(255,176,32,.08);border:1px solid rgba(255,176,32,.25);color:var(--warn)}
+    .result-box.err {background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25);color:var(--error)}
+    /* ETL Log */
+    .log-area{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:.7rem;font-family:'DM Mono','Courier New',monospace;font-size:.7rem;color:var(--muted);max-height:220px;overflow-y:auto;margin-top:.85rem}
+    .lg-ok  {color:var(--ok)}
+    .lg-err {color:var(--error)}
+    .lg-inf {color:var(--accent)}
+    .lg-warn{color:var(--warn)}
+    /* Users */
+    .full-col{grid-column:1/-1}
+    .usr-toolbar{display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem}
+    .usr-toolbar h2{flex:1;font-size:1rem;font-weight:700}
+    .usr-form{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem;display:none;margin-bottom:.85rem}
+    .usr-form.show{display:block}
+    .uf-grid{display:grid;grid-template-columns:1fr 1fr 1fr 120px;gap:.65rem;align-items:end}
+    @media(max-width:700px){.uf-grid{grid-template-columns:1fr 1fr}}
+    .uf-field label{display:block;font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:.3rem}
+    .uf-field input,.uf-field select{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:.45rem .7rem;outline:none}
+    .uf-field input:focus,.uf-field select:focus{border-color:var(--accent)}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Verificando acceso…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-title" style="color:var(--warn)">⚙️ Administración</span>
+    <div class="topbar-spacer"></div>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="admin-hdr">
+      <div class="eyebrow">⚙️ Panel de Administración</div>
+      <h1>Gestión del Sistema</h1>
+      <p>Carga de archivos Excel, gestión de usuarios y log de operaciones</p>
+    </div>
+
+    <div class="grid-admin">
+
+      <!-- ── Carga SEGUIMIENTO KPI ──────────────────────────────────── -->
+      <div class="a-card" style="animation-delay:.05s">
+        <h2>📤 Cargar Seguimiento KPI</h2>
+        <p class="desc">Sube el archivo <code>SEGUIMIENTO_CLICK_MES.xlsx</code>. El ETL corre en el browser, calcula los KPIs con la jornada laboral real y hace upsert en Supabase.</p>
+
+        <div class="meta-row">
+          <label>Mes</label>
+          <select class="meta-sel" id="uploadMes">
+            <option value="2026-03">Marzo 2026</option>
+            <option value="2026-04">Abril 2026</option>
+            <option value="2026-05" selected>Mayo 2026</option>
+            <option value="2026-06">Junio 2026</option>
+          </select>
+        </div>
+
+        <div class="drop-zone" id="dropKpi"
+             onclick="document.getElementById('fileKpi').click()"
+             ondragover="onDragOver(event,'dropKpi')"
+             ondragleave="onDragLeave('dropKpi')"
+             ondrop="onDrop(event,'fileKpi','dropKpi')">
+          <input type="file" id="fileKpi" accept=".xlsx,.xls" onchange="onFilePicked('fileKpi','lblKpi')"/>
+          <div class="drop-icon">📊</div>
+          <p>Arrastra el archivo aquí o haz clic para seleccionar</p>
+          <p class="hint">SEGUIMIENTO_CLICK_*.xlsx · Máx. 50 MB</p>
+          <p class="picked" id="lblKpi"></p>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%" onclick="subirKpi()">⬆️ Procesar y Cargar en Supabase</button>
+        <div class="prog-box" id="progKpi"><span id="progKpiTxt">Procesando…</span><div class="prog-bar-wrap"><div class="prog-bar" id="barKpi" style="width:0%"></div></div></div>
+        <div class="result-box" id="resKpi"></div>
+      </div>
+
+      <!-- ── Carga WMS ──────────────────────────────────────────────── -->
+      <div class="a-card" style="animation-delay:.1s">
+        <h2>🏭 Cargar Base WMS</h2>
+        <p class="desc">Sube el archivo <code>WMS_BASE_CLICK_COSMETICS.xlsx</code> para alimentar los futuros KPIs de inventario y capacidad. El ETL se definirá al recibir el archivo fuente.</p>
+
+        <div class="meta-row">
+          <label>Fecha de corte</label>
+          <input type="date" class="meta-inp" id="wmsDate"/>
+        </div>
+
+        <div class="drop-zone" id="dropWms"
+             onclick="document.getElementById('fileWms').click()"
+             ondragover="onDragOver(event,'dropWms')"
+             ondragleave="onDragLeave('dropWms')"
+             ondrop="onDrop(event,'fileWms','dropWms')">
+          <input type="file" id="fileWms" accept=".xlsx,.xls" onchange="onFilePicked('fileWms','lblWms')"/>
+          <div class="drop-icon">🗃️</div>
+          <p>Arrastra el archivo aquí o haz clic para seleccionar</p>
+          <p class="hint">WMS_BASE_CLICK_COSMETICS.xlsx · Máx. 100 MB</p>
+          <p class="picked" id="lblWms"></p>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%" onclick="subirWms()">⬆️ Cargar Base WMS</button>
+        <div class="prog-box" id="progWms"><span id="progWmsTxt">Procesando…</span><div class="prog-bar-wrap"><div class="prog-bar" id="barWms" style="width:0%"></div></div></div>
+        <div class="result-box" id="resWms"></div>
+      </div>
+
+      <!-- ── Usuarios ───────────────────────────────────────────────── -->
+      <div class="a-card full-col" style="animation-delay:.15s">
+        <div class="usr-toolbar">
+          <h2>👥 Gestión de Usuarios</h2>
+          <button class="btn btn-primary" onclick="toggleUsrForm()">➕ Nuevo usuario</button>
+        </div>
+
+        <div class="usr-form" id="usrForm">
+          <div class="uf-grid">
+            <div class="uf-field"><label>Correo</label><input type="email" id="uEmail" placeholder="correo@empresa.com"/></div>
+            <div class="uf-field"><label>Contraseña</label><input type="password" id="uPass" placeholder="mínimo 6 caracteres"/></div>
+            <div class="uf-field"><label>Nombre</label><input type="text" id="uNombre" placeholder="Nombre completo"/></div>
+            <div class="uf-field"><label>Rol</label>
+              <select id="uRol"><option value="viewer">Viewer</option><option value="admin">Admin</option></select>
+            </div>
+          </div>
+          <div style="margin-top:.75rem;display:flex;gap:.5rem">
+            <button class="btn btn-primary" onclick="crearUsuario()">Guardar</button>
+            <button class="btn" onclick="toggleUsrForm()">Cancelar</button>
+          </div>
+          <div class="result-box" id="resUsr"></div>
+        </div>
+
+        <div class="tbl-wrap">
+          <div class="tbl-scroll">
+            <table>
+              <thead><tr><th>Correo</th><th>Nombre</th><th>Rol</th><th>Acciones</th></tr></thead>
+              <tbody id="usrBody"><tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem">Cargando usuarios…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Log ETL ────────────────────────────────────────────────── -->
+      <div class="a-card full-col" style="animation-delay:.2s">
+        <h2>📋 Log de Cargues</h2>
+        <p class="desc">Historial de las últimas operaciones de carga realizadas en el sistema.</p>
+        <div class="log-area" id="etlLog"></div>
+        <div style="margin-top:.65rem;display:flex;gap:.5rem">
+          <button class="btn" onclick="loadEtlLog()">🔄 Refrescar</button>
+          <button class="btn" onclick="document.getElementById('etlLog').innerHTML=''">🗑️ Limpiar vista</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script src="../utils/etl.js"></script>
+<script>
+  applyTheme();
+
+  // ── Drag & Drop helpers ────────────────────────────────────────────────
+  function onDragOver(e, id) { e.preventDefault(); document.getElementById(id).classList.add('over'); }
+  function onDragLeave(id)   { document.getElementById(id).classList.remove('over'); }
+  function onDrop(e, inputId, zoneId) {
+    e.preventDefault(); onDragLeave(zoneId);
+    const f = e.dataTransfer.files[0]; if (!f) return;
+    const dt = new DataTransfer(); dt.items.add(f);
+    const input = document.getElementById(inputId);
+    input.files = dt.files;
+    input.dispatchEvent(new Event('change'));
+  }
+  function onFilePicked(inputId, labelId) {
+    const f = document.getElementById(inputId).files[0];
+    if (f) document.getElementById(labelId).textContent = `📎 ${f.name}  (${(f.size/1024/1024).toFixed(1)} MB)`;
+  }
+
+  // ── Progress helpers ───────────────────────────────────────────────────
+  function showProg(progId, barId, txtId, pct, msg) {
+    document.getElementById(progId).classList.add('show');
+    document.getElementById(barId).style.width = pct + '%';
+    document.getElementById(txtId).textContent = msg;
+  }
+  function hideProg(progId) { setTimeout(() => document.getElementById(progId).classList.remove('show'), 1200); }
+  function showRes(id, type, msg) {
+    const el = document.getElementById(id);
+    el.className = `result-box show ${type}`;
+    el.innerHTML = msg;
+  }
+
+  // ── Log helpers ────────────────────────────────────────────────────────
+  function addLog(msg, tipo = 'inf') {
+    const log = document.getElementById('etlLog');
+    const d = document.createElement('div');
+    d.className = 'lg-' + tipo;
+    d.textContent = `[${new Date().toLocaleTimeString('es-CO')}] ${msg}`;
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // ── CARGA SEGUIMIENTO KPI — ETL REAL ──────────────────────────────────
+  async function subirKpi() {
+    const file  = document.getElementById('fileKpi').files[0];
+    const mesId = document.getElementById('uploadMes').value;
+    if (!file) { showRes('resKpi','warn','⚠️ Selecciona un archivo primero.'); return; }
+
+    const runId = `run-${Date.now()}`;
+    addLog(`Iniciando ETL: ${file.name} → mes ${mesId}`, 'inf');
+    showProg('progKpi','barKpi','progKpiTxt', 5, 'Leyendo archivo…');
+
+    // ── Log en Supabase ────────────────────────────────────────────────
+    try {
+      await sb.rest('POST','etl_log',[{ run_id:runId, mes_id:mesId, archivo:file.name, estado:'iniciado' }],{'Prefer':'return=minimal'});
+    } catch(e) { addLog('Advertencia: no se pudo registrar inicio en etl_log — ' + e.message, 'warn'); }
+
+    try {
+      // 1. Leer archivo
+      const buf = await file.arrayBuffer();
+      showProg('progKpi','barKpi','progKpiTxt', 20, 'Validando estructura del Excel…');
+      addLog('Archivo leído. Procesando hoja RECIBOS…', 'inf');
+
+      // 2. ETL
+      showProg('progKpi','barKpi','progKpiTxt', 40, 'Aplicando lógica ETL y jornada laboral…');
+      const { records, inconsistencias, stats } = procesarExcel(buf, mesId);
+      addLog(`ETL completado: ${records.length} documentos · ${inconsistencias.length} inconsistencias`, 'inf');
+
+      // 3. Verificar si el mes ya existe
+      showProg('progKpi','barKpi','progKpiTxt', 60, 'Verificando existencia en Supabase…');
+      const existentes = await sb.rest('GET', `kpi_recibo_recepciones?mes_id=eq.${mesId}&select=documento`);
+      const setExist   = new Set((existentes || []).map(r => r.documento));
+      const esNuevo    = setExist.size === 0;
+      addLog(`Mes ${mesId}: ${esNuevo ? 'cargue nuevo' : `actualización (${setExist.size} registros existentes)`}`, 'inf');
+
+      // 4. Upsert en lotes de 100
+      showProg('progKpi','barKpi','progKpiTxt', 75, 'Cargando en Supabase…');
+      const BATCH = 100;
+      let insertados = 0, actualizados = 0;
+      for (let i = 0; i < records.length; i += BATCH) {
+        const lote = records.slice(i, i + BATCH);
+        await sb.rest('POST','kpi_recibo_recepciones', lote, {'Prefer':'resolution=merge-duplicates,return=minimal'});
+        const progPct = 75 + Math.round((i / records.length) * 20);
+        showProg('progKpi','barKpi','progKpiTxt', progPct, `Cargando lote ${Math.ceil(i/BATCH)+1}…`);
+        lote.forEach(r => setExist.has(r.documento) ? actualizados++ : insertados++);
+      }
+
+      // 5. Actualizar resumen
+      showProg('progKpi','barKpi','progKpiTxt', 96, 'Actualizando resumen…');
+      const labelMes = CONFIG.meses.find(m=>m.id===mesId)?.label || mesId;
+      await sb.rest('POST','kpi_recibo_resumen',[{
+        mes_id: mesId, label: labelMes,
+        total_oc: stats.total, ok_12h: stats.ok, late_12h: stats.late,
+        trt_12h: stats.trt, avg_h: stats.avgH, max_h: stats.maxH,
+        cert_count: stats.cert, pt_total: stats.pt, mp_total: stats.mp,
+        last_etl_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      }],{'Prefer':'resolution=merge-duplicates,return=minimal'});
+
+      // 6. Actualizar log
+      await sb.rest('PATCH',`etl_log?run_id=eq.${runId}`,{
+        estado:'completado',
+        docs_procesados: records.length,
+        docs_insertados: insertados,
+        docs_actualizados: actualizados,
+        docs_excluidos: 0,
+        completado_at: new Date().toISOString(),
+      },{'Prefer':'return=minimal'});
+
+      showProg('progKpi','barKpi','progKpiTxt', 100, 'Completado');
+      hideProg('progKpi');
+
+      const trtSem = stats.trt != null ? (stats.trt >= 95 ? '🟢' : stats.trt >= 80 ? '🟡' : '🔴') : '';
+      showRes('resKpi','ok',
+        `✅ <b>Cargue completado</b><br>
+         📥 Insertados: <b>${insertados}</b> · 🔄 Actualizados: <b>${actualizados}</b><br>
+         ⚠️ Inconsistencias (cuarentena): <b>${inconsistencias.length}</b><br>
+         ${trtSem} TRT: <b>${stats.trt ?? '—'}%</b> · T.Prom: <b>${stats.avgH ?? '—'}h</b>`
+      );
+      addLog(`✓ Mes ${mesId}: TRT ${stats.trt}% · ${insertados} insertados · ${actualizados} actualizados · ${inconsistencias.length} en cuarentena`, 'ok');
+
+    } catch (e) {
+      hideProg('progKpi');
+      showRes('resKpi','err','❌ Error: ' + e.message);
+      addLog('✗ Error ETL: ' + e.message, 'err');
+      try {
+        await sb.rest('PATCH',`etl_log?run_id=eq.${runId}`,{
+          estado:'error', error_msg: e.message, completado_at: new Date().toISOString()
+        },{'Prefer':'return=minimal'});
+      } catch {}
+    }
+  }
+
+  // ── CARGA WMS (placeholder hasta recibir archivo fuente) ───────────────
+  async function subirWms() {
+    const file = document.getElementById('fileWms').files[0];
+    if (!file) { showRes('resWms','warn','⚠️ Selecciona un archivo primero.'); return; }
+    showRes('resWms','warn','⏳ El ETL del archivo WMS se implementará al recibir el archivo fuente. El archivo fue recibido: ' + file.name);
+    addLog(`Archivo WMS recibido: ${file.name} — ETL pendiente de implementación`, 'warn');
+  }
+
+  // ── Gestión de usuarios (Supabase Admin API) ───────────────────────────
+  async function loadUsuarios() {
+    try {
+      const data = await sb.rest('GET','kpi_usuarios?order=created_at.asc');
+      renderUsersTable(data || []);
+    } catch {
+      // Fallback: listar desde auth (requiere service_role key en producción)
+      document.getElementById('usrBody').innerHTML =
+        `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem">
+          Requiere service_role key para listar usuarios de Supabase Auth.<br>
+          <small>Ver sección 2.3 del manual de despliegue.</small>
+        </td></tr>`;
+    }
+  }
+
+  function renderUsersTable(users) {
+    const tbody = document.getElementById('usrBody');
+    if (!users.length) {
+      tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><p>No hay usuarios registrados</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td>${u.email}</td>
+        <td>${u.nombre || '—'}</td>
+        <td><span class="badge ${u.rol === 'admin' ? 'badge-warn' : 'badge-info'}">${u.rol}</span></td>
+        <td>
+          <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.id}','${u.email}')">Eliminar</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  function toggleUsrForm() { document.getElementById('usrForm').classList.toggle('show'); }
+
+  async function crearUsuario() {
+    const email  = document.getElementById('uEmail').value.trim();
+    const pass   = document.getElementById('uPass').value;
+    const nombre = document.getElementById('uNombre').value.trim();
+    const rol    = document.getElementById('uRol').value;
+    const res    = document.getElementById('resUsr');
+
+    if (!email || !pass || !nombre) {
+      res.className='result-box show err'; res.textContent='Todos los campos son obligatorios.'; return;
+    }
+    if (pass.length < 6) {
+      res.className='result-box show err'; res.textContent='La contraseña debe tener al menos 6 caracteres.'; return;
+    }
+    try {
+      // Crear usuario en Supabase Auth via Admin API (necesita service_role)
+      await sb.rest('POST','kpi_usuarios',[{ email, nombre, rol }],{'Prefer':'return=minimal'});
+      res.className='result-box show ok';
+      res.textContent=`✅ Usuario "${email}" (${rol}) creado correctamente.`;
+      addLog(`Usuario creado: ${email} (${rol})`, 'ok');
+      toggleUsrForm();
+      loadUsuarios();
+    } catch(e) {
+      res.className='result-box show err';
+      res.textContent='❌ ' + e.message;
+    }
+  }
+
+  async function eliminarUsuario(id, email) {
+    if (!confirm(`¿Eliminar el usuario "${email}"?`)) return;
+    try {
+      await sb.rest('DELETE',`kpi_usuarios?id=eq.${id}`,null,{'Prefer':'return=minimal'});
+      addLog(`Usuario eliminado: ${email}`, 'warn');
+      loadUsuarios();
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  // ── ETL Log desde Supabase ─────────────────────────────────────────────
+  async function loadEtlLog() {
+    try {
+      const rows = await sb.rest('GET','etl_log?order=iniciado_at.desc&limit=25');
+      if (!rows || !rows.length) { addLog('No hay registros de ETL aún.', 'inf'); return; }
+      rows.forEach(r => {
+        const dt  = new Date(r.iniciado_at).toLocaleString('es-CO');
+        const tp  = r.estado === 'completado' ? 'ok' : r.estado === 'error' ? 'err' : 'inf';
+        const msg = `[${dt}] ${r.mes_id || '—'} | ${r.archivo || '—'} | ${r.estado} | proc:${r.docs_procesados} ins:${r.docs_insertados} act:${r.docs_actualizados}`;
+        addLog(msg, tp);
+      });
+    } catch(e) { addLog('No se pudo cargar el log: ' + e.message, 'warn'); }
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  window.addEventListener('load', async () => {
+    const user = await checkAuth('admin'); if (!user) return;
+    renderUser();
+    document.getElementById('wmsDate').value = new Date().toISOString().split('T')[0];
+    loadEtlLog();
+    loadUsuarios();
+    const ol = document.getElementById('overlay');
+    setTimeout(()=>ol.classList.add('out'),200);
+    setTimeout(()=>ol.remove(),600);
+  });
+</script>
+</body>
+</html>

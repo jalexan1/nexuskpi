@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>NexusKPI — Ingreso</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles/base.css"/>
+  <style>
+    body{display:flex;overflow:hidden;min-height:100vh}
+    .left{flex:1;background:var(--surface);border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+    .left-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 30% 40%,rgba(0,212,255,.1) 0%,transparent 60%),radial-gradient(ellipse 60% 80% at 70% 70%,rgba(123,47,255,.08) 0%,transparent 60%)}
+    .left-inner{position:relative;z-index:1;text-align:center;padding:3rem;max-width:420px}
+    .left-inner svg{width:320px;height:230px;margin-bottom:1.5rem}
+    .left-inner h1{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.15;margin-bottom:.4rem}
+    .left-inner p{color:var(--muted);font-size:.85rem}
+    .stats-row{display:flex;gap:.75rem;justify-content:center;margin-top:1.25rem}
+    .stat-m{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.6rem .9rem;text-align:center}
+    .stat-m .v{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;color:var(--ok)}
+    .stat-m .l{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .right{width:420px;min-width:420px;display:flex;flex-direction:column;justify-content:center;padding:2.5rem;background:var(--bg);position:relative}
+    .login-brand{font-family:'Syne',sans-serif;font-weight:800;font-size:.9rem;color:var(--accent);letter-spacing:.12em;text-transform:uppercase;display:flex;align-items:center;gap:.4rem;margin-bottom:2rem}
+    .login-brand-dot{width:7px;height:7px;background:var(--ok);border-radius:50%;animation:pulse 2s ease-in-out infinite}
+    h2.login-title{font-size:1.6rem;font-weight:800;margin-bottom:.25rem}
+    .login-sub{color:var(--muted);font-size:.85rem;margin-bottom:2rem}
+    .field{margin-bottom:1.1rem}
+    .field label{display:block;font-size:.7rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.4rem;font-weight:500}
+    .field input{width:100%;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);padding:.72rem .9rem;color:var(--text);font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;transition:border-color .2s,box-shadow .2s}
+    .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1)}
+    .btn-login{width:100%;padding:.82rem;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:var(--r-sm);color:#fff;font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;letter-spacing:.06em;cursor:pointer;transition:transform .15s,box-shadow .15s,opacity .2s;margin-top:.4rem}
+    .btn-login:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,212,255,.25)}
+    .btn-login:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .err-box{background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.3);border-radius:var(--r-sm);color:var(--error);font-size:.78rem;padding:.55rem .85rem;margin-top:.7rem;display:none}
+    .err-box.show{display:block}
+    .theme-corner{position:absolute;top:1rem;right:1rem;display:flex;gap:.3rem}
+    @media(max-width:700px){.left{display:none}.right{width:100%;min-width:0}}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+
+<!-- Panel izquierdo — ilustración KPI -->
+<div class="left">
+  <div class="left-bg"></div>
+  <div class="left-inner">
+    <svg viewBox="0 0 320 230" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="lg1" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#00D4FF"/><stop offset="100%" stop-color="#7B2FFF"/></linearGradient>
+        <linearGradient id="lgA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00D4FF" stop-opacity=".25"/><stop offset="100%" stop-color="#00D4FF" stop-opacity="0"/></linearGradient>
+      </defs>
+      <!-- Grid -->
+      <line x1="30" y1="185" x2="290" y2="185" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+      <line x1="30" y1="145" x2="290" y2="145" stroke="rgba(255,255,255,.04)" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="30" y1="105" x2="290" y2="105" stroke="rgba(255,255,255,.04)" stroke-width="1" stroke-dasharray="4,4"/>
+      <line x1="30" y1="65"  x2="290" y2="65"  stroke="rgba(255,255,255,.04)" stroke-width="1" stroke-dasharray="4,4"/>
+      <!-- Area -->
+      <path d="M30,155 L75,120 L120,92 L165,108 L210,68 L255,50 L290,38 L290,185 L30,185Z" fill="url(#lgA)"/>
+      <!-- Line -->
+      <path d="M30,155 L75,120 L120,92 L165,108 L210,68 L255,50 L290,38" stroke="url(#lg1)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <!-- Meta 95% -->
+      <line x1="30" y1="82" x2="290" y2="82" stroke="rgba(255,176,32,.5)" stroke-width="1.5" stroke-dasharray="5,3"/>
+      <text x="293" y="86" fill="rgba(255,176,32,.8)" font-size="8" font-family="DM Sans">95%</text>
+      <!-- Puntos -->
+      <circle cx="30"  cy="155" r="4" fill="#00D4FF"/>
+      <circle cx="75"  cy="120" r="4" fill="#00D4FF"/>
+      <circle cx="120" cy="92"  r="4" fill="#00D4FF"/>
+      <circle cx="165" cy="108" r="4" fill="#00D4FF"/>
+      <circle cx="210" cy="68"  r="4" fill="#7B2FFF"/>
+      <circle cx="255" cy="50"  r="4" fill="#7B2FFF"/>
+      <circle cx="290" cy="38"  r="5" fill="#00FF88">
+        <animate attributeName="r" values="5;8;5" dur="1.5s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="1;.3;1" dur="1.5s" repeatCount="indefinite"/>
+      </circle>
+      <!-- Badge TRT -->
+      <rect x="195" y="22" width="82" height="22" rx="11" fill="rgba(0,255,136,.15)" stroke="rgba(0,255,136,.4)" stroke-width="1"/>
+      <text x="210" y="37" fill="#00FF88" font-size="9" font-family="Syne" font-weight="700">TRT 100%</text>
+      <!-- Barras -->
+      <rect x="45"  y="162" width="16" height="23" rx="3" fill="rgba(0,212,255,.5)"/>
+      <rect x="90"  y="152" width="16" height="33" rx="3" fill="rgba(0,212,255,.5)"/>
+      <rect x="135" y="142" width="16" height="43" rx="3" fill="rgba(123,47,255,.5)"/>
+      <rect x="180" y="148" width="16" height="37" rx="3" fill="rgba(0,212,255,.5)"/>
+      <rect x="225" y="132" width="16" height="53" rx="3" fill="rgba(123,47,255,.5)"/>
+      <rect x="265" y="120" width="16" height="65" rx="3" fill="rgba(0,255,136,.6)"/>
+    </svg>
+    <h1>Inteligencia<br>Logística</h1>
+    <p>Indicadores en tiempo real · Decisiones con datos</p>
+    <div class="stats-row">
+      <div class="stat-m"><div class="v">8</div><div class="l">KPIs</div></div>
+      <div class="stat-m"><div class="v" id="statMeses">—</div><div class="l">Meses</div></div>
+      <div class="stat-m"><div class="v" id="statTRT">—</div><div class="l">TRT</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Panel derecho — login -->
+<div class="right">
+  <div class="theme-corner">
+    <button class="theme-btn" onclick="setTheme('')" title="Oscuro">🌙</button>
+    <button class="theme-btn" onclick="setTheme('light')" title="Claro">☀️</button>
+  </div>
+  <div class="login-brand"><div class="login-brand-dot"></div>NexusKPI</div>
+  <h2 class="login-title">Bienvenido</h2>
+  <p class="login-sub">Ingresa tus credenciales para continuar</p>
+  <form onsubmit="doLogin(event)">
+    <div class="field"><label>Correo electrónico</label>
+      <input type="email" id="email" placeholder="usuario@empresa.com" required autocomplete="email"/>
+    </div>
+    <div class="field"><label>Contraseña</label>
+      <input type="password" id="pass" placeholder="••••••••" required autocomplete="current-password"/>
+    </div>
+    <button type="submit" class="btn-login" id="btnLogin">Ingresar</button>
+    <div class="err-box" id="errBox"></div>
+  </form>
+</div>
+
+<script src="config/config.js"></script>
+<script src="utils/auth.js"></script>
+<script>
+  applyTheme();
+
+  async function doLogin(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnLogin');
+    const err = document.getElementById('errBox');
+    const email = document.getElementById('email').value.trim();
+    const pass  = document.getElementById('pass').value;
+    btn.disabled = true; btn.textContent = 'Verificando…';
+    err.classList.remove('show');
+    try {
+      const data = await sb.signIn(email, pass);
+      saveSession(data);
+      location.href = 'pages/menu.html';
+    } catch (ex) {
+      err.textContent = ex.message || 'Error de autenticación.';
+      err.classList.add('show');
+      btn.disabled = false; btn.textContent = 'Ingresar';
+      document.getElementById('pass').value = '';
+    }
+  }
+
+  // Cargar stats del login panel desde Supabase
+  async function loadStats() {
+    try {
+      const rows = await sb.rest('GET','kpi_recibo_resumen?order=mes_id.asc');
+      if (rows && rows.length) {
+        document.getElementById('statMeses').textContent = rows.length;
+        const last = rows[rows.length - 1];
+        document.getElementById('statTRT').textContent = last.trt_12h != null ? last.trt_12h + '%' : '—';
+      }
+    } catch { /* sin conexión: stats quedan en — */ }
+  }
+
+  window.addEventListener('load', async () => {
+    if (_getToken()) { location.href = 'pages/menu.html'; return; }
+    loadStats();
+    const ol = document.getElementById('overlay');
+    setTimeout(() => ol.classList.add('out'), 200);
+    setTimeout(() => ol.remove(), 600);
+  });
+</script>
+</body>
+</html>

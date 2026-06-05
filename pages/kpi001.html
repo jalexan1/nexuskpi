@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>NexusKPI — KPI-REC-001</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    .page{display:flex;flex-direction:column;min-height:100vh}
+    .content{flex:1;padding:1.25rem 1.5rem;max-width:1400px;margin:0 auto;width:100%}
+    /* Tabs */
+    .tabs-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 1.5rem;gap:.15rem;overflow-x:auto}
+    .tab-btn{padding:.8rem 1rem;font-size:.8rem;font-weight:500;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s}
+    .tab-btn:hover{color:var(--text)}
+    .tab-btn.on{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-panel{display:none}.tab-panel.on{display:block}
+    /* Header KPI */
+    .kpi-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap}
+    .kpi-hdr h1{font-size:1.3rem;font-weight:800;display:flex;align-items:center;gap:.5rem}
+    .kpi-hdr-sub{font-size:.8rem;color:var(--muted);margin-top:.2rem}
+    /* Mes selector */
+    .mes-bar{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;padding:.85rem 1.1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:1.25rem}
+    .mes-bar label{font-size:.7rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+    .mes-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:.38rem .7rem;cursor:pointer;outline:none}
+    .mes-sel:focus{border-color:var(--accent)}
+    /* Stats */
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:.75rem;margin-bottom:1.25rem}
+    .stat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.15rem;animation:fadeUp .35s ease both}
+    .stat-box .s-lbl{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.4rem}
+    .stat-box .s-val{font-family:'Syne',sans-serif;font-size:1.75rem;font-weight:800;color:var(--text);line-height:1}
+    .stat-box .s-sub{font-size:.7rem;color:var(--muted);margin-top:.25rem}
+    .stat-ok{border-color:rgba(0,255,136,.3)}.stat-ok .s-val{color:var(--ok)}
+    .stat-warn{border-color:rgba(255,176,32,.3)}.stat-warn .s-val{color:var(--warn)}
+    .stat-err{border-color:rgba(255,77,109,.3)}.stat-err .s-val{color:var(--error)}
+    /* Charts */
+    .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.25rem}
+    @media(max-width:860px){.charts-grid{grid-template-columns:1fr}}
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem}
+    .chart-title{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:.85rem;display:flex;align-items:center;justify-content:space-between}
+    .chart-wrap{position:relative;height:210px}
+    /* Comparativo */
+    .comp-wrap{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+    @media(max-width:800px){.comp-wrap{grid-template-columns:1fr}}
+    .comp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem}
+    .comp-card h3{font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.75rem}
+    .comp-row{display:flex;justify-content:space-between;align-items:center;padding:.42rem 0;border-bottom:1px solid var(--border);font-size:.8rem}
+    .comp-row:last-child{border-bottom:none}
+    .comp-metric{color:var(--muted)}
+    .v-a{color:var(--accent);font-weight:600;font-family:'Syne',sans-serif}
+    .v-b{color:var(--accent2);font-weight:600;font-family:'Syne',sans-serif}
+    .delta-up{color:var(--ok);font-size:.72rem}
+    .delta-dn{color:var(--error);font-size:.72rem}
+    /* Table controls */
+    .tbl-ctrl{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;padding:.7rem .9rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.75rem}
+    .flt-lbl{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase}
+    .flt-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.78rem;padding:.32rem .6rem;outline:none;cursor:pointer}
+    .flt-sel:focus{border-color:var(--accent)}
+    .flt-count{font-size:.72rem;color:var(--muted);margin-left:auto}
+    /* Cuarentena */
+    .sec-title{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:var(--warn);margin:1.25rem 0 .6rem;display:flex;align-items:center;gap:.5rem}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando datos…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-title">KPI-REC-001</span>
+    <div class="topbar-spacer"></div>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <nav class="tabs-nav">
+    <button class="tab-btn on"  onclick="tab('resumen',this)">📊 Resumen</button>
+    <button class="tab-btn"     onclick="tab('comparativo',this)">⚖️ Comparativo</button>
+    <button class="tab-btn"     onclick="tab('detalle',this)">📋 Detalle Recepciones</button>
+  </nav>
+
+  <main class="content">
+    <div class="kpi-hdr">
+      <div>
+        <h1>📦 KPI-REC-001 <span class="badge badge-ok">En vivo</span></h1>
+        <div class="kpi-hdr-sub">Tasa de Recepción a Tiempo (TRT) · SLA 12 horas efectivas · Meta ≥ 95%</div>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+        <button class="btn" onclick="cargarDatos()" id="btnRefresh">🔄 Actualizar</button>
+        <span id="tsUpdate" style="font-size:.7rem;color:var(--dim)"></span>
+      </div>
+    </div>
+
+    <!-- Selector de meses compartido entre tabs -->
+    <div class="mes-bar">
+      <label>Mes A</label>
+      <select class="mes-sel" id="selA" onchange="onMesChange()"></select>
+      <span style="color:var(--dim);font-size:.8rem">vs</span>
+      <label>Mes B</label>
+      <select class="mes-sel" id="selB" onchange="onMesChange()"></select>
+      <div style="margin-left:auto;font-size:.72rem;color:var(--dim)" id="statusDatos">—</div>
+    </div>
+
+    <!-- ═══ TAB RESUMEN ═══════════════════════════════════════════════════ -->
+    <div class="tab-panel on" id="tab-resumen">
+      <div class="stats-grid" id="statsGrid"></div>
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">TRT % por Semana <span class="badge badge-info" style="font-size:.6rem">SLA 12h</span></div>
+          <div class="chart-wrap"><canvas id="cWeek"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">PT vs MP — Cumplimiento</div>
+          <div class="chart-wrap"><canvas id="cTipo"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Top Proveedores — TRT %</div>
+          <div class="chart-wrap"><canvas id="cProv"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Distribución Tiempo Efectivo (h)</div>
+          <div class="chart-wrap"><canvas id="cHist"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB COMPARATIVO ══════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-comparativo">
+      <div class="comp-wrap" id="compWrap">
+        <div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses para comparar</p></div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB DETALLE ══════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-detalle">
+      <div class="tbl-ctrl">
+        <span class="flt-lbl">Mes</span>
+        <select class="flt-sel" id="fMes" onchange="filtrar()"></select>
+        <span class="flt-lbl">Tipo</span>
+        <select class="flt-sel" id="fTipo" onchange="filtrar()">
+          <option value="">Todos</option><option value="PT">PT</option><option value="MP">MP</option>
+        </select>
+        <span class="flt-lbl">SLA</span>
+        <select class="flt-sel" id="fSLA" onchange="filtrar()">
+          <option value="">Todos</option><option value="ok">A tiempo ✅</option><option value="late">Tardío ❌</option>
+        </select>
+        <span class="flt-lbl">Proveedor</span>
+        <select class="flt-sel" id="fProv" onchange="filtrar()"><option value="">Todos</option></select>
+        <button class="btn btn-sm" onclick="limpiarFiltros()">✕</button>
+        <span class="flt-count" id="fCount"></span>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr>
+              <th>Documento</th><th>Fecha</th><th>Semana</th><th>Proveedor</th>
+              <th>Tipo</th><th>SKUs</th><th>Unidades</th>
+              <th>H. Cita</th><th>H. Inicio</th><th>H. TT</th>
+              <th>T. Ef.(h)</th><th>SLA 12h</th><th>Cert</th>
+            </tr></thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Cuarentena -->
+      <div class="sec-title" id="secCuarentena" style="display:none">
+        ⚠️ Registros en Cuarentena — Requieren Revisión
+        <span class="badge badge-warn" id="cntCuarentena"></span>
+      </div>
+      <div class="tbl-wrap" id="tblCuarentenaWrap" style="display:none">
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr><th>Documento</th><th>Fecha</th><th>Proveedor</th><th>Tipo</th><th>Causal de Inconsistencia</th></tr></thead>
+            <tbody id="tblCuarentena"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+  applyTheme();
+
+  // ── Estado ─────────────────────────────────────────────────────────────
+  let allData = {};   // { mes_id: [...records] }
+  let charts  = {};
+
+  // ── Tabs ───────────────────────────────────────────────────────────────
+  function tab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
+    document.getElementById('tab-' + id).classList.add('on');
+    btn.classList.add('on');
+    if (id === 'comparativo') renderComparativo();
+    if (id === 'detalle')     renderDetalle();
+  }
+
+  // ── Cargar datos de Supabase ───────────────────────────────────────────
+  async function cargarDatos() {
+    const btn = document.getElementById('btnRefresh');
+    btn.disabled = true; btn.textContent = '⏳';
+    document.getElementById('statusDatos').textContent = 'Cargando…';
+    try {
+      const rows = await sb.rest('GET','kpi_recibo_recepciones?order=mes_id.asc,fecha.asc');
+      allData = {};
+      rows.forEach(r => { if (!allData[r.mes_id]) allData[r.mes_id] = []; allData[r.mes_id].push(r); });
+      poblarSelectores(Object.keys(allData).sort());
+      document.getElementById('tsUpdate').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-CO');
+      document.getElementById('statusDatos').textContent = `${rows.length} registros`;
+    } catch (e) {
+      document.getElementById('statusDatos').textContent = '⚠️ ' + e.message.slice(0,60);
+    }
+    btn.disabled = false; btn.textContent = '🔄 Actualizar';
+  }
+
+  function poblarSelectores(meses) {
+    const lbl = id => CONFIG.meses.find(m => m.id === id)?.label || id;
+    ['selA','selB'].forEach((sid, i) => {
+      const s = document.getElementById(sid);
+      s.innerHTML = meses.map((m,j) => `<option value="${m}" ${j===(i===0?meses.length-2:meses.length-1)?'selected':''}>${lbl(m)}</option>`).join('');
+    });
+    // Detalle filter
+    const fMes = document.getElementById('fMes');
+    fMes.innerHTML = `<option value="">Todos los meses</option>` + meses.map(m => `<option value="${m}">${lbl(m)}</option>`).join('');
+    onMesChange();
+  }
+
+  function onMesChange() { renderResumen(); }
+
+  // ── KPI Cálculos ───────────────────────────────────────────────────────
+  function calcKpi(records) {
+    if (!records || !records.length) return null;
+    const total  = records.length;
+    const medidos = records.filter(r => r.sla_ok_12 !== null);
+    const ok     = medidos.filter(r => r.sla_ok_12).length;
+    const late   = medidos.filter(r => !r.sla_ok_12).length;
+    const times  = records.filter(r => r.tiempo_h > 0).map(r => r.tiempo_h);
+    const sorted = [...times].sort((a,b) => a-b);
+    return {
+      total, medidos: medidos.length, ok, late,
+      sinDato: total - medidos.length,
+      trt: medidos.length > 0 ? Math.round(ok/medidos.length*1000)/10 : null,
+      avgH: times.length ? Math.round(times.reduce((a,b)=>a+b,0)/times.length*100)/100 : null,
+      maxH: times.length ? Math.max(...times) : null,
+      medH: sorted.length ? sorted[Math.floor(sorted.length/2)] : null,
+      cert: records.filter(r => r.is_cert).length,
+      pt:   records.filter(r => r.tipo==='PT').length,
+      mp:   records.filter(r => r.tipo==='MP').length,
+      ptOk: records.filter(r => r.tipo==='PT' && r.sla_ok_12).length,
+      mpOk: records.filter(r => r.tipo==='MP' && r.sla_ok_12).length,
+      provs: [...new Set(records.map(r => r.proveedor))].length,
+      inc:  records.filter(r => r.is_inconsistente).length,
+    };
+  }
+
+  function semaforoCls(trt) {
+    if (trt == null) return '';
+    if (trt >= CONFIG.kpiRec001.semaforo.verde) return 'stat-ok';
+    if (trt >= CONFIG.kpiRec001.semaforo.amarillo) return 'stat-warn';
+    return 'stat-err';
+  }
+
+  // ── Resumen ────────────────────────────────────────────────────────────
+  function renderResumen() {
+    const mesId = document.getElementById('selA').value;
+    const rec   = allData[mesId] || [];
+    const kpi   = calcKpi(rec);
+    const grid  = document.getElementById('statsGrid');
+
+    if (!kpi) { grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📭</div><p>Sin datos para este mes</p></div>`; return; }
+
+    const semCls = semaforoCls(kpi.trt);
+    grid.innerHTML = [
+      [`TRT · SLA 12h`, `${kpi.trt ?? '—'}%`, `${kpi.ok} de ${kpi.medidos} a tiempo · Meta ≥95%`, semCls],
+      [`Total OC`, kpi.total, `${kpi.provs} proveedores`, ''],
+      [`Tardíos`, kpi.late, `${kpi.medidos>0?Math.round(kpi.late/kpi.medidos*100):0}% del total medido`, 'stat-err'],
+      [`Sin dato / Cuarentena`, kpi.sinDato, `Requieren revisión`, kpi.sinDato>0?'stat-warn':''],
+      [`T. Promedio (h)`, kpi.avgH ?? '—', `Mediana ${kpi.medH ?? '—'}h · Máx ${kpi.maxH ?? '—'}h`, ''],
+      [`TRT · PT`, kpi.pt>0?Math.round(kpi.ptOk/kpi.pt*1000)/10+'%':'—', `${kpi.ptOk}/${kpi.pt} PT a tiempo`, ''],
+      [`TRT · MP`, kpi.mp>0?Math.round(kpi.mpOk/kpi.mp*1000)/10+'%':'—', `${kpi.mpOk}/${kpi.mp} MP a tiempo`, ''],
+      [`Certificados`, kpi.cert, `${kpi.total>0?Math.round(kpi.cert/kpi.total*100):0}% del total`, ''],
+    ].map(([lbl,val,sub,cls],i) => `
+      <div class="stat-box ${cls}" style="animation-delay:${.05*(i+1)}s">
+        <div class="s-lbl">${lbl}</div>
+        <div class="s-val">${val}</div>
+        <div class="s-sub">${sub}</div>
+      </div>`).join('');
+
+    renderCharts(rec);
+  }
+
+  // ── Charts ────────────────────────────────────────────────────────────
+  const C = { text: getComputedStyle(document.documentElement).getPropertyValue('--muted') };
+  function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+  function baseOpts(yMax, suffix='') {
+    return {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{
+        y:{ min:0, ...(yMax?{max:yMax}:{}), grid:{color:'rgba(255,255,255,.04)'}, ticks:{callback:v=>v+suffix, font:{size:10}} },
+        x:{ grid:{display:false}, ticks:{font:{size:10}} }
+      }
+    };
+  }
+
+  function renderCharts(rec) {
+    // Semanal
+    const wks = {};
+    rec.forEach(r => {
+      if (!r.semana) return;
+      if (!wks[r.semana]) wks[r.semana] = {ok:0,tot:0};
+      if (r.sla_ok_12 !== null) { wks[r.semana].tot++; if (r.sla_ok_12) wks[r.semana].ok++; }
+    });
+    const wK = Object.keys(wks).sort();
+    const wV = wK.map(k => wks[k].tot>0 ? Math.round(wks[k].ok/wks[k].tot*1000)/10 : 0);
+    destroyChart('cWeek');
+    charts.cWeek = new Chart(document.getElementById('cWeek'), {
+      type:'line', data:{ labels:wK, datasets:[
+        { label:'TRT%', data:wV, borderColor:'#00D4FF', backgroundColor:'rgba(0,212,255,.08)', fill:true, tension:.4, pointRadius:5,
+          pointBackgroundColor: wV.map(v => v>=95?'#00FF88':v>=80?'#FFB020':'#FF4D6D') },
+        { label:'Meta 95%', data:wK.map(()=>95), borderColor:'rgba(255,176,32,.5)', borderDash:[5,3], pointRadius:0, fill:false }
+      ]}, options:baseOpts(110,'%')
+    });
+
+    // Donut PT/MP
+    const ptOk = rec.filter(r=>r.tipo==='PT'&&r.sla_ok_12).length;
+    const ptL  = rec.filter(r=>r.tipo==='PT'&&r.sla_ok_12===false).length;
+    const mpOk = rec.filter(r=>r.tipo==='MP'&&r.sla_ok_12).length;
+    const mpL  = rec.filter(r=>r.tipo==='MP'&&r.sla_ok_12===false).length;
+    destroyChart('cTipo');
+    charts.cTipo = new Chart(document.getElementById('cTipo'), {
+      type:'doughnut',
+      data:{ labels:['PT OK','PT Tarde','MP OK','MP Tarde'],
+        datasets:[{ data:[ptOk,ptL,mpOk,mpL],
+          backgroundColor:['rgba(0,212,255,.8)','rgba(0,212,255,.2)','rgba(123,47,255,.8)','rgba(123,47,255,.2)'],
+          borderColor:['#00D4FF','#00D4FF','#7B2FFF','#7B2FFF'], borderWidth:1 }]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'right', labels:{font:{size:11}} } } }
+    });
+
+    // Proveedores
+    const pm = {};
+    rec.forEach(r => {
+      if (!pm[r.proveedor]) pm[r.proveedor] = {ok:0,tot:0};
+      if (r.sla_ok_12 !== null) { pm[r.proveedor].tot++; if (r.sla_ok_12) pm[r.proveedor].ok++; }
+    });
+    const pK = Object.keys(pm).sort((a,b)=>pm[b].tot-pm[a].tot).slice(0,8);
+    const pV = pK.map(k => pm[k].tot>0?Math.round(pm[k].ok/pm[k].tot*1000)/10:0);
+    destroyChart('cProv');
+    charts.cProv = new Chart(document.getElementById('cProv'), {
+      type:'bar',
+      data:{ labels:pK.map(k=>k.length>16?k.slice(0,15)+'…':k), datasets:[{
+        label:'TRT%', data:pV, borderRadius:4,
+        backgroundColor: pV.map(v=>v>=95?'rgba(0,255,136,.7)':v>=80?'rgba(255,176,32,.7)':'rgba(255,77,109,.7)')
+      }]},
+      options:{ ...baseOpts(110,'%'), indexAxis:'y' }
+    });
+
+    // Histograma
+    const buckets = [0,1,2,3,4,5,6,7,8,9,10,12,15,999];
+    const hist = Array(buckets.length-1).fill(0);
+    rec.forEach(r => {
+      if (!r.tiempo_h || r.tiempo_h<=0) return;
+      for (let i=0;i<buckets.length-1;i++) {
+        if (r.tiempo_h>=buckets[i] && r.tiempo_h<buckets[i+1]) { hist[i]++; break; }
+      }
+    });
+    destroyChart('cHist');
+    charts.cHist = new Chart(document.getElementById('cHist'), {
+      type:'bar',
+      data:{ labels:buckets.slice(0,-1).map((b,i)=>`${b}–${buckets[i+1]=== 999?'∞':buckets[i+1]}h`),
+        datasets:[{ label:'OC', data:hist, borderRadius:4,
+          backgroundColor: buckets.slice(0,-1).map((b,i)=>buckets[i+1]<=12?'rgba(0,212,255,.65)':'rgba(255,77,109,.65)') }]
+      },
+      options: baseOpts(null,'')
+    });
+  }
+
+  // ── Comparativo ────────────────────────────────────────────────────────
+  function renderComparativo() {
+    const idA = document.getElementById('selA').value;
+    const idB = document.getElementById('selB').value;
+    const kA  = calcKpi(allData[idA] || []);
+    const kB  = calcKpi(allData[idB] || []);
+    const lblA = CONFIG.meses.find(m=>m.id===idA)?.label || idA;
+    const lblB = CONFIG.meses.find(m=>m.id===idB)?.label || idB;
+    const wrap = document.getElementById('compWrap');
+
+    if (!kA || !kB) { wrap.innerHTML = `<div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses con datos</p></div>`; return; }
+
+    const d = (a,b,fmt=v=>v.toFixed(1),inv=false) => {
+      const diff=b-a; const up=inv?diff<0:diff>0;
+      const s=diff>0?'+':''; const cls=up?'delta-up':diff<0?'delta-dn':'';
+      return `<span class="${cls}">${s}${fmt(diff)}</span>`;
+    };
+
+    const rows = [
+      ['TRT 12h', `${kA.trt??'—'}%`, `${kB.trt??'—'}%`, kA.trt!=null&&kB.trt!=null?d(kA.trt,kB.trt,v=>v.toFixed(1)+'%'):''],
+      ['Total OC', kA.total, kB.total, d(kA.total,kB.total,v=>Math.round(v).toString())],
+      ['A tiempo', kA.ok, kB.ok, d(kA.ok,kB.ok,v=>Math.round(v).toString())],
+      ['Tardíos', kA.late, kB.late, d(kA.late,kB.late,v=>Math.round(v).toString(),true)],
+      ['Sin dato', kA.sinDato, kB.sinDato, d(kA.sinDato,kB.sinDato,v=>Math.round(v).toString(),true)],
+      ['T. Prom (h)', `${kA.avgH??'—'}h`, `${kB.avgH??'—'}h`, kA.avgH!=null&&kB.avgH!=null?d(kA.avgH,kB.avgH,v=>v.toFixed(2)+'h',true):''],
+      ['T. Máx (h)', `${kA.maxH??'—'}h`, `${kB.maxH??'—'}h`, ''],
+      ['TRT PT', kA.pt>0?Math.round(kA.ptOk/kA.pt*1000)/10+'%':'—', kB.pt>0?Math.round(kB.ptOk/kB.pt*1000)/10+'%':'—', ''],
+      ['TRT MP', kA.mp>0?Math.round(kA.mpOk/kA.mp*1000)/10+'%':'—', kB.mp>0?Math.round(kB.mpOk/kB.mp*1000)/10+'%':'—', ''],
+      ['Certificados', kA.cert, kB.cert, ''],
+      ['Proveedores', kA.provs, kB.provs, ''],
+    ];
+
+    wrap.innerHTML = `
+      <div class="comp-card">
+        <h3>Tabla Comparativa — ${lblA} vs ${lblB}</h3>
+        <div class="comp-row" style="font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.07em">
+          <span class="comp-metric">Indicador</span>
+          <div style="display:flex;gap:1rem"><span class="v-a">${lblA.split(' ')[0]}</span><span class="v-b">${lblB.split(' ')[0]}</span></div>
+          <span style="width:55px;text-align:right;font-size:.68rem;color:var(--muted)">Var.</span>
+        </div>
+        ${rows.map(([m,a,b,dv])=>`
+          <div class="comp-row">
+            <span class="comp-metric">${m}</span>
+            <div style="display:flex;gap:1rem"><span class="v-a">${a}</span><span class="v-b">${b}</span></div>
+            <span style="width:55px;text-align:right">${dv}</span>
+          </div>`).join('')}
+      </div>
+      <div class="comp-card">
+        <h3>Visual Comparativo</h3>
+        <div class="chart-wrap" style="height:270px"><canvas id="cComp"></canvas></div>
+      </div>`;
+
+    new Chart(document.getElementById('cComp'), {
+      type:'bar',
+      data:{ labels:['TRT 12h','TRT PT','TRT MP'],
+        datasets:[
+          { label:lblA.split(' ')[0], data:[kA.trt, kA.pt>0?Math.round(kA.ptOk/kA.pt*1000)/10:0, kA.mp>0?Math.round(kA.mpOk/kA.mp*1000)/10:0], backgroundColor:'rgba(0,212,255,.7)', borderRadius:5 },
+          { label:lblB.split(' ')[0], data:[kB.trt, kB.pt>0?Math.round(kB.ptOk/kB.pt*1000)/10:0, kB.mp>0?Math.round(kB.mpOk/kB.mp*1000)/10:0], backgroundColor:'rgba(123,47,255,.7)', borderRadius:5 },
+          { label:'Meta', data:[95,95,95], type:'line', borderColor:'rgba(255,176,32,.7)', borderDash:[5,3], pointRadius:0, fill:false }
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ position:'bottom', labels:{font:{size:11}} } },
+        scales:{ y:{ min:0, max:110, ticks:{callback:v=>v+'%'} } }
+      }
+    });
+  }
+
+  // ── Detalle / Tabla ────────────────────────────────────────────────────
+  function renderDetalle() {
+    const mesId = document.getElementById('fMes').value;
+    let rec = [];
+    if (mesId) rec = allData[mesId] || [];
+    else Object.values(allData).forEach(a => rec.push(...a));
+
+    // Poblar filtro proveedor
+    const provs = [...new Set(rec.map(r=>r.proveedor))].sort();
+    const fProv = document.getElementById('fProv');
+    const curP  = fProv.value;
+    fProv.innerHTML = `<option value="">Todos</option>` + provs.map(p=>`<option value="${p}" ${p===curP?'selected':''}>${p}</option>`).join('');
+
+    filtrar(rec);
+  }
+
+  function filtrar(baseRec) {
+    const mes  = document.getElementById('fMes').value;
+    const tipo = document.getElementById('fTipo').value;
+    const sla  = document.getElementById('fSLA').value;
+    const prov = document.getElementById('fProv').value;
+
+    let rec = baseRec;
+    if (!rec) {
+      if (mes) rec = allData[mes] || [];
+      else { rec = []; Object.values(allData).forEach(a => rec.push(...a)); }
+    }
+
+    // Solo registros consistentes en la tabla principal
+    let consistentes = rec.filter(r => !r.is_inconsistente);
+    if (tipo) consistentes = consistentes.filter(r=>r.tipo===tipo);
+    if (sla==='ok')   consistentes = consistentes.filter(r=>r.sla_ok_12===true);
+    if (sla==='late')  consistentes = consistentes.filter(r=>r.sla_ok_12===false);
+    if (prov) consistentes = consistentes.filter(r=>r.proveedor===prov);
+
+    document.getElementById('fCount').textContent = `${consistentes.length} registros`;
+
+    const tbody = document.getElementById('tblBody');
+    tbody.innerHTML = consistentes.length ? consistentes.map(r => {
+      const ok  = r.sla_ok_12;
+      const cls = ok===true?'row-ok':ok===false?'row-late':'';
+      const tc  = r.tipo==='PT'?'var(--pt)':'var(--mp)';
+      return `<tr class="${cls}">
+        <td><b>${r.documento}</b></td>
+        <td>${r.fecha||'—'}</td>
+        <td>${r.semana||'—'}</td>
+        <td style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.proveedor}">${r.proveedor}</td>
+        <td><span style="color:${tc};font-weight:600;font-size:.78rem">${r.tipo||'—'}</span></td>
+        <td>${r.skus||0}</td>
+        <td>${(r.unidades||0).toLocaleString('es-CO')}</td>
+        <td>${r.hora_cita||'—'}</td>
+        <td>${r.hora_inicio||'—'}</td>
+        <td><b>${r.hora_tt||'—'}</b></td>
+        <td>${r.tiempo_h!=null?parseFloat(r.tiempo_h).toFixed(2):'—'}</td>
+        <td>${ok===true?'<span class="badge badge-ok">✅ OK</span>':ok===false?'<span class="badge badge-late">❌ Tarde</span>':'<span class="badge badge-warn">Sin dato</span>'}</td>
+        <td>${r.is_cert?'<span style="color:var(--warn)">✅</span>':'—'}</td>
+      </tr>`;
+    }).join('') : `<tr><td colspan="13"><div class="empty"><div class="empty-icon">🔍</div><p>Sin registros con los filtros aplicados</p></div></td></tr>`;
+
+    // Cuarentena
+    const incs = rec.filter(r => r.is_inconsistente);
+    const secC = document.getElementById('secCuarentena');
+    const wrapC = document.getElementById('tblCuarentenaWrap');
+    if (incs.length) {
+      secC.style.display = 'flex';
+      wrapC.style.display = 'block';
+      document.getElementById('cntCuarentena').textContent = incs.length;
+      document.getElementById('tblCuarentena').innerHTML = incs.map(r => `
+        <tr class="row-inc">
+          <td><b>${r.documento}</b></td>
+          <td>${r.fecha||'—'}</td>
+          <td>${r.proveedor}</td>
+          <td>${r.tipo||'—'}</td>
+          <td style="color:var(--warn);font-size:.78rem">${r.causal_inconsistencia||'Sin causal registrada'}</td>
+        </tr>`).join('');
+    } else {
+      secC.style.display = 'none';
+      wrapC.style.display = 'none';
+    }
+  }
+
+  function limpiarFiltros() {
+    ['fTipo','fSLA','fProv'].forEach(id=>document.getElementById(id).value='');
+    renderDetalle();
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  window.addEventListener('load', async () => {
+    const user = await checkAuth(); if (!user) return;
+    renderUser();
+    await cargarDatos();
+    const ol = document.getElementById('overlay');
+    setTimeout(()=>ol.classList.add('out'),100);
+    setTimeout(()=>ol.remove(),500);
+  });
+</script>
+</body>
+</html>
