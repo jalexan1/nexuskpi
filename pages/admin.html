@@ -376,7 +376,14 @@
             if (dtFin < dtIni) dtFin.setDate(dtFin.getDate() + 1);
 
             tiempoH = tiempoEfectivoHoras(dtIni, dtFin);
-            if (tiempoH === null) { causal='Tiempo calculado = 0'; esInc=true; }
+            // Si el proceso cruzó medianoche y la llegada es antes de las 08:00,
+            // tiempoEfectivoHoras retorna null. Usar la porción efectiva del día de entrada: horaRef → 17:00
+            if (tiempoH === null && dtFin > dtIni) {
+              const [y2,mo2,d2] = r.fecha.split('-').map(Number);
+              const fin17 = new Date(y2, mo2-1, d2, 17, 0, 0);
+              if (dtIni < fin17) tiempoH = Math.round((fin17 - dtIni) / 36000) / 100;
+            }
+            if (tiempoH === null || tiempoH <= 0) { causal='Tiempo calculado = 0'; esInc=true; }
             else slaOk = tiempoH <= CONFIG.kpiRec001.slaHoras;
           } catch(e) { causal=`Error: ${e.message}`; esInc=true; }
         }
