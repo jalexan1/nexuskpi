@@ -11,18 +11,13 @@
     .eyebrow { font-size:.68rem; letter-spacing:.18em; text-transform:uppercase; color:var(--warn); font-weight:600; margin-bottom:.3rem; }
     .admin-hdr h1 { font-size:clamp(1.3rem,4vw,1.6rem); font-weight:800; }
     .admin-hdr p  { color:var(--muted); font-size:.82rem; margin-top:.25rem; margin-bottom:1.5rem; }
-
-    /* Grid 2 columnas → 1 en móvil */
     .grid-admin { display:grid; grid-template-columns:1fr 1fr; gap:1.1rem; }
     @media (max-width:799px)  { .grid-admin { grid-template-columns:1fr; } }
     @media (min-width:1920px) { .grid-admin { grid-template-columns:1fr 1fr 1fr; } }
     .full-col { grid-column:1/-1; }
-
     .a-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg); padding:1.25rem; animation:fadeUp .4s ease both; }
     .a-card h2 { font-size:.95rem; font-weight:700; margin-bottom:.25rem; display:flex; align-items:center; gap:.45rem; }
     .a-card .desc { font-size:.77rem; color:var(--muted); margin-bottom:1rem; line-height:1.5; }
-
-    /* Drop zone */
     .drop-zone {
       border:2px dashed var(--border2); border-radius:var(--r);
       padding:1.5rem 1rem; text-align:center; cursor:pointer;
@@ -34,8 +29,6 @@
     .drop-zone p    { font-size:.79rem; color:var(--muted); }
     .drop-zone .hint{ font-size:.67rem; color:var(--dim); margin-top:.2rem; }
     .drop-zone .picked { font-size:.79rem; color:var(--accent); font-weight:600; margin-top:.4rem; word-break:break-all; }
-
-    /* Meta row */
     .meta-row { display:flex; gap:.55rem; align-items:center; flex-wrap:wrap; margin-bottom:.8rem; }
     .meta-row label { font-size:.66rem; color:var(--muted); letter-spacing:.07em; text-transform:uppercase; white-space:nowrap; }
     .meta-sel,.meta-inp {
@@ -45,21 +38,38 @@
       padding:.38rem .65rem; outline:none; flex:1; min-width:100px; max-width:200px;
     }
     .meta-sel:focus,.meta-inp:focus { border-color:var(--accent); }
-
-    /* Progress */
+    .btn-row { display:flex; gap:.5rem; flex-wrap:wrap; }
     .prog-box { display:none; background:var(--surface2); border-radius:var(--r-sm); padding:.65rem .85rem; margin-top:.65rem; font-size:.79rem; }
     .prog-box.show { display:block; }
     .prog-bar-wrap { height:5px; background:var(--surface3); border-radius:3px; margin-top:.35rem; overflow:hidden; }
     .prog-bar { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:3px; transition:width .3s; }
-
-    /* Result */
     .result-box { display:none; border-radius:var(--r-sm); padding:.65rem .85rem; font-size:.79rem; margin-top:.65rem; line-height:1.5; }
     .result-box.show { display:block; }
     .result-box.ok   { background:rgba(0,255,136,.08); border:1px solid rgba(0,255,136,.25); color:var(--ok); }
     .result-box.warn { background:rgba(255,176,32,.08); border:1px solid rgba(255,176,32,.25); color:var(--warn); }
     .result-box.err  { background:rgba(255,77,109,.08); border:1px solid rgba(255,77,109,.25); color:var(--error); }
 
-    /* ETL Log */
+    /* ── Reprocesar card ── */
+    .repro-card {
+      background:var(--surface);
+      border:1px solid rgba(0,212,255,.2);
+      border-radius:var(--r-lg); padding:1.25rem;
+      animation:fadeUp .4s .12s ease both;
+    }
+    .repro-card h2 { font-size:.95rem; font-weight:700; margin-bottom:.25rem; display:flex; align-items:center; gap:.45rem; }
+    .repro-card .desc { font-size:.77rem; color:var(--muted); margin-bottom:1rem; line-height:1.5; }
+    .repro-mes-list { display:flex; flex-direction:column; gap:.45rem; margin-bottom:.85rem; }
+    .repro-mes-item {
+      display:flex; align-items:center; justify-content:space-between;
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:var(--r-sm); padding:.6rem .85rem; gap:.75rem; flex-wrap:wrap;
+    }
+    .repro-mes-item .mes-info { display:flex; flex-direction:column; gap:.1rem; }
+    .repro-mes-item .mes-label { font-family:'Syne',sans-serif; font-size:.82rem; font-weight:700; color:var(--text); }
+    .repro-mes-item .mes-stats { font-size:.7rem; color:var(--muted); }
+    .repro-mes-item .mes-stats .inc { color:var(--warn); font-weight:600; }
+    .repro-mes-item .mes-stats .ok  { color:var(--ok);   font-weight:600; }
+
     .log-area {
       background:var(--bg); border:1px solid var(--border); border-radius:var(--r-sm);
       padding:.65rem; font-family:'Courier New',monospace; font-size:.7rem;
@@ -70,8 +80,6 @@
     .lg-err { color:var(--error); }
     .lg-inf { color:var(--accent); }
     .lg-warn{ color:var(--warn); }
-
-    /* Users */
     .usr-toolbar { display:flex; align-items:center; gap:.5rem; margin-bottom:.8rem; flex-wrap:wrap; }
     .usr-toolbar h2 { flex:1; font-size:.95rem; font-weight:700; }
     .usr-form { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); padding:1rem; display:none; margin-bottom:.8rem; }
@@ -82,7 +90,7 @@
     .uf-field input,.uf-field select {
       width:100%; background:var(--surface); border:1px solid var(--border2);
       border-radius:var(--r-sm); color:var(--text);
-      font-family:'DM Sans',sans-serif; font-size:16px; /* evita zoom iOS */
+      font-family:'DM Sans',sans-serif; font-size:16px;
       padding:.42rem .65rem; outline:none;
     }
     .uf-field input:focus,.uf-field select:focus { border-color:var(--accent); }
@@ -107,12 +115,12 @@
     <div class="admin-hdr">
       <div class="eyebrow">⚙️ Panel de Administración</div>
       <h1>Gestión del Sistema</h1>
-      <p>Carga de archivos Excel, gestión de usuarios y log de operaciones</p>
+      <p>Carga de archivos Excel, reprocesamiento de meses, gestión de usuarios y log de operaciones</p>
     </div>
 
     <div class="grid-admin">
 
-      <!-- Carga Seguimiento -->
+      <!-- ── Carga Seguimiento ── -->
       <div class="a-card" style="animation-delay:.05s">
         <h2>📤 Cargar Seguimiento KPI</h2>
         <p class="desc">Sube <code>SEGUIMIENTO_CLICK_MES.xlsx</code>. El ETL corre en el browser y hace upsert en Supabase.</p>
@@ -136,15 +144,35 @@
           <p class="hint">SEGUIMIENTO_CLICK_*.xlsx · Máx. 50 MB</p>
           <p class="picked" id="lblKpi"></p>
         </div>
-        <button class="btn btn-primary btn-full-mobile" onclick="subirKpi()">⬆️ Procesar y Cargar</button>
+        <div class="btn-row">
+          <button class="btn btn-primary" style="flex:1" onclick="subirKpi()">⬆️ Procesar y Cargar</button>
+        </div>
         <div class="prog-box" id="progKpi"><span id="progKpiTxt">Procesando…</span><div class="prog-bar-wrap"><div class="prog-bar" id="barKpi" style="width:0%"></div></div></div>
         <div class="result-box" id="resKpi"></div>
       </div>
 
-      <!-- Carga WMS -->
+      <!-- ── Reprocesar mes ── -->
+      <div class="repro-card">
+        <h2>🔄 Reprocesar Mes</h2>
+        <p class="desc">
+          Recalcula <code>tiempo_h</code>, <code>sla_ok_12</code> e <code>is_inconsistente</code> con la lógica ETL actual
+          para los registros que ya están en Supabase — <b>sin necesidad de subir el archivo de nuevo</b>.
+          Útil cuando se corrige la lógica del ETL.
+        </p>
+
+        <!-- Lista de meses disponibles en Supabase -->
+        <div class="repro-mes-list" id="reproMesList">
+          <div style="text-align:center;color:var(--muted);font-size:.8rem;padding:.5rem">Cargando meses…</div>
+        </div>
+
+        <div class="prog-box" id="progRepro"><span id="progReproTxt">Reprocesando…</span><div class="prog-bar-wrap"><div class="prog-bar" id="barRepro" style="width:0%"></div></div></div>
+        <div class="result-box" id="resRepro"></div>
+      </div>
+
+      <!-- ── Carga WMS ── -->
       <div class="a-card" style="animation-delay:.1s">
         <h2>🏭 Cargar Base WMS</h2>
-        <p class="desc">Sube <code>WMS_BASE_CLICK_COSMETICS.xlsx</code> para los futuros KPIs de inventario. ETL pendiente al recibir el archivo fuente.</p>
+        <p class="desc">Sube <code>WMS_BASE_CLICK_COSMETICS.xlsx</code>. ETL pendiente al recibir el archivo fuente.</p>
         <div class="meta-row">
           <label>Corte</label>
           <input type="date" class="meta-inp" id="wmsDate"/>
@@ -160,12 +188,11 @@
           <p class="hint">WMS_BASE_CLICK_COSMETICS.xlsx · Máx. 100 MB</p>
           <p class="picked" id="lblWms"></p>
         </div>
-        <button class="btn btn-primary btn-full-mobile" onclick="subirWms()">⬆️ Cargar Base WMS</button>
-        <div class="prog-box" id="progWms"><span id="progWmsTxt">Procesando…</span><div class="prog-bar-wrap"><div class="prog-bar" id="barWms" style="width:0%"></div></div></div>
+        <button class="btn btn-primary" style="width:100%" onclick="subirWms()">⬆️ Cargar Base WMS</button>
         <div class="result-box" id="resWms"></div>
       </div>
 
-      <!-- Usuarios -->
+      <!-- ── Usuarios ── -->
       <div class="a-card full-col" style="animation-delay:.15s">
         <div class="usr-toolbar">
           <h2>👥 Gestión de Usuarios</h2>
@@ -192,10 +219,10 @@
         </div></div>
       </div>
 
-      <!-- Log ETL -->
+      <!-- ── Log ETL ── -->
       <div class="a-card full-col" style="animation-delay:.2s">
         <h2>📋 Log de Cargues</h2>
-        <p class="desc">Historial de las últimas operaciones de carga realizadas en el sistema.</p>
+        <p class="desc">Historial de las últimas operaciones de carga y reprocesamiento.</p>
         <div class="log-area" id="etlLog"></div>
         <div style="margin-top:.6rem;display:flex;gap:.45rem;flex-wrap:wrap">
           <button class="btn" onclick="loadEtlLog()">🔄 Refrescar</button>
@@ -213,7 +240,7 @@
 <script>
   applyTheme();
 
-  // Drag & Drop
+  // ── Drag & Drop ────────────────────────────────────────────────────────
   function onDragOver(e,id){ e.preventDefault(); document.getElementById(id).classList.add('over'); }
   function onDragLeave(id)  { document.getElementById(id).classList.remove('over'); }
   function onDrop(e,inputId,zoneId) {
@@ -228,10 +255,10 @@
     if(f) document.getElementById(labelId).textContent=`📎 ${f.name} (${(f.size/1024/1024).toFixed(1)} MB)`;
   }
 
+  // ── Helpers UI ─────────────────────────────────────────────────────────
   function showProg(pId,bId,tId,pct,msg){ document.getElementById(pId).classList.add('show'); document.getElementById(bId).style.width=pct+'%'; document.getElementById(tId).textContent=msg; }
   function hideProg(id){ setTimeout(()=>document.getElementById(id).classList.remove('show'),1200); }
   function showRes(id,type,msg){ const el=document.getElementById(id); el.className=`result-box show ${type}`; el.innerHTML=msg; }
-
   function addLog(msg,tipo='inf') {
     const log=document.getElementById('etlLog');
     const d=document.createElement('div'); d.className='lg-'+tipo;
@@ -239,8 +266,34 @@
     log.appendChild(d); log.scrollTop=log.scrollHeight;
   }
 
+  // ── Upsert en lotes ────────────────────────────────────────────────────
+  async function upsertLotes(records, onProgress) {
+    const BATCH=100; let ins=0, act=0;
+    const existentes = await sb.rest('GET',`kpi_recibo_recepciones?mes_id=eq.${records[0].mes_id}&select=documento`);
+    const setExist   = new Set((existentes||[]).map(r=>r.documento));
+    for(let i=0;i<records.length;i+=BATCH){
+      const lote=records.slice(i,i+BATCH);
+      await sb.rest('POST','kpi_recibo_recepciones',lote,{'Prefer':'resolution=merge-duplicates,return=minimal'});
+      lote.forEach(r=>setExist.has(r.documento)?act++:ins++);
+      if(onProgress) onProgress(Math.round(((i+lote.length)/records.length)*100));
+    }
+    return {ins, act};
+  }
+
+  async function upsertResumen(mesId, stats) {
+    const label=CONFIG.meses.find(m=>m.id===mesId)?.label||mesId;
+    await sb.rest('POST','kpi_recibo_resumen',[{
+      mes_id:mesId, label,
+      total_oc:stats.total, ok_12h:stats.ok, late_12h:stats.late,
+      trt_12h:stats.trt, avg_h:stats.avgH, max_h:stats.maxH,
+      cert_count:stats.cert, pt_total:stats.pt, mp_total:stats.mp,
+      last_etl_at:new Date().toISOString(), updated_at:new Date().toISOString(),
+    }],{'Prefer':'resolution=merge-duplicates,return=minimal'});
+  }
+
+  // ── Carga desde archivo Excel ──────────────────────────────────────────
   async function subirKpi() {
-    const file=document.getElementById('fileKpi').files[0];
+    const file =document.getElementById('fileKpi').files[0];
     const mesId=document.getElementById('uploadMes').value;
     if(!file){ showRes('resKpi','warn','⚠️ Selecciona un archivo primero.'); return; }
     const runId=`run-${Date.now()}`;
@@ -251,62 +304,189 @@
     } catch(e){ addLog('Advertencia etl_log: '+e.message,'warn'); }
     try {
       const buf=await file.arrayBuffer();
-      showProg('progKpi','barKpi','progKpiTxt',20,'Validando estructura…');
+      showProg('progKpi','barKpi','progKpiTxt',20,'Aplicando lógica ETL…');
       const {records,inconsistencias,stats}=procesarExcel(buf,mesId);
       addLog(`ETL: ${records.length} docs · ${inconsistencias.length} inconsistencias`,'inf');
-      showProg('progKpi','barKpi','progKpiTxt',55,'Verificando en Supabase…');
-      const existentes=await sb.rest('GET',`kpi_recibo_recepciones?mes_id=eq.${mesId}&select=documento`);
-      const setExist=new Set((existentes||[]).map(r=>r.documento));
-      showProg('progKpi','barKpi','progKpiTxt',70,'Cargando en Supabase…');
-      const BATCH=100; let ins=0,act=0;
-      for(let i=0;i<records.length;i+=BATCH){
-        const lote=records.slice(i,i+BATCH);
-        await sb.rest('POST','kpi_recibo_recepciones',lote,{'Prefer':'resolution=merge-duplicates,return=minimal'});
-        const p=70+Math.round((i/records.length)*22);
-        showProg('progKpi','barKpi','progKpiTxt',p,`Lote ${Math.ceil(i/BATCH)+1}…`);
-        lote.forEach(r=>setExist.has(r.documento)?act++:ins++);
-      }
+      showProg('progKpi','barKpi','progKpiTxt',55,'Cargando en Supabase…');
+      const {ins,act}=await upsertLotes(records,(p)=>showProg('progKpi','barKpi','progKpiTxt',55+Math.round(p*0.35),`Cargando…`));
       showProg('progKpi','barKpi','progKpiTxt',95,'Actualizando resumen…');
-      const labelMes=CONFIG.meses.find(m=>m.id===mesId)?.label||mesId;
-      await sb.rest('POST','kpi_recibo_resumen',[{
-        mes_id:mesId,label:labelMes,total_oc:stats.total,ok_12h:stats.ok,
-        late_12h:stats.late,trt_12h:stats.trt,avg_h:stats.avgH,max_h:stats.maxH,
-        cert_count:stats.cert,pt_total:stats.pt,mp_total:stats.mp,
-        last_etl_at:new Date().toISOString(),updated_at:new Date().toISOString()
-      }],{'Prefer':'resolution=merge-duplicates,return=minimal'});
-      await sb.rest('PATCH',`etl_log?run_id=eq.${runId}`,{
-        estado:'completado',docs_procesados:records.length,docs_insertados:ins,
-        docs_actualizados:act,completado_at:new Date().toISOString()
-      },{'Prefer':'return=minimal'});
+      await upsertResumen(mesId,stats);
+      await sb.rest('PATCH',`etl_log?run_id=eq.${runId}`,{estado:'completado',docs_procesados:records.length,docs_insertados:ins,docs_actualizados:act,completado_at:new Date().toISOString()},{'Prefer':'return=minimal'});
       showProg('progKpi','barKpi','progKpiTxt',100,'Completado');
       hideProg('progKpi');
       const sem=stats.trt!=null?(stats.trt>=95?'🟢':stats.trt>=80?'🟡':'🔴'):'';
       showRes('resKpi','ok',`✅ <b>Completado</b><br>📥 Insertados: <b>${ins}</b> · 🔄 Actualizados: <b>${act}</b><br>⚠️ Cuarentena: <b>${inconsistencias.length}</b><br>${sem} TRT: <b>${stats.trt??'—'}%</b> · T.Prom: <b>${stats.avgH??'—'}h</b>`);
       addLog(`✓ ${mesId}: TRT ${stats.trt}% · ${ins} ins · ${act} act · ${inconsistencias.length} cuarentena`,'ok');
+      cargarMesesReprocesar(); // refrescar lista
     } catch(e) {
       hideProg('progKpi');
       showRes('resKpi','err','❌ '+e.message);
       addLog('✗ '+e.message,'err');
-      try { await sb.rest('PATCH',`etl_log?run_id=eq.${runId}`,{estado:'error',error_msg:e.message,completado_at:new Date().toISOString()},{'Prefer':'return=minimal'}); } catch{}
     }
   }
 
+  // ── REPROCESAR MES ─────────────────────────────────────────────────────
+  /**
+   * Trae todos los registros del mes desde Supabase,
+   * recalcula tiempo_h, sla_ok_12, is_inconsistente con la lógica ETL actual
+   * y hace upsert — sin necesidad de subir el archivo de nuevo.
+   */
+  async function reprocesarMes(mesId) {
+    const label = CONFIG.meses.find(m=>m.id===mesId)?.label || mesId;
+    addLog(`Reprocesando ${label}…`, 'inf');
+    showProg('progRepro','barRepro','progReproTxt', 10, `Leyendo ${label} desde Supabase…`);
+
+    try {
+      // 1. Traer todos los registros del mes desde Supabase
+      const rows = await sb.rest('GET', `kpi_recibo_recepciones?mes_id=eq.${mesId}&order=documento.asc`);
+      if (!rows || !rows.length) { showRes('resRepro','warn','⚠️ No hay registros para este mes en Supabase.'); hideProg('progRepro'); return; }
+
+      showProg('progRepro','barRepro','progReproTxt', 30, `Recalculando ${rows.length} registros…`);
+
+      // 2. Recalcular tiempo_h, sla_ok_12, is_inconsistente para cada registro
+      const { inicioH, finH, festivos } = CONFIG.jornada;
+      const recalculados = rows.map(r => {
+        let tiempoH=null, slaOk=null, causal=null, esInc=false;
+
+        if (!r.fecha) {
+          causal='Fecha vacía'; esInc=true;
+        } else if (!r.hora_inicio && !r.hora_cita) {
+          causal='HORA CITA y HORA INICIO vacías'; esInc=true;
+        } else if (!r.hora_tt) {
+          causal='HORA TT vacía'; esInc=true;
+        } else {
+          try {
+            const horaRef = r.hora_cita || r.hora_inicio;
+            const [rh, rm] = horaRef.split(':').map(Number);
+            const [th, tm] = r.hora_tt.split(':').map(Number);
+            const [y, mo, d] = r.fecha.split('-').map(Number);
+            const dtIni = new Date(y, mo-1, d, rh, rm, 0);
+            let   dtFin = new Date(y, mo-1, d, th, tm, 0);
+
+            // Cruce de medianoche
+            if (dtFin < dtIni) dtFin.setDate(dtFin.getDate() + 1);
+
+            tiempoH = tiempoEfectivoHoras(dtIni, dtFin);
+            if (tiempoH === null) { causal='Tiempo calculado = 0'; esInc=true; }
+            else slaOk = tiempoH <= CONFIG.kpiRec001.slaHoras;
+          } catch(e) { causal=`Error: ${e.message}`; esInc=true; }
+        }
+
+        return {
+          ...r,
+          tiempo_h:             tiempoH,
+          sla_ok_12:            slaOk,
+          is_inconsistente:     esInc,
+          causal_inconsistencia:causal,
+          updated_at:           new Date().toISOString(),
+        };
+      });
+
+      showProg('progRepro','barRepro','progReproTxt', 60, 'Guardando en Supabase…');
+
+      // 3. Upsert en lotes
+      const BATCH=100;
+      for(let i=0;i<recalculados.length;i+=BATCH){
+        await sb.rest('POST','kpi_recibo_recepciones',recalculados.slice(i,i+BATCH),{'Prefer':'resolution=merge-duplicates,return=minimal'});
+        const p=60+Math.round(((i+BATCH)/recalculados.length)*30);
+        showProg('progRepro','barRepro','progReproTxt',Math.min(p,90),`Guardando lote ${Math.ceil(i/BATCH)+1}…`);
+      }
+
+      showProg('progRepro','barRepro','progReproTxt', 95, 'Actualizando resumen…');
+
+      // 4. Recalcular stats y actualizar resumen
+      const medidos  = recalculados.filter(r=>r.sla_ok_12!==null);
+      const ok       = medidos.filter(r=>r.sla_ok_12).length;
+      const late     = medidos.filter(r=>!r.sla_ok_12).length;
+      const times    = recalculados.filter(r=>r.tiempo_h).map(r=>r.tiempo_h);
+      const incCount = recalculados.filter(r=>r.is_inconsistente).length;
+      const stats = {
+        total:   recalculados.length,
+        ok, late,
+        trt:     medidos.length>0 ? Math.round(ok/medidos.length*1000)/10 : null,
+        avgH:    times.length ? Math.round(times.reduce((a,b)=>a+b,0)/times.length*100)/100 : null,
+        maxH:    times.length ? Math.max(...times) : null,
+        cert:    recalculados.filter(r=>r.is_cert).length,
+        pt:      recalculados.filter(r=>r.tipo==='PT').length,
+        mp:      recalculados.filter(r=>r.tipo==='MP').length,
+      };
+      await upsertResumen(mesId, stats);
+
+      showProg('progRepro','barRepro','progReproTxt',100,'Completado');
+      hideProg('progRepro');
+
+      const sem = stats.trt!=null ? (stats.trt>=95?'🟢':stats.trt>=80?'🟡':'🔴') : '';
+      showRes('resRepro','ok',
+        `✅ <b>${label} reprocesado</b><br>
+         📊 Total: <b>${recalculados.length}</b> registros<br>
+         ⚠️ Cuarentena: <b>${incCount}</b><br>
+         ${sem} TRT: <b>${stats.trt??'—'}%</b> · T.Prom: <b>${stats.avgH??'—'}h</b>`
+      );
+      addLog(`✓ Reprocesado ${label}: TRT ${stats.trt}% · cuarentena ${incCount}`,'ok');
+      cargarMesesReprocesar(); // refrescar contadores
+
+    } catch(e) {
+      hideProg('progRepro');
+      showRes('resRepro','err','❌ '+e.message);
+      addLog('✗ Reproceso error: '+e.message,'err');
+    }
+  }
+
+  // Cargar lista de meses disponibles en Supabase para reprocesar
+  async function cargarMesesReprocesar() {
+    const lista = document.getElementById('reproMesList');
+    try {
+      const resumen = await sb.rest('GET','kpi_recibo_resumen?order=mes_id.asc');
+      if (!resumen || !resumen.length) {
+        lista.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">No hay meses cargados en Supabase aún.</div>`;
+        return;
+      }
+
+      // Para cada mes, contar inconsistencias
+      const counts = await Promise.all(
+        resumen.map(r =>
+          sb.rest('GET',`kpi_recibo_recepciones?mes_id=eq.${r.mes_id}&is_inconsistente=eq.true&select=id`)
+            .then(rows => ({ mesId:r.mes_id, label:r.label||r.mes_id, trt:r.trt_12h, total:r.total_oc, inc:(rows||[]).length }))
+            .catch(()=>({ mesId:r.mes_id, label:r.label||r.mes_id, trt:r.trt_12h, total:r.total_oc, inc:'?' }))
+        )
+      );
+
+      lista.innerHTML = counts.map(c => `
+        <div class="repro-mes-item">
+          <div class="mes-info">
+            <span class="mes-label">${c.label}</span>
+            <span class="mes-stats">
+              ${c.total} registros ·
+              TRT <b>${c.trt??'—'}%</b> ·
+              Cuarentena: <span class="${c.inc>0?'inc':'ok'}">${c.inc}</span>
+            </span>
+          </div>
+          <button class="btn btn-sm" onclick="reprocesarMes('${c.mesId}')">🔄 Reprocesar</button>
+        </div>`
+      ).join('');
+
+    } catch(e) {
+      lista.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">No se pudo conectar a Supabase.</div>`;
+    }
+  }
+
+  // ── WMS ────────────────────────────────────────────────────────────────
   async function subirWms() {
     const file=document.getElementById('fileWms').files[0];
     if(!file){ showRes('resWms','warn','⚠️ Selecciona un archivo primero.'); return; }
-    showRes('resWms','warn',`⏳ Archivo recibido: ${file.name}. El ETL WMS se implementará al entregar el archivo fuente.`);
+    showRes('resWms','warn',`⏳ Archivo recibido: ${file.name}. ETL WMS pendiente de implementación.`);
     addLog(`WMS recibido: ${file.name} — ETL pendiente`,'warn');
   }
 
+  // ── Usuarios ───────────────────────────────────────────────────────────
   async function loadUsuarios() {
     try {
       const data=await sb.rest('GET','kpi_usuarios?order=created_at.asc');
       renderUsersTable(data||[]);
     } catch {
-      document.getElementById('usrBody').innerHTML=`<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem;font-size:.78rem">Conecta Supabase para ver usuarios.<br><small>Ver sección 2.3 del manual.</small></td></tr>`;
+      document.getElementById('usrBody').innerHTML=`<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem;font-size:.78rem">Conecta Supabase para ver usuarios.</td></tr>`;
     }
   }
-
   function renderUsersTable(users) {
     const tbody=document.getElementById('usrBody');
     if(!users.length){ tbody.innerHTML=`<tr><td colspan="4"><div class="empty"><p>Sin usuarios registrados</p></div></td></tr>`; return; }
@@ -317,9 +497,7 @@
       <td><button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.id}','${u.email}')">Eliminar</button></td>
     </tr>`).join('');
   }
-
   function toggleUsrForm(){ document.getElementById('usrForm').classList.toggle('show'); }
-
   async function crearUsuario() {
     const email=document.getElementById('uEmail').value.trim();
     const pass=document.getElementById('uPass').value;
@@ -335,7 +513,6 @@
       toggleUsrForm(); loadUsuarios();
     } catch(e){ res.className='result-box show err'; res.textContent='❌ '+e.message; }
   }
-
   async function eliminarUsuario(id,email) {
     if(!confirm(`¿Eliminar "${email}"?`)) return;
     try {
@@ -344,6 +521,7 @@
     } catch(e){ alert('Error: '+e.message); }
   }
 
+  // ── ETL Log ────────────────────────────────────────────────────────────
   async function loadEtlLog() {
     try {
       const rows=await sb.rest('GET','etl_log?order=iniciado_at.desc&limit=25');
@@ -356,11 +534,14 @@
     } catch(e){ addLog('No se pudo cargar el log: '+e.message,'warn'); }
   }
 
+  // ── Init ───────────────────────────────────────────────────────────────
   window.addEventListener('load', async () => {
     const user=await checkAuth('admin'); if(!user) return;
     renderUser();
     document.getElementById('wmsDate').value=new Date().toISOString().split('T')[0];
-    loadEtlLog(); loadUsuarios();
+    cargarMesesReprocesar();
+    loadEtlLog();
+    loadUsuarios();
     const ol=document.getElementById('overlay');
     setTimeout(()=>ol.classList.add('out'),200);
     setTimeout(()=>ol.remove(),600);
