@@ -3,6 +3,13 @@
 -- Ejecutar en: Supabase Dashboard → SQL Editor
 -- ============================================================
 
+Ejecutar el siguiente SQL en SQL Editor:
+-- Columnas nuevas en kpi_recibo_recepciones
+ALTER TABLE kpi_recibo_recepciones
+  ADD COLUMN IF NOT EXISTS is_inconsistente      BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS causal_inconsistencia TEXT;
+
+
 -- ── KPI-REC-001: Recepciones ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS kpi_recibo_recepciones (
   id                      BIGSERIAL PRIMARY KEY,
