@@ -281,14 +281,23 @@
   }
 
   async function upsertResumen(mesId, stats) {
-    const label=CONFIG.meses.find(m=>m.id===mesId)?.label||mesId;
-    await sb.rest('POST','kpi_recibo_resumen',[{
-      mes_id:mesId, label,
+    const label   = CONFIG.meses.find(m=>m.id===mesId)?.label || mesId;
+    const payload = {
+      label,
       total_oc:stats.total, ok_12h:stats.ok, late_12h:stats.late,
       trt_12h:stats.trt, avg_h:stats.avgH, max_h:stats.maxH,
       cert_count:stats.cert, pt_total:stats.pt, mp_total:stats.mp,
       last_etl_at:new Date().toISOString(), updated_at:new Date().toISOString(),
-    }],{'Prefer':'resolution=merge-duplicates,return=minimal'});
+    };
+    // Verificar si ya existe el mes en el resumen
+    const existe = await sb.rest('GET', `kpi_recibo_resumen?mes_id=eq.${mesId}&select=id`);
+    if (existe && existe.length > 0) {
+      // Actualizar registro existente
+      await sb.rest('PATCH', `kpi_recibo_resumen?mes_id=eq.${mesId}`, payload, {'Prefer':'return=minimal'});
+    } else {
+      // Insertar nuevo
+      await sb.rest('POST', 'kpi_recibo_resumen', [{...payload, mes_id:mesId}], {'Prefer':'return=minimal'});
+    }
   }
 
   // ── Carga desde archivo Excel ──────────────────────────────────────────
