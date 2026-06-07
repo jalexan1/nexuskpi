@@ -1,576 +1,844 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <title>NexusKPI — KPI-INV-002</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="../styles/base.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    /* ── KPI header ── */
-    .kpi-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem;flex-wrap:wrap}
-    .kpi-hdr h1{font-size:clamp(1rem,3vw,1.25rem);font-weight:800;display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
-    .kpi-hdr-sub{font-size:.76rem;color:var(--muted);margin-top:.15rem}
-    .kpi-actions{display:flex;gap:.4rem;align-items:center;flex-shrink:0;flex-wrap:wrap}
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>KPI-INV-002 · Exactitud de Inventario — NexusKPI</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ──────────────────────────────────────────────
+   DESIGN TOKENS — idénticos al base.css existente
+   ────────────────────────────────────────────── */
+:root {
+  --navy:   #1B3A6B;
+  --teal:   #0D7A5F;
+  --gold:   #E8A020;
+  --red:    #C0392B;
+  --green:  #1A8754;
+  --amber:  #D97706;
+  --bg:     #F0F3F8;
+  --card:   #FFFFFF;
+  --text:   #1A1A2E;
+  --muted:  #6B7280;
+  --border: #D5DCE8;
+}
 
-    /* ── Mes selector ── */
-    .mes-bar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:1rem}
-    .mes-bar label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
-    .mes-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:.35rem .65rem;cursor:pointer;outline:none}
-    .mes-sel:focus{border-color:var(--accent)}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* ── HERO ── */
-    .hero{display:grid;grid-template-columns:220px 1fr;gap:1rem;margin-bottom:1rem}
-    @media(max-width:799px){.hero{grid-template-columns:1fr}}
-    @media(min-width:1920px){.hero{grid-template-columns:280px 1fr}}
+html { font-size: 16px; }
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  -webkit-tap-highlight-color: transparent;
+}
 
-    .semaforo{background:var(--surface);border:2px solid var(--border);border-radius:var(--r);padding:1.25rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.5rem;text-align:center}
-    .sem-lbl{font-size:.65rem;font-weight:700;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
-    .sem-num{font-size:clamp(3rem,8vw,4rem);font-weight:900;line-height:1}
-    .sem-unit{font-size:1.1rem;color:var(--muted)}
-    .sem-meta{font-size:.72rem;color:var(--muted);line-height:1.7}
-    .sem-pill{font-weight:700;font-size:.78rem;padding:.3rem 1rem;border-radius:20px;border:2px solid}
-    .sem-pill.verde  {background:rgba(0,255,136,.12);color:var(--ok);border-color:var(--ok)}
-    .sem-pill.amarillo{background:rgba(255,176,32,.12);color:var(--warn);border-color:var(--warn)}
-    .sem-pill.rojo   {background:rgba(255,77,109,.12);color:var(--error);border-color:var(--error)}
-    .sem-barra-wrap{width:100%;height:7px;background:var(--surface3);border-radius:9999px;overflow:hidden}
-    .sem-barra{height:7px;border-radius:9999px;transition:width .5s ease}
-    .sem-delta{font-size:.72rem;color:var(--muted)}
-    .formula-box{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:.65rem .75rem;width:100%;text-align:center}
-    .formula-txt{font-size:.72rem;font-weight:700;color:var(--accent)}
+/* ── HEADER ── */
+.header {
+  background: linear-gradient(135deg, var(--navy) 0%, #0f2952 60%, var(--navy) 100%);
+  color: #fff;
+}
+.header-inner {
+  max-width: 1280px; margin: 0 auto;
+  padding: 20px 32px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.header-badge  { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: #93C5FD; text-transform: uppercase; }
+.header-title  { font-size: 20px; font-weight: 800; line-height: 1.2; }
+.header-sub    { font-size: 11px; color: #BFD4F0; margin-top: 2px; }
+.header-right  { display: flex; gap: 18px; align-items: center; }
+.header-meta   { text-align: right; font-size: 11px; color: #BFD4F0; line-height: 1.8; }
+.kpi-code      { background: var(--teal); padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 700; }
 
-    /* ── Métricas grid ── */
-    .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
-    @media(min-width:1200px){.metrics-grid{grid-template-columns:1fr 1fr}}
-    .mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem 1rem;display:flex;flex-direction:column;gap:.15rem}
-    .mc .ml{font-size:.63rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase}
-    .mc .mv{font-size:clamp(1.2rem,2.5vw,1.6rem);font-weight:800;line-height:1.1}
-    .mc .ms{font-size:.68rem;color:var(--muted)}
+/* ── TOOLBAR (mes + volver) ── */
+.toolbar {
+  background: #fff; border-bottom: 1px solid var(--border);
+  padding: 10px 32px; display: flex; align-items: center; gap: 14px;
+}
+.toolbar label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.toolbar select {
+  font-size: 13px; padding: 6px 10px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--bg); color: var(--text);
+  cursor: pointer; touch-action: manipulation;
+}
+.toolbar a {
+  margin-left: auto; font-size: 12px; font-weight: 700;
+  color: var(--navy); text-decoration: none;
+}
+.toolbar a:hover { text-decoration: underline; }
 
-    /* ── Charts ── */
-    .charts-2col{display:grid;grid-template-columns:3fr 2fr;gap:.75rem;margin-bottom:.75rem}
-    @media(max-width:799px){.charts-2col{grid-template-columns:1fr}}
-    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
-    .sec-title{font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.85rem;display:flex;align-items:center;gap:.5rem}
-    .sec-title .bar{width:4px;height:14px;border-radius:2px;flex-shrink:0;background:var(--accent)}
+/* ── LOADING / ERROR ── */
+#loading, #error-box {
+  max-width: 640px; margin: 60px auto; text-align: center;
+  padding: 40px 32px; background: var(--card);
+  border-radius: 12px; border: 1px solid var(--border);
+}
+#loading { color: var(--muted); }
+.spinner {
+  width: 40px; height: 40px; border: 4px solid var(--border);
+  border-top-color: var(--teal); border-radius: 50%;
+  animation: spin .8s linear infinite; margin: 0 auto 16px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#error-box { border-color: var(--red); color: var(--red); display: none; }
 
-    /* ── Sección card ── */
-    .sec-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1rem}
+/* ── MAIN ── */
+main { max-width: 1280px; margin: 0 auto; padding: 24px 32px 48px; }
 
-    /* ── Rankings ── */
-    .ranks-2col{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem}
-    @media(max-width:599px){.ranks-2col{grid-template-columns:1fr}}
-    .rank-item{display:flex;align-items:center;gap:.6rem;padding:.4rem 0;border-bottom:1px dashed var(--border);font-size:.78rem}
-    .rank-item:last-child{border-bottom:none}
-    .rank-num{width:20px;height:20px;border-radius:50%;background:var(--surface3);color:var(--muted);font-size:.65rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-    .rank-num.bad{background:rgba(255,77,109,.15);color:var(--error)}
-    .rank-sku{font-weight:600;flex:1;font-size:.78rem}
+/* ── HERO ── */
+.hero { display: grid; grid-template-columns: 320px 1fr; gap: 18px; margin-bottom: 20px; }
+.semaforo-card {
+  background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(27,58,107,.08);
+  padding: 28px 22px; display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+}
+.sem-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; }
+.sem-value { font-size: 62px; font-weight: 900; line-height: 1; }
+.sem-unit  { font-size: 17px; color: var(--muted); }
+.sem-meta  { font-size: 12px; color: var(--muted); }
+.sem-pill  {
+  background: #D1FAE5; color: #065F46; font-weight: 700; font-size: 13px;
+  padding: 5px 16px; border-radius: 20px; border: 2px solid #10B981;
+}
+.sem-pill.amber { background: #FEF3C7; color: #92400E; border-color: #F59E0B; }
+.sem-pill.red   { background: #FEE2E2; color: #991B1B; border-color: #EF4444; }
 
-    /* ── Detail grid ── */
-    .detail-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.75rem;margin-bottom:1rem}
-    @media(max-width:799px){.detail-grid{grid-template-columns:1fr 1fr}}
-    @media(max-width:479px){.detail-grid{grid-template-columns:1fr}}
-    .detail-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
-    .detail-card h4{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.65rem}
-    .di{display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px dashed var(--border);font-size:.78rem}
-    .di:last-child{border-bottom:none}
-    .dk{color:var(--muted)}.dv{font-weight:700;color:var(--text)}
+.metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.metric-card {
+  background: var(--card); border-radius: 10px; border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(27,58,107,.06);
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 4px;
+}
+.metric-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+.metric-value { font-size: 28px; font-weight: 800; line-height: 1.1; }
+.metric-sub   { font-size: 11px; color: var(--muted); }
 
-    /* ── Tags ── */
-    .tag{display:inline-flex;align-items:center;padding:.15rem .55rem;border-radius:20px;font-size:.68rem;font-weight:600}
-    .tag-ok  {background:rgba(0,255,136,.1);color:var(--ok);border:1px solid rgba(0,255,136,.25)}
-    .tag-crit{background:rgba(255,77,109,.1);color:var(--error);border:1px solid rgba(255,77,109,.25)}
-    .tag-warn{background:rgba(255,176,32,.1);color:var(--warn);border:1px solid rgba(255,176,32,.25)}
-    .tag-cap {background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.25)}
-    .tag-body{background:rgba(123,47,255,.1);color:var(--accent2);border:1px solid rgba(123,47,255,.25)}
-    .tag-kit {background:rgba(255,176,32,.1);color:var(--warn);border:1px solid rgba(255,176,32,.25)}
-    .tag-mp  {background:rgba(255,77,109,.1);color:var(--error);border:1px solid rgba(255,77,109,.25)}
-    .tag-otro{background:var(--surface3);color:var(--muted);border:1px solid var(--border)}
+/* ── PROGRESS ── */
+.progress-wrap { background: #E5E7EB; border-radius: 9999px; height: 8px; overflow: hidden; }
+.progress-bar  { height: 8px; border-radius: 9999px; transition: width .4s ease; }
+.prog-ok    { background: var(--green); }
+.prog-alert { background: var(--amber); }
+.prog-red   { background: var(--red);   }
 
-    /* ── Tabla conteos ── */
-    .wt{width:100%;border-collapse:collapse}
-    .wt thead tr{background:var(--surface3)}
-    .wt th{padding:.5rem .75rem;font-size:.68rem;font-weight:700;text-align:center;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-    .wt th:first-child{text-align:left}
-    .wt td{padding:.5rem .75rem;font-size:.78rem;text-align:center;border-bottom:1px solid var(--border)}
-    .wt td:first-child{text-align:left;font-weight:600}
-    .wt .tr-tot{background:var(--surface2);font-weight:700}
-    .wt .tr-tot td{border-bottom:none}
+/* ── FORMULA BOX ── */
+.formula-box {
+  background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+  border: 1.5px solid #93C5FD; border-radius: 10px;
+  padding: 12px 16px; margin-top: 8px; text-align: center; width: 100%;
+}
+.formula-text { font-size: 12px; font-weight: 700; color: var(--navy); }
 
-    /* ── Error / Loading ── */
-    .err-box{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25);border-radius:var(--r);padding:1rem;color:var(--error);font-size:.82rem;display:none}
-    .err-box.show{display:block}
-  </style>
+/* ── CHARTS ROW ── */
+.charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; margin-bottom: 20px; }
+.chart-card {
+  background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(27,58,107,.06); padding: 20px 22px;
+}
+.card-title {
+  font-size: 12px; font-weight: 700; color: var(--navy);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.card-title-accent { width: 4px; height: 16px; border-radius: 2px; background: var(--teal); flex-shrink: 0; }
+
+/* ── TABLE ── */
+.table-card {
+  background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(27,58,107,.06);
+  padding: 20px 22px; margin-bottom: 20px; overflow-x: auto;
+}
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead tr { background: var(--navy); color: #fff; }
+thead th {
+  padding: 9px 11px; text-align: center; font-weight: 700;
+  font-size: 11px; letter-spacing: .5px; white-space: nowrap;
+}
+thead th:first-child { text-align: left; border-radius: 4px 0 0 4px; }
+thead th:last-child  { border-radius: 0 4px 4px 0; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+tbody tr:hover { background: #F8FAFF; }
+tbody td { padding: 8px 11px; text-align: center; }
+tbody td:first-child { text-align: left; font-weight: 500; }
+.tfoot-row td { font-weight: 700; background: #F0F3F8; border-top: 2px solid var(--border); }
+
+/* ── TAGS ── */
+.tag { display: inline-block; padding: 2px 9px; border-radius: 12px; font-weight: 700; font-size: 11px; }
+.tag-ok    { background: #D1FAE5; color: #065F46; }
+.tag-alert { background: #FEF3C7; color: #92400E; }
+.tag-crit  { background: #FEE2E2; color: #991B1B; }
+.tag-cap   { background: #DBEAFE; color: #1E40AF; }
+.tag-body  { background: #EDE9FE; color: #5B21B6; }
+.tag-kit   { background: #FEF3C7; color: #92400E; }
+.tag-mp    { background: #FCE7F3; color: #9D174D; }
+.tag-otro  { background: #F3F4F6; color: #374151; }
+
+/* ── RANKINGS ── */
+.skus-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 20px; }
+.rank-card {
+  background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(27,58,107,.06); padding: 20px 22px;
+}
+.rank-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 12px;
+}
+.rank-item:last-child { border-bottom: none; }
+.rank-num {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--navy);
+  color: #fff; font-size: 10px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.rank-num.bad { background: var(--red); }
+.rank-sku  { font-weight: 700; flex: 1; }
+.rank-bar-wrap { width: 72px; background: #E5E7EB; border-radius: 4px; height: 6px; overflow: hidden; }
+.rank-bar { height: 6px; border-radius: 4px; }
+
+/* ── DETAIL GRID ── */
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-bottom: 20px; }
+.detail-card {
+  background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(27,58,107,.06); padding: 18px 20px;
+}
+.detail-card h4 {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--muted); margin-bottom: 10px;
+}
+.detail-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 12px;
+}
+.detail-item:last-child { border-bottom: none; }
+.detail-key { color: var(--muted); }
+.detail-val { font-weight: 700; color: var(--navy); }
+
+/* ── COLORS ── */
+.c-navy  { color: var(--navy);  }
+.c-teal  { color: var(--teal);  }
+.c-amber { color: var(--amber); }
+.c-red   { color: var(--red);   }
+.c-green { color: var(--green); }
+
+/* ── FOOTER ── */
+footer {
+  background: var(--navy); color: #93C5FD; text-align: center;
+  font-size: 11px; padding: 14px; margin-top: 8px;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .hero         { grid-template-columns: 1fr; }
+  .charts-row   { grid-template-columns: 1fr; }
+  .skus-row     { grid-template-columns: 1fr; }
+  .detail-grid  { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  main            { padding: 16px 14px 40px; }
+  .header-inner   { padding: 14px 16px; }
+  .toolbar        { padding: 8px 14px; }
+  .metrics-grid   { grid-template-columns: 1fr; }
+  .detail-grid    { grid-template-columns: 1fr; }
+}
+@media (min-width: 1920px) {
+  html { font-size: 18px; }
+  .metrics-grid { grid-template-columns: 1fr 1fr 1fr 1fr; }
+}
+</style>
 </head>
 <body>
 
-<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando datos…</p></div></div>
-
-<div class="page">
-  <header class="topbar">
-    <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
-    <span class="topbar-sep">/</span>
-    <span class="topbar-title">KPI-INV-002</span>
-    <div class="topbar-spacer"></div>
-    <div class="theme-bar">
-      <button class="theme-btn" onclick="setTheme('')">🌙</button>
-      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+<!-- ══ HEADER ══ -->
+<div class="header">
+  <div class="header-inner">
+    <div>
+      <div class="header-badge">Logistics &amp; Service × Click Cosmetics · B2B</div>
+      <div class="header-title">KPI-INV-002 · Exactitud de Inventario (EI %)</div>
+      <div class="header-sub" id="hdr-sub">Proceso: Almacenamiento / Inventario Cíclico · Bodega 021</div>
     </div>
-    <div class="topbar-user" id="topbarUser"></div>
-  </header>
-
-  <main class="content">
-
-    <!-- KPI Header -->
-    <div class="kpi-hdr">
-      <div>
-        <h1>🗃️ KPI-INV-002 <span class="badge badge-info" style="font-size:.6rem">EN VIVO</span></h1>
-        <div class="kpi-hdr-sub" id="hdr-sub">Exactitud de Inventario (EI %) · Inventario Cíclico · Bodega 021</div>
-      </div>
-      <div class="kpi-actions">
-        <span style="font-size:.72rem;color:var(--muted)" id="hdr-meta"></span>
-      </div>
+    <div class="header-right">
+      <div class="header-meta" id="hdr-meta">Cargando datos…</div>
+      <span class="kpi-code">KPI-INV-002</span>
     </div>
-
-    <!-- Selector período -->
-    <div class="mes-bar">
-      <label for="sel-periodo">Período</label>
-      <select class="mes-sel" id="sel-periodo"></select>
-      <div style="flex:1"></div>
-      <a href="menu.html" class="btn btn-sm">← Menú</a>
-    </div>
-
-    <!-- Error box -->
-    <div class="err-box" id="error-box"><span id="error-msg"></span></div>
-
-    <!-- ── HERO ── -->
-    <div class="hero" id="dashboard" style="display:none">
-      <div class="semaforo">
-        <div class="sem-lbl">Exactitud de Inventario</div>
-        <div class="sem-num" id="ei-val">—</div>
-        <div class="sem-unit">%</div>
-        <div class="sem-meta">Meta: ≥ 99%</div>
-        <div class="sem-barra-wrap"><div class="sem-barra" id="ei-bar" style="width:0%"></div></div>
-        <div class="sem-pill" id="status-pill">—</div>
-        <div class="sem-delta" id="var-meta">—</div>
-        <div style="font-size:.7rem;color:var(--muted);text-align:center" id="status-msg"></div>
-        <div class="formula-box">
-          <div class="formula-txt">EI (%) = SKUs sin diferencia ÷ Total SKUs × 100</div>
-          <div style="font-size:.68rem;color:var(--muted);margin-top:.2rem" id="formula-detalle">—</div>
-        </div>
-      </div>
-      <div class="metrics-grid">
-        <div class="mc">
-          <div class="ml">Total SKUs Contados</div>
-          <div class="mv" id="met-total">—</div>
-          <div class="ms" id="met-total-sub">—</div>
-        </div>
-        <div class="mc">
-          <div class="ml">SKUs Exactos</div>
-          <div class="mv sem-verde" id="met-exactos">—</div>
-          <div class="ms">Cantidad física = WMS</div>
-        </div>
-        <div class="mc">
-          <div class="ml">SKUs con Diferencia</div>
-          <div class="mv sem-rojo" id="met-difs">—</div>
-          <div class="ms">Requieren ajuste en WMS</div>
-        </div>
-        <div class="mc">
-          <div class="ml">Conteo ID / Fecha</div>
-          <div class="mv" style="font-size:1rem" id="met-conteo">—</div>
-          <div class="ms" id="met-operario">—</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── CHARTS ── -->
-    <div class="charts-2col" id="sec-charts" style="display:none">
-      <div class="chart-card">
-        <div class="sec-title"><div class="bar"></div>Exactitud por Familia de Producto</div>
-        <canvas id="chart-familias" height="90"></canvas>
-      </div>
-      <div class="chart-card">
-        <div class="sec-title"><div class="bar"></div>Distribución — SKUs con Diferencia</div>
-        <canvas id="chart-doughnut" height="140"></canvas>
-      </div>
-    </div>
-
-    <!-- ── TABLA CONTEOS ── -->
-    <div class="sec-card" id="sec-tabla" style="display:none">
-      <div class="sec-title">
-        <div class="bar"></div>
-        Registro de Conteos — Período <span id="lbl-periodo">—</span>
-      </div>
-      <div class="tbl-wrap"><div class="tbl-scroll">
-        <table class="wt">
-          <thead>
-            <tr>
-              <th>Fecha Conteo</th><th>Conteo ID</th><th>Semana</th>
-              <th># SKUs Contados</th><th># SKUs Exactos</th><th>Con Error</th>
-              <th>EI (%)</th><th>Meta</th><th>Δ pp</th><th>Estado</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-conteos"></tbody>
-          <tfoot id="tfoot-conteos"></tfoot>
-        </table>
-      </div></div>
-    </div>
-
-    <!-- ── RANKINGS ── -->
-    <div class="ranks-2col" id="sec-ranks" style="display:none">
-      <div class="sec-card" style="margin-bottom:0">
-        <div class="sec-title"><div class="bar" style="background:var(--ok)"></div>SKUs 100% Exactos (Top 8)</div>
-        <div id="skus-best"></div>
-      </div>
-      <div class="sec-card" style="margin-bottom:0">
-        <div class="sec-title"><div class="bar" style="background:var(--error)"></div>SKUs con Mayor Diferencia</div>
-        <div id="skus-worst"></div>
-      </div>
-    </div>
-
-    <!-- ── DETAIL GRID ── -->
-    <div class="detail-grid" id="sec-detail" style="display:none">
-      <div class="detail-card">
-        <h4>📐 Fórmula y resultado</h4>
-        <div class="di"><span class="dk">Fórmula</span><span class="dv">SKUs exactos / Total × 100</span></div>
-        <div class="di"><span class="dk">Resultado</span><span class="dv" id="det-resultado">—</span></div>
-        <div class="di"><span class="dk">Meta</span><span class="dv">≥ 99%</span></div>
-        <div class="di"><span class="dk">Δ vs meta</span><span class="dv" id="det-delta">—</span></div>
-        <div class="di"><span class="dk">Semáforo</span><span class="dv" id="det-semaforo">—</span></div>
-      </div>
-      <div class="detail-card">
-        <h4>📦 Exactitud por Familia</h4>
-        <div class="di"><span class="dk">Capilar (PTC)</span><span class="dv" id="fam-cap">—</span></div>
-        <div class="di"><span class="dk">Body (PTB)</span><span class="dv" id="fam-body">—</span></div>
-        <div class="di"><span class="dk">Kit (PTK)</span><span class="dv" id="fam-kit">—</span></div>
-        <div class="di"><span class="dk">Materia Prima (MP)</span><span class="dv" id="fam-mp">—</span></div>
-        <div class="di"><span class="dk">Otro (PT)</span><span class="dv" id="fam-otro">—</span></div>
-      </div>
-      <div class="detail-card">
-        <h4>⚠️ Tipo de Diferencia</h4>
-        <div class="di"><span class="dk">Sobrante físico</span><span class="dv" id="tipo-sobre">—</span></div>
-        <div class="di"><span class="dk">Faltante físico</span><span class="dv" id="tipo-falta">—</span></div>
-        <div class="di"><span class="dk">Acción recomendada</span><span class="dv" id="accion-rec">—</span></div>
-        <div class="di"><span class="dk">Fuente</span><span class="dv">ConteoInvxID · WMS</span></div>
-        <div class="di"><span class="dk">Bodega</span><span class="dv">021 — Click Cosmetics</span></div>
-      </div>
-    </div>
-
-    <!-- ── DETALLE SKUs (colapsable) ── -->
-    <div class="sec-card" id="sec-skus" style="display:none">
-      <div class="sec-title" style="justify-content:space-between;cursor:pointer" onclick="toggleDetalle()">
-        <div style="display:flex;align-items:center;gap:.5rem">
-          <div class="bar"></div>
-          Detalle por SKU — Conteo activo
-        </div>
-        <button class="btn btn-sm" id="toggle-lbl">▼ Mostrar</button>
-      </div>
-      <div id="detalle-wrapper" style="display:none">
-        <div class="tbl-wrap"><div class="tbl-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Referencia</th><th>Descripción</th><th>Familia</th><th>EAN</th>
-                <th>Cant. WMS</th><th>Cant. Física</th><th>Diferencia</th><th>Estado</th>
-              </tr>
-            </thead>
-            <tbody id="tbody-detalle"></tbody>
-          </table>
-        </div></div>
-      </div>
-    </div>
-
-  </main>
+  </div>
 </div>
 
-<script src="../config/config.js"></script>
-<script src="../utils/auth.js"></script>
-<script>
-applyTheme();
+<!-- ══ TOOLBAR ══ -->
+<div class="toolbar">
+  <label for="sel-periodo">Período:</label>
+  <select id="sel-periodo"></select>
+  <a href="menu.html">← Volver al menú</a>
+</div>
 
-// ── Helpers ───────────────────────────────────────────────────────────────
+<!-- ══ LOADING ══ -->
+<div id="loading">
+  <div class="spinner"></div>
+  <p>Cargando datos de inventario desde Supabase…</p>
+</div>
+<div id="error-box">
+  <p id="error-msg">Error al cargar datos.</p>
+</div>
+
+<!-- ══ DASHBOARD (oculto hasta cargar) ══ -->
+<main id="dashboard" style="display:none">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="semaforo-card">
+      <div class="sem-label">Exactitud de Inventario</div>
+      <div class="sem-value" id="ei-val">—</div>
+      <div class="sem-unit">%</div>
+      <div class="sem-meta">Meta: ≥ 99%</div>
+      <div style="width:100%;margin:6px 0">
+        <div class="progress-wrap">
+          <div class="progress-bar" id="ei-bar" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="sem-pill" id="status-pill">—</div>
+      <div style="font-size:12px;font-weight:700" id="var-meta">—</div>
+      <div style="font-size:11px;color:var(--muted);text-align:center" id="status-msg"></div>
+      <div class="formula-box">
+        <div class="formula-text">EI (%) = SKUs sin diferencia ÷ Total SKUs × 100</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px" id="formula-detalle">—</div>
+      </div>
+    </div>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Total SKUs Contados</div>
+        <div class="metric-value c-navy" id="met-total">—</div>
+        <div class="metric-sub" id="met-total-sub">—</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">SKUs Exactos</div>
+        <div class="metric-value c-green" id="met-exactos">—</div>
+        <div class="metric-sub">Cantidad física = WMS</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">SKUs con Diferencia</div>
+        <div class="metric-value c-red" id="met-difs">—</div>
+        <div class="metric-sub">Requieren ajuste en WMS</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Conteo ID / Fecha</div>
+        <div class="metric-value c-teal" style="font-size:18px" id="met-conteo">—</div>
+        <div class="metric-sub" id="met-operario">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="card-title">
+        <div class="card-title-accent"></div>
+        Exactitud por Familia de Producto
+      </div>
+      <canvas id="chart-familias" height="90"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">
+        <div class="card-title-accent"></div>
+        Distribución — SKUs con Diferencia
+      </div>
+      <canvas id="chart-doughnut" height="140"></canvas>
+    </div>
+  </div>
+
+  <!-- TABLA CONTEOS POR SEMANA -->
+  <div class="table-card">
+    <div class="card-title">
+      <div class="card-title-accent"></div>
+      Registro de Conteos — Período <span id="lbl-periodo">—</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha Conteo</th>
+          <th>Conteo ID</th>
+          <th>Semana</th>
+          <th># SKUs Contados</th>
+          <th># SKUs Exactos</th>
+          <th>SKUs con Error</th>
+          <th>EI (%)</th>
+          <th>Meta (%)</th>
+          <th>Δ pp</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-conteos"></tbody>
+      <tfoot id="tfoot-conteos"></tfoot>
+    </table>
+  </div>
+
+  <!-- RANKINGS -->
+  <div class="skus-row">
+    <div class="rank-card">
+      <div class="card-title">
+        <div class="card-title-accent" style="background:var(--green)"></div>
+        SKUs 100% Exactos (Top 8)
+      </div>
+      <div id="skus-best"></div>
+    </div>
+    <div class="rank-card">
+      <div class="card-title">
+        <div class="card-title-accent" style="background:var(--red)"></div>
+        SKUs con Mayor Diferencia
+      </div>
+      <div id="skus-worst"></div>
+    </div>
+  </div>
+
+  <!-- DETAIL GRID -->
+  <div class="detail-grid">
+    <div class="detail-card">
+      <h4>📐 Fórmula y resultado</h4>
+      <div class="detail-item"><span class="detail-key">Fórmula</span><span class="detail-val">SKUs exactos / Total × 100</span></div>
+      <div class="detail-item"><span class="detail-key">Resultado</span><span class="detail-val" id="det-resultado">—</span></div>
+      <div class="detail-item"><span class="detail-key">Meta</span><span class="detail-val">≥ 99%</span></div>
+      <div class="detail-item"><span class="detail-key">Δ vs meta</span><span class="detail-val" id="det-delta">—</span></div>
+      <div class="detail-item"><span class="detail-key">Semáforo</span><span class="detail-val" id="det-semaforo">—</span></div>
+    </div>
+    <div class="detail-card">
+      <h4>📦 Exactitud por Familia</h4>
+      <div class="detail-item"><span class="detail-key">Capilar (PTC)</span><span class="detail-val" id="fam-cap">—</span></div>
+      <div class="detail-item"><span class="detail-key">Body (PTB)</span><span class="detail-val" id="fam-body">—</span></div>
+      <div class="detail-item"><span class="detail-key">Kit (PTK)</span><span class="detail-val" id="fam-kit">—</span></div>
+      <div class="detail-item"><span class="detail-key">Materia Prima (MP)</span><span class="detail-val" id="fam-mp">—</span></div>
+      <div class="detail-item"><span class="detail-key">Otro (PT)</span><span class="detail-val" id="fam-otro">—</span></div>
+    </div>
+    <div class="detail-card">
+      <h4>⚠️ Tipo de Diferencia</h4>
+      <div class="detail-item"><span class="detail-key">Sobrante físico</span><span class="detail-val" id="tipo-sobre">—</span></div>
+      <div class="detail-item"><span class="detail-key">Faltante físico</span><span class="detail-val" id="tipo-falta">—</span></div>
+      <div class="detail-item"><span class="detail-key">Acción recomendada</span><span class="detail-val" id="accion-rec">—</span></div>
+      <div class="detail-item"><span class="detail-key">Fuente de datos</span><span class="detail-val">ConteoInvxID</span></div>
+      <div class="detail-item"><span class="detail-key">Bodega</span><span class="detail-val">021 — Click Cosmetics</span></div>
+    </div>
+  </div>
+
+  <!-- TABLA DETALLE SKUs -->
+  <div class="table-card">
+    <div class="card-title" style="justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="card-title-accent"></div>
+        Detalle por SKU — Conteo activo
+      </div>
+      <button onclick="toggleDetalle()" style="font-size:11px;padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer">
+        <span id="toggle-lbl">▼ Mostrar</span>
+      </button>
+    </div>
+    <div id="detalle-wrapper" style="display:none">
+      <table>
+        <thead>
+          <tr>
+            <th>Referencia</th>
+            <th>Descripción</th>
+            <th>Familia</th>
+            <th>EAN</th>
+            <th>Cant. WMS</th>
+            <th>Cant. Física</th>
+            <th>Diferencia</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-detalle"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  NexusKPI · Nacional de Logistics and Service × Click Cosmetics · KPI-INV-002 · Confidencial
+</footer>
+
+<script type="module">
+/* ═══════════════════════════════════════════════════
+   CONFIGURACIÓN — importar desde config.js del proyecto
+   En producción, reemplazar con:
+     import { SUPABASE_URL, SUPABASE_KEY, PERIODOS } from '../config/config.js';
+   ═══════════════════════════════════════════════════ */
+
+// ── CONFIG (temporalmente inline hasta integrar con config.js) ──
+const SUPABASE_URL = window.__NEXUSKPI_URL__ || 'https://husmzwfaaaelqsytajxw.supabase.co';
+const SUPABASE_KEY = window.__NEXUSKPI_KEY__ || 'sb_publishable_aBQJdx_ChbLDojt95lo36g_xrxOSoZB';
+
+const PERIODOS = [
+  { id: '2026-05', label: 'Mayo 2026'  },
+  { id: '2026-06', label: 'Junio 2026' },
+];
+
+// ── HELPERS ──
 const $ = id => document.getElementById(id);
 const fmt = n => Number(n).toLocaleString('es-CO');
 
 function getSem(pct) {
-  if (pct >= 99) return { cls: 'verde',    emoji: '🟢', label: 'BIEN',    col: 'var(--ok)'    };
-  if (pct >= 97) return { cls: 'amarillo', emoji: '🟡', label: 'ALERTA',  col: 'var(--warn)'  };
-  return               { cls: 'rojo',     emoji: '🔴', label: 'CRÍTICO', col: 'var(--error)' };
+  if (pct >= 99) return { cls: '',       emoji: '🟢', label: 'BIEN',    col: 'var(--green)' };
+  if (pct >= 97) return { cls: 'amber',  emoji: '🟡', label: 'ALERTA',  col: 'var(--amber)' };
+  return               { cls: 'red',    emoji: '🔴', label: 'CRÍTICO', col: 'var(--red)'   };
 }
 
 function getFamTag(fam) {
   const m = { CAPILAR:'tag-cap', BODY:'tag-body', KIT:'tag-kit', MATERIA_PRIMA:'tag-mp', OTRO:'tag-otro' };
   return m[fam?.toUpperCase()] || 'tag-otro';
 }
+
 function getFamLabel(fam) {
   const m = { CAPILAR:'Capilar', BODY:'Body', KIT:'Kit', MATERIA_PRIMA:'Mat.Prima', OTRO:'Otro' };
   return m[fam?.toUpperCase()] || fam;
 }
+
 function pctFamStr(total, exactos, difs) {
   if (!total) return '<span style="color:var(--muted)">— Sin datos</span>';
   const p   = ((exactos / total) * 100).toFixed(1);
-  const col = difs === 0 ? 'var(--ok)' : p >= 97 ? 'var(--warn)' : 'var(--error)';
-  return `<span style="color:${col};font-weight:700">${p}% (${difs} dif. / ${total} SKUs)</span>`;
+  const col = difs === 0 ? 'var(--green)' : p >= 97 ? 'var(--amber)' : 'var(--red)';
+  return `<span style="color:${col}">${p}% (${difs} dif. / ${total} SKUs)</span>`;
 }
 
-// ── Secciones visibles ────────────────────────────────────────────────────
-function mostrarSecciones() {
-  ['dashboard','sec-charts','sec-tabla','sec-ranks','sec-detail','sec-skus']
-    .forEach(id => { const el=$(id); if(el) el.style.display=''; });
-}
-function ocultarSecciones() {
-  ['dashboard','sec-charts','sec-tabla','sec-ranks','sec-detail','sec-skus']
-    .forEach(id => { const el=$(id); if(el) el.style.display='none'; });
+// ── SUPABASE FETCH ──
+async function sbFetch(path) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: {
+      'apikey':         SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+    },
+  });
+  if (!res.ok) throw new Error(`Supabase error ${res.status} — ${path}`);
+  return res.json();
 }
 
-// ── Cargar períodos ───────────────────────────────────────────────────────
+// ── CARGAR PERÍODOS DISPONIBLES ──
 async function cargarPeriodos() {
   try {
-    const rows = await sb.rest('GET', 'kpi_inventario_conteos?select=periodo_id&order=periodo_id.desc');
-    const ids  = [...new Set((rows||[]).map(r => r.periodo_id))];
+    const rows = await sbFetch('kpi_inventario_conteos?select=periodo_id&order=periodo_id.desc');
+    const ids  = [...new Set(rows.map(r => r.periodo_id))];
     const sel  = $('sel-periodo');
     sel.innerHTML = '';
-    const todos = ids.length > 0 ? ids : CONFIG.meses.map(m => m.id);
+
+    // Mezclar con PERIODOS del config para etiquetas
+    const todos = ids.length > 0 ? ids : PERIODOS.map(p => p.id);
     todos.forEach(id => {
-      const cfg = CONFIG.meses.find(m => m.id === id);
+      const cfg = PERIODOS.find(p => p.id === id);
       const opt = document.createElement('option');
-      opt.value = id;
+      opt.value       = id;
       opt.textContent = cfg ? cfg.label : id;
       sel.appendChild(opt);
     });
+
     sel.addEventListener('change', () => renderDashboard(sel.value));
-    if (todos.length) renderDashboard(todos[0]);
-  } catch(e) {
+    renderDashboard(todos[0]);
+  } catch (e) {
     mostrarError(e.message);
   }
 }
 
-// ── Render dashboard ──────────────────────────────────────────────────────
+// ── RENDER DASHBOARD ──
 async function renderDashboard(periodoId) {
-  ocultarSecciones();
-  $('error-box').classList.remove('show');
+  $('loading').style.display  = 'block';
+  $('dashboard').style.display = 'none';
+  $('error-box').style.display = 'none';
 
   try {
+    // Cargar datos desde Supabase
     const [conteos, detalles] = await Promise.all([
-      sb.rest('GET', `kpi_inventario_conteos?periodo_id=eq.${encodeURIComponent(periodoId)}&order=fecha_conteo.asc`),
-      sb.rest('GET', `kpi_inventario_detalle?periodo_id=eq.${encodeURIComponent(periodoId)}&select=*`),
+      sbFetch(`kpi_inventario_conteos?periodo_id=eq.${encodeURIComponent(periodoId)}&order=fecha_conteo.asc`),
+      sbFetch(`kpi_inventario_detalle?periodo_id=eq.${encodeURIComponent(periodoId)}&select=*`),
     ]);
 
-    if (!conteos || !conteos.length) {
-      throw new Error(`No hay datos para el período ${periodoId}. Cargá el archivo WMS desde el Panel Admin.`);
+    if (!conteos.length) {
+      throw new Error(`No hay datos para el período ${periodoId}. Cargar el archivo WMS desde el Panel Admin.`);
     }
 
-    // ── Cálculos globales ──
+    // ── CÁLCULOS GLOBALES ──
     const totalSKUs    = detalles.length;
     const totalExactos = detalles.filter(d => d.es_exacto).length;
     const totalDifs    = totalSKUs - totalExactos;
     const eiPct        = totalSKUs > 0 ? parseFloat(((totalExactos / totalSKUs) * 100).toFixed(2)) : 0;
     const sem          = getSem(eiPct);
     const deltaVsMeta  = (eiPct - 99).toFixed(2);
-    const primerConteo = conteos[0];
 
-    // ── KPI header ──
-    $('hdr-sub').textContent = `Exactitud de Inventario · Conteo ID ${primerConteo.id_conteo} · Bodega ${primerConteo.bodega || '021'}`;
-    $('hdr-meta').textContent = `${primerConteo.fecha_conteo} · ${primerConteo.operario || '—'}`;
+    // Primer conteo del período para header
+    const primerConteo = conteos[0];
+    const ultimoConteo = conteos[conteos.length - 1];
+
+    // ── HEADER ──
+    $('hdr-sub').textContent  = `Proceso: Inventario Cíclico · Conteo ID ${primerConteo.id_conteo} · Bodega ${primerConteo.bodega || '021'}`;
+    $('hdr-meta').innerHTML   = `Fecha Conteo: ${primerConteo.fecha_conteo}<br>Contador: ${primerConteo.operario || '—'}<br>Período: ${periodoId}`;
     $('lbl-periodo').textContent = periodoId;
 
-    // ── Semáforo ──
-    $('ei-val').textContent  = eiPct.toFixed(2);
-    $('ei-val').className    = `sem-num sem-${sem.cls}`;
-    $('ei-bar').style.width  = Math.min(eiPct, 100) + '%';
-    $('ei-bar').style.background = sem.cls === 'verde' ? 'var(--ok)' : sem.cls === 'amarillo' ? 'var(--warn)' : 'var(--error)';
+    // ── SEMÁFORO ──
+    $('ei-val').textContent   = eiPct.toFixed(2);
+    $('ei-val').className     = `sem-value c-${sem.cls === '' ? 'green' : sem.cls === 'amber' ? 'amber' : 'red'}`;
+    $('ei-bar').style.width   = Math.min(eiPct, 100) + '%';
+    $('ei-bar').className     = `progress-bar prog-${sem.cls === '' ? 'ok' : sem.cls === 'amber' ? 'alert' : 'red'}`;
     const pill = $('status-pill');
-    pill.className = `sem-pill ${sem.cls}`;
+    pill.className  = 'sem-pill' + (sem.cls ? ' ' + sem.cls : '');
     pill.textContent = `${sem.emoji} ${sem.label}`;
-    $('var-meta').textContent = (eiPct >= 99 ? '+' : '') + deltaVsMeta + ' pp vs meta';
-    $('var-meta').style.color = sem.col;
+    $('var-meta').textContent  = (eiPct >= 99 ? '+' : '') + deltaVsMeta + ' pp vs meta';
+    $('var-meta').style.color  = sem.col;
     $('status-msg').textContent = eiPct >= 99
       ? 'Mantener conteos cíclicos semanales.'
-      : eiPct >= 97 ? 'Plan de mejora. Ajuste en WMS en 24h.'
-      : 'Inventario general inmediato. Auditoría de procesos.';
+      : eiPct >= 97
+        ? 'Plan de mejora. Ajuste en WMS en 24h.'
+        : 'Inventario general inmediato. Auditoría de procesos.';
     $('formula-detalle').textContent = `${totalExactos} ÷ ${totalSKUs} × 100 = ${eiPct.toFixed(2)}%`;
 
-    // ── Métricas ──
-    $('met-total').textContent     = fmt(totalSKUs);
+    // ── MÉTRICAS ──
+    $('met-total').textContent    = fmt(totalSKUs);
     $('met-total-sub').textContent = `${new Set(detalles.map(d => d.id_conteo)).size} conteo(s) · ${primerConteo.bodega || '021'}`;
-    $('met-exactos').textContent   = fmt(totalExactos);
-    $('met-difs').textContent      = fmt(totalDifs);
-    $('met-conteo').textContent    = `ID ${primerConteo.id_conteo}`;
-    $('met-operario').textContent  = primerConteo.fecha_conteo + ' · ' + (primerConteo.operario || '—');
+    $('met-exactos').textContent  = fmt(totalExactos);
+    $('met-difs').textContent     = fmt(totalDifs);
+    $('met-conteo').textContent   = `ID ${primerConteo.id_conteo}`;
+    $('met-operario').textContent = primerConteo.fecha_conteo + ' · ' + (primerConteo.operario || '—');
 
-    // ── Tabla conteos ──
-    const tb = $('tbody-conteos');
-    tb.innerHTML = '';
+    // ── TABLA CONTEOS ──
+    const tbConteos = $('tbody-conteos');
+    tbConteos.innerHTML = '';
     conteos.forEach(c => {
-      const s = getSem(c.ei_pct);
+      const s     = getSem(c.ei_pct);
       const delta = (c.ei_pct - 99).toFixed(2);
-      const tr = document.createElement('tr');
+      const tr    = document.createElement('tr');
       tr.innerHTML = `
-        <td>${c.fecha_conteo}</td><td>${c.id_conteo}</td><td>${c.semana||'—'}</td>
-        <td>${fmt(c.total_skus)}</td><td>${fmt(c.skus_exactos)}</td>
-        <td style="color:${c.skus_diferencia>0?'var(--error)':'var(--ok)'}">${fmt(c.skus_diferencia)}</td>
+        <td>${c.fecha_conteo}</td>
+        <td>${c.id_conteo}</td>
+        <td>${c.semana || '—'}</td>
+        <td>${fmt(c.total_skus)}</td>
+        <td>${fmt(c.skus_exactos)}</td>
+        <td style="color:${c.skus_diferencia > 0 ? 'var(--red)' : 'var(--green)'}">${fmt(c.skus_diferencia)}</td>
         <td style="font-weight:700;color:${s.col}">${parseFloat(c.ei_pct).toFixed(2)}%</td>
         <td>99%</td>
-        <td style="color:${c.ei_pct>=99?'var(--ok)':'var(--error)'}">${c.ei_pct>=99?'+':''}${delta}</td>
-        <td><span class="tag ${c.ei_pct>=99?'tag-ok':c.ei_pct>=97?'tag-warn':'tag-crit'}">${s.emoji} ${s.label}</span></td>`;
-      tb.appendChild(tr);
+        <td style="color:${c.ei_pct >= 99 ? 'var(--green)' : 'var(--red)'}">${c.ei_pct >= 99 ? '+' : ''}${delta}</td>
+        <td><span class="tag ${c.ei_pct >= 99 ? 'tag-ok' : c.ei_pct >= 97 ? 'tag-alert' : 'tag-crit'}">${s.emoji} ${s.label}</span></td>
+      `;
+      tbConteos.appendChild(tr);
     });
+    // Fila total
     const tf = $('tfoot-conteos');
     const semG = getSem(eiPct);
-    tf.innerHTML = `<tr class="tr-tot">
+    tf.innerHTML = `<tr class="tfoot-row">
       <td colspan="3">ACUMULADO PERÍODO</td>
-      <td>${fmt(totalSKUs)}</td><td>${fmt(totalExactos)}</td>
-      <td style="color:${totalDifs>0?'var(--error)':'var(--ok)'}">${fmt(totalDifs)}</td>
+      <td>${fmt(totalSKUs)}</td>
+      <td>${fmt(totalExactos)}</td>
+      <td style="color:${totalDifs > 0 ? 'var(--red)' : 'var(--green)'}">${fmt(totalDifs)}</td>
       <td style="font-weight:700;color:${semG.col}">${eiPct.toFixed(2)}%</td>
       <td>99%</td>
-      <td style="color:${eiPct>=99?'var(--ok)':'var(--error)'}">${eiPct>=99?'+':''}${deltaVsMeta}</td>
-      <td><span class="tag ${eiPct>=99?'tag-ok':eiPct>=97?'tag-warn':'tag-crit'}">${semG.emoji} ${semG.label}</span></td>
+      <td style="color:${eiPct >= 99 ? 'var(--green)' : 'var(--red)'}">${eiPct >= 99 ? '+' : ''}${deltaVsMeta}</td>
+      <td><span class="tag ${eiPct >= 99 ? 'tag-ok' : eiPct >= 97 ? 'tag-alert' : 'tag-crit'}">${semG.emoji} ${semG.label}</span></td>
     </tr>`;
 
-    // ── Familias ──
+    // ── ESTADÍSTICAS POR FAMILIA ──
     const famMap = {};
     detalles.forEach(d => {
-      const f = (d.familia||'OTRO').toUpperCase();
-      if (!famMap[f]) famMap[f] = {total:0,exactos:0,difs:0};
+      const f = (d.familia || 'OTRO').toUpperCase();
+      if (!famMap[f]) famMap[f] = { total: 0, exactos: 0, difs: 0 };
       famMap[f].total++;
-      if (d.es_exacto) famMap[f].exactos++; else famMap[f].difs++;
+      if (d.es_exacto) famMap[f].exactos++;
+      else             famMap[f].difs++;
     });
+
     ['CAPILAR','BODY','KIT','MATERIA_PRIMA','OTRO'].forEach(fam => {
-      const idMap = {CAPILAR:'fam-cap',BODY:'fam-body',KIT:'fam-kit',MATERIA_PRIMA:'fam-mp',OTRO:'fam-otro'};
-      const d = famMap[fam] || {total:0,exactos:0,difs:0};
-      $(idMap[fam]).innerHTML = pctFamStr(d.total, d.exactos, d.difs);
+      const ids = { CAPILAR:'fam-cap', BODY:'fam-body', KIT:'fam-kit', MATERIA_PRIMA:'fam-mp', OTRO:'fam-otro' };
+      const d   = famMap[fam] || { total: 0, exactos: 0, difs: 0 };
+      $(ids[fam]).innerHTML = pctFamStr(d.total, d.exactos, d.difs);
     });
 
-    // ── Tipo diferencia ──
-    const difsList = detalles.filter(d => !d.es_exacto);
-    const sobre = difsList.filter(d => parseFloat(d.qty_fisica) > parseFloat(d.qty_wms)).length;
-    const falta = difsList.filter(d => parseFloat(d.qty_fisica) < parseFloat(d.qty_wms)).length;
-    $('tipo-sobre').innerHTML = `<span style="color:var(--warn)">${sobre} ref(s)</span>`;
-    $('tipo-falta').innerHTML = `<span style="color:var(--error)">${falta} ref(s)</span>`;
-    $('accion-rec').innerHTML = `<span style="color:${semG.col}">${eiPct>=99?'Mantener conteos cíclicos':eiPct>=97?'Ajuste WMS en 24h':'Auditoría + ajuste masivo Kardex'}</span>`;
+    // ── TIPO DE DIFERENCIA ──
+    const difs   = detalles.filter(d => !d.es_exacto);
+    const sobre  = difs.filter(d => parseFloat(d.qty_fisica) > parseFloat(d.qty_wms)).length;
+    const falta  = difs.filter(d => parseFloat(d.qty_fisica) < parseFloat(d.qty_wms)).length;
+    $('tipo-sobre').innerHTML = `<span style="color:var(--amber)">${sobre} ref(s)</span>`;
+    $('tipo-falta').innerHTML = `<span style="color:var(--red)">${falta} ref(s)</span>`;
+    const accion = eiPct >= 99
+      ? 'Mantener conteos cíclicos'
+      : eiPct >= 97
+        ? 'Ajuste WMS en 24h'
+        : 'Auditoría + ajuste masivo Kardex';
+    $('accion-rec').innerHTML = `<span style="color:${semG.col}">${accion}</span>`;
 
-    // ── Detail card ──
-    $('det-resultado').textContent = eiPct.toFixed(2) + '%';
-    $('det-resultado').style.color = semG.col;
-    $('det-delta').textContent = (eiPct>=99?'+':'') + deltaVsMeta + ' pp';
-    $('det-delta').style.color = semG.col;
-    $('det-semaforo').textContent = `${semG.emoji} ${semG.label}`;
+    // ── DETAIL CARD ──
+    $('det-resultado').textContent  = eiPct.toFixed(2) + '%';
+    $('det-resultado').style.color  = semG.col;
+    $('det-delta').textContent      = (eiPct >= 99 ? '+' : '') + deltaVsMeta + ' pp';
+    $('det-delta').style.color      = semG.col;
+    $('det-semaforo').textContent   = `${semG.emoji} ${semG.label}`;
 
-    // ── Rankings ──
-    const bestDiv = $('skus-best');
+    // ── RANKING EXACTOS ──
+    const exactosArr = detalles.filter(d => d.es_exacto).slice(0, 8);
+    const bestDiv    = $('skus-best');
     bestDiv.innerHTML = '';
-    detalles.filter(d => d.es_exacto).slice(0,8).forEach((d,i) => {
-      const el = document.createElement('div');
-      el.className = 'rank-item';
-      el.innerHTML = `<div class="rank-num">${i+1}</div>
-        <div class="rank-sku">${d.referencia}<br><span style="font-weight:400;font-size:.65rem;color:var(--muted)">${(d.descripcion||'').substring(0,40)}</span></div>
-        <span class="tag tag-ok" style="font-size:.65rem">100%</span>`;
-      bestDiv.appendChild(el);
+    exactosArr.forEach((d, i) => {
+      const div = document.createElement('div');
+      div.className = 'rank-item';
+      div.innerHTML = `
+        <div class="rank-num">${i + 1}</div>
+        <div class="rank-sku">${d.referencia}<br>
+          <span style="font-weight:400;font-size:10px;color:var(--muted)">${(d.descripcion||'').substring(0,40)}</span>
+        </div>
+        <span class="tag tag-ok" style="font-size:10px">100% exacto</span>
+      `;
+      bestDiv.appendChild(div);
     });
-    if (!bestDiv.children.length) bestDiv.innerHTML = '<p class="empty">Sin SKUs exactos.</p>';
+    if (!exactosArr.length) bestDiv.innerHTML = '<p style="color:var(--muted);font-size:12px;padding:12px 0">Sin SKUs exactos en este período.</p>';
 
-    const difsArr = detalles.filter(d=>!d.es_exacto)
-      .map(d=>({...d, absDif:Math.abs(parseFloat(d.qty_fisica)-parseFloat(d.qty_wms))}))
-      .sort((a,b)=>b.absDif-a.absDif);
-    const maxDif = difsArr[0]?.absDif || 1;
+    // ── RANKING CON DIFERENCIAS ──
+    const difsArr = detalles
+      .filter(d => !d.es_exacto)
+      .map(d => ({ ...d, absDif: Math.abs(parseFloat(d.qty_fisica) - parseFloat(d.qty_wms)) }))
+      .sort((a, b) => b.absDif - a.absDif);
+    const maxDif  = difsArr.length > 0 ? difsArr[0].absDif : 1;
     const worstDiv = $('skus-worst');
     worstDiv.innerHTML = '';
-    difsArr.slice(0,8).forEach((d,i) => {
-      const diff = parseFloat(d.qty_fisica) - parseFloat(d.qty_wms);
-      const col  = d.absDif > 1000 ? 'var(--error)' : 'var(--warn)';
-      const barW = Math.min(Math.round(d.absDif/maxDif*100),100);
-      const el   = document.createElement('div');
+    difsArr.slice(0, 8).forEach((d, i) => {
+      const qWms  = parseFloat(d.qty_wms);
+      const qFis  = parseFloat(d.qty_fisica);
+      const diff  = qFis - qWms;
+      const pctD  = qWms > 0 ? (Math.abs(diff) / qWms * 100).toFixed(1) : '—';
+      const col   = d.absDif > 1000 ? 'var(--red)' : 'var(--amber)';
+      const barW  = Math.min(Math.round(d.absDif / maxDif * 100), 100);
+      const el    = document.createElement('div');
       el.className = 'rank-item';
-      el.innerHTML = `<div class="rank-num bad">${i+1}</div>
+      el.innerHTML = `
+        <div class="rank-num bad">${i + 1}</div>
         <div class="rank-sku">${d.referencia} — ${(d.descripcion||'').substring(0,26)}<br>
-          <span style="font-weight:400;font-size:.65rem;color:var(--muted)">${diff>0?'Sobrante':'Faltante'}</span></div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="color:${col};font-weight:700;font-size:.75rem">${(diff>0?'+':'')}${fmt(diff)} u.</div>
-          <div style="height:4px;width:60px;background:var(--surface3);border-radius:2px;margin-top:3px">
-            <div style="height:4px;width:${barW}%;background:${col};border-radius:2px"></div></div>
-        </div>`;
+          <span style="font-weight:400;font-size:10px;color:var(--muted)">${d.ubicacion || '—'} · ${diff > 0 ? 'Sobrante' : 'Faltante'}</span>
+        </div>
+        <div style="text-align:right">
+          <div style="color:${col};font-weight:700;font-size:11px">${(diff > 0 ? '+' : '')}${fmt(diff)} u.</div>
+          <div style="color:var(--muted);font-size:10px">${pctD}% dif.</div>
+          <div class="rank-bar-wrap" style="margin-top:4px">
+            <div class="rank-bar" style="width:${barW}%;background:${col}"></div>
+          </div>
+        </div>
+      `;
       worstDiv.appendChild(el);
     });
-    if (!worstDiv.children.length) worstDiv.innerHTML = '<p class="empty" style="color:var(--ok)">✅ Sin diferencias.</p>';
+    if (!difsArr.length) worstDiv.innerHTML = '<p style="color:var(--green);font-size:12px;padding:12px 0">✅ Sin diferencias en este período.</p>';
 
-    // ── Tabla detalle SKUs ──
+    // ── TABLA DETALLE SKUs ──
     const tbDet = $('tbody-detalle');
     tbDet.innerHTML = '';
     detalles.forEach(d => {
-      const qW = parseFloat(d.qty_wms), qF = parseFloat(d.qty_fisica), diff = qF - qW;
-      const tr = document.createElement('tr');
+      const qW   = parseFloat(d.qty_wms);
+      const qF   = parseFloat(d.qty_fisica);
+      const diff  = qF - qW;
+      const tr    = document.createElement('tr');
       tr.innerHTML = `
-        <td><b>${d.referencia}</b></td>
-        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.descripcion||''}">${d.descripcion||'—'}</td>
+        <td><b style="font-size:11px">${d.referencia}</b></td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left"
+            title="${d.descripcion||''}">${d.descripcion||'—'}</td>
         <td><span class="tag ${getFamTag(d.familia)}">${getFamLabel(d.familia)}</span></td>
-        <td style="font-size:.7rem;color:var(--muted)">${d.ean||'—'}</td>
-        <td>${fmt(qW)}</td><td>${fmt(qF)}</td>
-        <td style="font-weight:700;color:${diff<0?'var(--error)':diff>0?'var(--warn)':'var(--ok)'}">
-          ${diff===0?'—':(diff>0?'+':'')+fmt(diff)}</td>
-        <td><span class="tag ${d.es_exacto?'tag-ok':'tag-crit'}">${d.es_exacto?'✅ EXACTO':'❌ DIF.'}</span></td>`;
+        <td style="font-size:10px;color:var(--muted)">${d.ean||'—'}</td>
+        <td>${fmt(qW)}</td>
+        <td>${fmt(qF)}</td>
+        <td style="font-weight:700;color:${diff < 0 ? 'var(--red)' : diff > 0 ? 'var(--amber)' : 'var(--green)'}">
+          ${diff === 0 ? '—' : (diff > 0 ? '+' : '') + fmt(diff)}
+        </td>
+        <td><span class="tag ${d.es_exacto ? 'tag-ok' : 'tag-crit'}">${d.es_exacto ? '✅ EXACTO' : '❌ DIFERENCIA'}</span></td>
+      `;
       tbDet.appendChild(tr);
     });
 
-    // ── Charts ──
+    // ── CHART — Barras por Familia ──
     const famLabels = ['CAPILAR','BODY','KIT','MATERIA_PRIMA','OTRO'];
-    const famEI     = famLabels.map(f => { const d=famMap[f]; return d&&d.total?parseFloat(((d.exactos/d.total)*100).toFixed(1)):0; });
-    const famColors = famEI.map(v => v>=99?'#00FF88':v>=97?'#FFB020':'#FF4D6D');
+    const famEI     = famLabels.map(f => {
+      const d = famMap[f];
+      return d && d.total ? parseFloat(((d.exactos / d.total) * 100).toFixed(1)) : 0;
+    });
+    const famColors = famEI.map(v => v >= 99 ? '#1A8754' : v >= 97 ? '#D97706' : '#C0392B');
 
-    const ctx1 = $('chart-familias');
-    if (ctx1._ci) ctx1._ci.destroy();
-    ctx1._ci = new Chart(ctx1, { type:'bar', data:{
-      labels:['Capilar','Body','Kit','Mat.Prima','Otro'],
-      datasets:[
-        {label:'EI (%)',data:famEI,backgroundColor:famColors,borderWidth:0,borderRadius:5},
-        {label:'Meta 99%',data:famLabels.map(()=>99),type:'line',borderColor:'#FFB020',borderDash:[5,4],borderWidth:2,pointRadius:0,fill:false}
-      ]},
-      options:{responsive:true,plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:12}}},
-        scales:{y:{min:0,max:105,grid:{color:'rgba(255,255,255,.05)'},ticks:{font:{size:10},color:'#7A8BA6',callback:v=>v+'%'}},
-                x:{grid:{display:false},ticks:{font:{size:11},color:'#7A8BA6'}}}}
+    const ctx1 = document.getElementById('chart-familias');
+    if (ctx1._chartInst) ctx1._chartInst.destroy();
+    ctx1._chartInst = new Chart(ctx1, {
+      type: 'bar',
+      data: {
+        labels: ['Capilar','Body','Kit','Mat.Prima','Otro'],
+        datasets: [
+          {
+            label: 'EI (%)',
+            data: famEI,
+            backgroundColor: famColors,
+            borderWidth: 0, borderRadius: 6,
+          },
+          {
+            label: 'Meta 99%',
+            data: famLabels.map(() => 99),
+            type: 'line', borderColor: '#E8A020', borderDash: [6, 4],
+            borderWidth: 2, pointRadius: 0, fill: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 14 } } },
+        scales: {
+          y: { min: 0, max: 105, grid: { color: '#E5E7EB' }, ticks: { font: { size: 10 }, callback: v => v + '%' } },
+          x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        },
+      },
     });
 
-    const difFams = famLabels.filter(f=>famMap[f]&&famMap[f].difs>0);
-    const okFams  = famLabels.filter(f=>!famMap[f]||famMap[f].difs===0);
-    const ctx2 = $('chart-doughnut');
-    if (ctx2._ci) ctx2._ci.destroy();
-    const doughnutData = difFams.length === 0
-      ? {labels:['Sin diferencias ✅'],datasets:[{data:[1],backgroundColor:['#00FF88'],borderWidth:0}]}
-      : {labels:[...difFams.map(f=>getFamLabel(f)+' ('+famMap[f].difs+' dif.)'),...okFams.map(f=>getFamLabel(f)+' OK')],
-         datasets:[{data:[...difFams.map(f=>famMap[f].difs),...okFams.map(()=>0.1)],backgroundColor:['#FF4D6D','#FFB020','#7B2FFF','#00FF88','#00D4FF'],borderWidth:2,borderColor:'rgba(0,0,0,0)'}]};
-    ctx2._ci = new Chart(ctx2, {type:'doughnut',data:doughnutData,
-      options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:10,padding:8,color:'#7A8BA6'}}}}
-    });
+    // ── CHART — Doughnut diferencias ──
+    const difFams = famLabels.filter(f => famMap[f] && famMap[f].difs > 0);
+    const okFams  = famLabels.filter(f => !famMap[f] || famMap[f].difs === 0);
+    const ctx2 = document.getElementById('chart-doughnut');
+    if (ctx2._chartInst) ctx2._chartInst.destroy();
+    if (difFams.length === 0) {
+      // Sin diferencias
+      ctx2._chartInst = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+          labels: ['Sin diferencias ✅'],
+          datasets: [{ data: [1], backgroundColor: ['#1A8754'], borderWidth: 0 }],
+        },
+        options: { responsive: true, cutout: '60%',
+          plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } } } },
+      });
+    } else {
+      const labels = [
+        ...difFams.map(f => getFamLabel(f) + ' (' + famMap[f].difs + ' dif.)'),
+        ...okFams.map(f => getFamLabel(f) + ' OK'),
+      ];
+      const data   = [
+        ...difFams.map(f => famMap[f].difs),
+        ...okFams.map(() => 0.1),
+      ];
+      ctx2._chartInst = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{ data, backgroundColor: ['#C0392B','#D97706','#F59E0B','#1A8754','#0D7A5F'], borderWidth: 2, borderColor: '#fff' }],
+        },
+        options: { responsive: true, cutout: '60%',
+          plugins: { legend: { position: 'bottom', labels: { font: { size: 9 }, boxWidth: 10, padding: 8 } } } },
+      });
+    }
 
-    mostrarSecciones();
+    $('loading').style.display   = 'none';
+    $('dashboard').style.display = 'block';
 
-  } catch(e) {
+  } catch (e) {
     mostrarError(e.message);
   }
 }
 
 function mostrarError(msg) {
-  $('error-box').classList.add('show');
-  $('error-msg').textContent = '⚠️ ' + msg;
+  $('loading').style.display  = 'none';
+  $('error-box').style.display = 'block';
+  $('error-msg').textContent  = '⚠️ ' + msg;
   console.error(msg);
 }
 
-function toggleDetalle() {
-  const w = $('detalle-wrapper'), lbl = $('toggle-lbl');
+// ── TOGGLE DETALLE ──
+window.toggleDetalle = function () {
+  const w   = $('detalle-wrapper');
+  const lbl = $('toggle-lbl');
   const vis = w.style.display !== 'none';
-  w.style.display = vis ? 'none' : '';
-  lbl.textContent = vis ? '▼ Mostrar' : '▲ Ocultar';
-}
+  w.style.display   = vis ? 'none' : '';
+  lbl.textContent   = vis ? '▼ Mostrar' : '▲ Ocultar';
+};
 
-// ── Init ──────────────────────────────────────────────────────────────────
-window.addEventListener('load', async () => {
-  const user = await checkAuth(); if (!user) return;
-  renderUser();
-  await cargarPeriodos();
-  const ol = document.getElementById('overlay');
-  setTimeout(() => ol.classList.add('out'), 100);
-  setTimeout(() => ol.remove(), 500);
-});
+// ── INIT ──
+cargarPeriodos();
 </script>
 </body>
 </html>

@@ -244,6 +244,50 @@
         <div class="result-box" id="resInv"></div>
       </div>
 
+
+      <!-- ── Carga KPI-DES-003 Nivel de Servicio ── -->
+      <div class="a-card" style="animation-delay:.16s">
+        <h2>🏭 Cargar Nivel de Servicio (KPI-DES-003)</h2>
+        <p class="desc">
+          Sube <code>SEGUIMIENTO_CLICK_MES.xlsx</code>. El ETL lee las hojas
+          <code>ALISTAMIENTO</code> (col. Facturado, PROCESO=B2B) y <code>PICKING WMS</code>
+          (col. cantidad), cruza por Comprobante y calcula el NS%.
+        </p>
+        <div class="meta-row">
+          <label>Período</label>
+          <select class="meta-sel" id="desMes">
+            <option value="2026-03">Marzo 2026</option>
+            <option value="2026-04">Abril 2026</option>
+            <option value="2026-05" selected>Mayo 2026</option>
+            <option value="2026-06">Junio 2026</option>
+          </select>
+        </div>
+        <div class="drop-zone" id="dropDes"
+             onclick="document.getElementById('fileDes').click()"
+             ondragover="onDragOver(event,'dropDes')"
+             ondragleave="onDragLeave('dropDes')"
+             ondrop="onDrop(event,'fileDes','dropDes')">
+          <input type="file" id="fileDes" accept=".xlsx,.xls"
+                 onchange="onFilePicked('fileDes','lblDes')"/>
+          <div class="drop-icon">🏭</div>
+          <p>Toca para seleccionar o arrastra el archivo</p>
+          <p class="hint">SEGUIMIENTO_CLICK_*.xlsx · Máx. 50 MB</p>
+          <p class="picked" id="lblDes"></p>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" style="flex:1" onclick="subirNivelServicio()">
+            ⬆️ Procesar y Cargar NS
+          </button>
+        </div>
+        <div class="prog-box" id="progDes">
+          <span id="progDesTxt">Procesando…</span>
+          <div class="prog-bar-wrap">
+            <div class="prog-bar" id="barDes" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="result-box" id="resDes"></div>
+      </div>
+
       <!-- ── Usuarios ── -->
       <div class="a-card full-col" style="animation-delay:.15s">
         <div class="usr-toolbar">
@@ -290,6 +334,7 @@
 <script src="../utils/auth.js"></script>
 <script src="../utils/etl.js"></script>
 <script src="../utils/etl_inv002.js"></script>
+<script src="../utils/etl_des003.js"></script>
 <script>
   applyTheme();
 
@@ -603,6 +648,56 @@
       hideProg('progInv');
       showRes('resInv', 'err', '❌ ' + e.message);
       addLog('✗ Error ETL Inventario: ' + e.message, 'err');
+    }
+  }
+
+  // ── KPI-DES-003: Nivel de Servicio ────────────────────────────────────
+  async function subirNivelServicio() {
+    const file  = document.getElementById('fileDes').files[0];
+    const mesId = document.getElementById('desMes').value;
+
+    if (!file) {
+      showRes('resDes', 'warn', '⚠️ Selecciona el archivo SEGUIMIENTO_CLICK_MES.xlsx primero.');
+      return;
+    }
+
+    function onProgreso(mensaje) {
+      addLog(mensaje, 'inf');
+      showProg('progDes', 'barDes', 'progDesTxt', 50, mensaje);
+    }
+
+    addLog(`Iniciando ETL NS: ${file.name} → ${mesId}`, 'inf');
+    showProg('progDes', 'barDes', 'progDesTxt', 5, 'Leyendo archivo Excel…');
+
+    try {
+      const resultado = await procesarNivelServicio(file, mesId, onProgreso);
+
+      showProg('progDes', 'barDes', 'progDesTxt', 100, 'Completado');
+      hideProg('progDes');
+
+      const ns       = resultado.nsPct;
+      const semEmoji = ns >= 98 ? '🟢' : ns >= 90 ? '🟡' : '🔴';
+
+      showRes('resDes', 'ok',
+        `✅ <b>Nivel de Servicio cargado</b><br>` +
+        `${semEmoji} NS%: <b>${ns.toFixed(2)}%</b> · <b>${resultado.estado}</b><br>` +
+        `📦 Und. pedidas: <b>${resultado.undPedidas.toLocaleString('es-CO')}</b><br>` +
+        `✅ Und. despachadas: <b>${resultado.undDesp.toLocaleString('es-CO')}</b><br>` +
+        `❌ Und. cortadas: <b>${resultado.undCortadas.toLocaleString('es-CO')}</b><br>` +
+        `📅 ${resultado.semanas} semanas · ${resultado.dias} días · ${resultado.skus} SKUs`
+      );
+
+      addLog(
+        `✓ NS ${mesId}: ${ns.toFixed(2)}% · ` +
+        `${resultado.undDesp.toLocaleString('es-CO')} desp / ${resultado.undPedidas.toLocaleString('es-CO')} ped · ` +
+        `${resultado.semanas} semanas · ${resultado.skus} SKUs`,
+        'ok'
+      );
+
+    } catch (e) {
+      hideProg('progDes');
+      showRes('resDes', 'err', '❌ ' + e.message);
+      addLog('✗ Error ETL NS: ' + e.message, 'err');
     }
   }
 
