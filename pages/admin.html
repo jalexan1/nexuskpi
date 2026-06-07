@@ -256,10 +256,7 @@
         <div class="meta-row">
           <label>Período</label>
           <select class="meta-sel" id="desMes">
-            <option value="2026-03">Marzo 2026</option>
-            <option value="2026-04">Abril 2026</option>
-            <option value="2026-05" selected>Mayo 2026</option>
-            <option value="2026-06">Junio 2026</option>
+            <!-- Poblado dinámicamente desde CONFIG.meses en el init -->
           </select>
         </div>
         <div class="drop-zone" id="dropDes"
@@ -680,6 +677,7 @@
 
       showRes('resDes', 'ok',
         `✅ <b>Nivel de Servicio cargado</b><br>` +
+        `📅 Periodo guardado: <b>${resultado.periodoId}</b><br>` +
         `${semEmoji} NS%: <b>${ns.toFixed(2)}%</b> · <b>${resultado.estado}</b><br>` +
         `📦 Und. pedidas: <b>${resultado.undPedidas.toLocaleString('es-CO')}</b><br>` +
         `✅ Und. despachadas: <b>${resultado.undDesp.toLocaleString('es-CO')}</b><br>` +
@@ -696,7 +694,10 @@
 
     } catch (e) {
       hideProg('progDes');
-      showRes('resDes', 'err', '❌ ' + e.message);
+      // e.message ya incluye el mes afectado porque el ETL usa _labelPeriodo()
+      showRes('resDes', 'err',
+        `❌ <b>Error al cargar Nivel de Servicio</b><br>${e.message}`
+      );
       addLog('✗ Error ETL NS: ' + e.message, 'err');
     }
   }
@@ -770,6 +771,14 @@
     const user=await checkAuth('admin'); if(!user) return;
     renderUser();
     document.getElementById('wmsDate').value=new Date().toISOString().split('T')[0];
+    // Poblar selectores de mes desde CONFIG.meses (sin hardcodear opciones)
+    ['uploadMes','desMes'].forEach(selId => {
+      const sel = document.getElementById(selId);
+      if (!sel) return;
+      sel.innerHTML = CONFIG.meses.map((m,i) =>
+        `<option value="${m.id}" ${i===CONFIG.meses.length-1?'selected':''}>${m.label}</option>`
+      ).join('');
+    });
     cargarMesesReprocesar();
     loadEtlLog();
     loadUsuarios();

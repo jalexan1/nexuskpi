@@ -99,6 +99,15 @@ function _leerHoja(workbook, sheetName, colsBuscadas) {
   return rows;
 }
 
+// ── Label legible para mensajes de error al usuario ──────────────────────────
+const _MESES_ES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+function _labelPeriodo(periodoId) {
+  if (!periodoId) return periodoId;
+  const [y, m] = periodoId.split('-').map(Number);
+  return `${_MESES_ES[m] || m} ${y}`;
+}
+
 // ── Función principal ─────────────────────────────────────────────────────────
 /**
  * @param {File}     file       — SEGUIMIENTO_CLICK_MES.xlsx
@@ -116,22 +125,50 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
   log('📋 Procesando hoja ALISTAMIENTO…');
   const rowsAlist = _leerHoja(wb, 'ALISTAMIENTO', ['PROCESO', 'Comprobante', 'Facturado']);
 
-  // Filtrar: PROCESO=B2B  Y  fecha DIA pertenece al periodoId elegido
-  // CRÍTICO: no usar periodoId como sustituto de la fecha — leer DIA real de cada fila
+  // ── AUTODETECCIÓN DEL PERIODO DESDE EL CAMPO DIA ─────────────────────────
+  // NO se filtra por periodoId aquí — se detecta el mes mayoritario del archivo
+  // y se valida que coincida con el periodoId seleccionado en admin.
+  // Esto evita que un selector con "Mayo" preseleccionado procese un archivo de Abril.
+
+  // Paso A: leer todas las líneas B2B con fecha válida
+  const b2bTodas = rowsAlist.filter(r =>
+    String(r['PROCESO'] || '').trim().toUpperCase() === 'B2B' && _toISO(r['DIA'])
+  );
+
+  // Paso B: detectar el mes dominante en el campo DIA
+  const conteoMes = {};
+  for (const r of b2bTodas) {
+    const mes = _toISO(r['DIA']).slice(0, 7); // "YYYY-MM"
+    conteoMes[mes] = (conteoMes[mes] || 0) + 1;
+  }
+  // El mes con más líneas es el periodo real del archivo
+  const periodoDetectado = Object.entries(conteoMes)
+    .sort((a, b) => b[1] - a[1])[0]?.[0];
+
+  if (!periodoDetectado) {
+    throw new Error('No se encontraron líneas B2B con campo DIA válido en ALISTAMIENTO.');
+  }
+
+  // Paso C: advertir si el selector del admin no coincide con el archivo
+  if (periodoDetectado !== periodoId) {
+    log(`⚠ ATENCIÓN: el selector del admin dice "${periodoId}" pero el archivo contiene datos de "${periodoDetectado}".`);
+    log(`   Usando el periodo detectado desde el campo DIA: ${periodoDetectado}`);
+    // Sobreescribir periodoId con el valor real del archivo
+    periodoId = periodoDetectado;
+  }
+
   const [pYear, pMonth] = periodoId.split('-').map(Number);
 
-  const b2b = rowsAlist.filter(r => {
-    if (String(r['PROCESO'] || '').trim().toUpperCase() !== 'B2B') return false;
+  // Paso D: filtrar solo las líneas del periodo detectado
+  const b2b = b2bTodas.filter(r => {
     const fecha = _toISO(r['DIA']);
-    if (!fecha) return false;
     const [y, mo] = fecha.split('-').map(Number);
     return y === pYear && mo === pMonth;
   });
 
   log(`✅ ALISTAMIENTO: ${rowsAlist.length} líneas totales → ${b2b.length} líneas B2B en ${periodoId}`);
-
-  if (b2b.length === 0) {
-    throw new Error(`No hay líneas B2B con fecha ${periodoId} en la hoja ALISTAMIENTO. Verifica que el archivo corresponde al periodo correcto.`);
+  if (Object.keys(conteoMes).length > 1) {
+    log(`   Meses detectados en archivo: ${Object.entries(conteoMes).map(([k,v])=>k+':'+v+'líneas').join(' | ')}`);
   }
 
   // Agrupar por Comprobante normalizado → { fecha, pedidas_total, skus[] }
@@ -252,17 +289,22 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
   log(`   Sin match en WMS: ${sinMatch} pedidos (NS=0) | Capeados (exceso WMS): ${conCapeo}`);
 
   // ── Paso 4: Borrar datos previos del periodo ───────────────────────────────
-  log('🗑 Eliminando datos previos del periodo…');
+  // Silencioso para el usuario — ocurre siempre antes de insertar.
+  // Si falla, se lanza error con instrucción clara de qué mes recargar.
+  log('🗑 Limpiando datos previos del periodo…');
   for (const tabla of ['kpi_ns_resumen', 'kpi_ns_diario', 'kpi_ns_skus']) {
     try {
       await sb.rest('DELETE', `${tabla}?periodo_id=eq.${periodoId}`);
     } catch(e) {
-      log(`⚠ No se pudo limpiar ${tabla}: ${e.message}`);
+      throw new Error(
+        `No se pudo limpiar los datos anteriores de ${_labelPeriodo(periodoId)}. ` +
+        `Vuelve a cargar el archivo de ${_labelPeriodo(periodoId)} para corregirlo.`
+      );
     }
   }
 
   // ── Paso 5: kpi_ns_resumen (fila global + filas semanales) ────────────────
-  log('💾 Guardando resumen semanal…');
+  log('💾 Guardando datos en Supabase…');
   const resumenRows = [{
     periodo_id:   periodoId,
     semana:       null,
@@ -294,7 +336,12 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
       await sb.rest('POST', 'kpi_ns_resumen', resumenRows.slice(i, i + 100),
         { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
       okRes += Math.min(100, resumenRows.length - i);
-    } catch(e) { log(`⚠ Error resumen lote ${i}: ${e.message}`); }
+    } catch(e) {
+      throw new Error(
+        `Error guardando el resumen de ${_labelPeriodo(periodoId)}. ` +
+        `Vuelve a cargar el archivo de ${_labelPeriodo(periodoId)} para corregirlo. (${e.message})`
+      );
+    }
   }
   log(`✅ kpi_ns_resumen: ${okRes} filas (1 global + ${semanaMap.size} semanales)`);
 
@@ -328,7 +375,12 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
       await sb.rest('POST', 'kpi_ns_diario', diarioRows.slice(i, i + 100),
         { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
       okDia += Math.min(100, diarioRows.length - i);
-    } catch(e) { log(`⚠ Error diario lote ${i}: ${e.message}`); }
+    } catch(e) {
+      throw new Error(
+        `Error guardando el detalle diario de ${_labelPeriodo(periodoId)}. ` +
+        `Vuelve a cargar el archivo de ${_labelPeriodo(periodoId)} para corregirlo. (${e.message})`
+      );
+    }
   }
   log(`✅ kpi_ns_diario: ${okDia} días`);
 
@@ -355,7 +407,12 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
       await sb.rest('POST', 'kpi_ns_skus', skuRows.slice(i, i + 100),
         { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
       okSku += Math.min(100, skuRows.length - i);
-    } catch(e) { log(`⚠ Error SKUs lote ${i}: ${e.message}`); }
+    } catch(e) {
+      throw new Error(
+        `Error guardando los SKUs de ${_labelPeriodo(periodoId)}. ` +
+        `Vuelve a cargar el archivo de ${_labelPeriodo(periodoId)} para corregirlo. (${e.message})`
+      );
+    }
   }
   log(`✅ kpi_ns_skus: ${okSku} SKUs`);
 
