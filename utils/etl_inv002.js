@@ -386,7 +386,7 @@ async function limpiarDetallesPrevios(url, key, periodoId) {
  * @param {Function} onProgress  — callback(mensaje: string) para actualizar UI
  * @returns {Object} stats — resultado del procesamiento
  */
-export async function procesarInventario(file, periodoId, supabaseUrl, supabaseKey, onProgress = () => {}) {
+async function procesarInventario(file, periodoId, supabaseUrl, supabaseKey, onProgress = () => {}) {
   onProgress('Leyendo archivo Excel…');
 
   // Leer archivo con SheetJS
@@ -435,7 +435,7 @@ export async function procesarInventario(file, periodoId, supabaseUrl, supabaseK
  * @param {Function} onProgress
  * @returns {Object} stats actualizados
  */
-export async function reprocesarInventario(periodoId, supabaseUrl, supabaseKey, onProgress = () => {}) {
+async function reprocesarInventario(periodoId, supabaseUrl, supabaseKey, onProgress = () => {}) {
   onProgress('Obteniendo detalles de Supabase…');
 
   const res = await fetch(
