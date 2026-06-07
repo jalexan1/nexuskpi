@@ -42,7 +42,7 @@ const CONFIG = Object.freeze({
 
   kpis: [
     { code:'KPI-REC-001', name:'Tasa de Recepción a Tiempo', icon:'📦', href:'kpi001.html', activo:true  },
-    { code:'KPI-INV-002', name:'Exactitud de Inventario',    icon:'🗃️', href:null,          activo:true },
+    { code:'KPI-INV-002', name:'Exactitud de Inventario',    icon:'🗃️', href:'kpi002.html', activo:true },
     { code:'KPI-DES-003', name:'Nivel de Servicio CEDI',     icon:'🏭', href:null,          activo:true },
     { code:'KPI-ALI-004', name:'Productividad Alistamiento', icon:'🔧', href:null,          activo:true },
     { code:'KPI-DES-005', name:'On-Time Delivery (OTD)',     icon:'🚚', href:null,          activo:false },

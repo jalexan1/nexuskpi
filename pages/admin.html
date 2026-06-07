@@ -192,6 +192,58 @@
         <div class="result-box" id="resWms"></div>
       </div>
 
+      <!-- ── Carga KPI-INV-002 Inventario ── -->
+      <div class="a-card" style="animation-delay:.13s">
+        <h2>📦 Cargar Inventario (KPI-INV-002)</h2>
+        <p class="desc">
+          Sube <code>WMS_BASE_CLICK_COSMETICS_MES.xlsx</code>. El ETL lee la hoja
+          <code>ConteoInvxID</code>, filtra bodega <code>021</code> y calcula la
+          Exactitud de Inventario (EI%). Los resultados se guardan en Supabase.
+        </p>
+
+        <!-- Selector de mes -->
+        <div class="meta-row">
+          <label>Período</label>
+          <select class="meta-sel" id="invMes">
+            <option value="2026-05" selected>Mayo 2026</option>
+            <option value="2026-06">Junio 2026</option>
+            <option value="2026-07">Julio 2026</option>
+          </select>
+        </div>
+
+        <!-- Drop zone -->
+        <div class="drop-zone" id="dropInv"
+             onclick="document.getElementById('fileInv').click()"
+             ondragover="onDragOver(event,'dropInv')"
+             ondragleave="onDragLeave('dropInv')"
+             ondrop="onDrop(event,'fileInv','dropInv')">
+          <input type="file" id="fileInv" accept=".xlsx,.xls"
+                 onchange="onFilePicked('fileInv','lblInv')"/>
+          <div class="drop-icon">🔢</div>
+          <p>Toca para seleccionar o arrastra el archivo</p>
+          <p class="hint">WMS_BASE_CLICK_COSMETICS_*.xlsx · Máx. 100 MB</p>
+          <p class="picked" id="lblInv"></p>
+        </div>
+
+        <!-- Botones -->
+        <div class="btn-row">
+          <button class="btn btn-primary" style="flex:1" onclick="subirInventario()">
+            ⬆️ Procesar y Cargar Inventario
+          </button>
+        </div>
+
+        <!-- Progreso -->
+        <div class="prog-box" id="progInv">
+          <span id="progInvTxt">Procesando…</span>
+          <div class="prog-bar-wrap">
+            <div class="prog-bar" id="barInv" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Resultado -->
+        <div class="result-box" id="resInv"></div>
+      </div>
+
       <!-- ── Usuarios ── -->
       <div class="a-card full-col" style="animation-delay:.15s">
         <div class="usr-toolbar">
@@ -237,6 +289,7 @@
 <script src="../config/config.js"></script>
 <script src="../utils/auth.js"></script>
 <script src="../utils/etl.js"></script>
+<script src="../utils/etl_inv002.js"></script>
 <script>
   applyTheme();
 
@@ -483,6 +536,84 @@
 
     } catch(e) {
       lista.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">No se pudo conectar a Supabase.</div>`;
+    }
+  }
+
+  // ── KPI-INV-002: Carga Inventario ──────────────────────────────────────
+  /**
+   * Lee el archivo WMS_BASE_CLICK_COSMETICS_MES.xlsx seleccionado,
+   * llama al ETL de inventario (etl_inv002.js) y muestra el resultado.
+   *
+   * La función procesarInventario() viene de utils/etl_inv002.js.
+   * Recibe: (File, periodoId, supabaseUrl, supabaseKey, callbackProgreso)
+   * Devuelve: { eiPctGlobal, totalSKUs, totalExactos, totalDifs, semaforo, inconsistentesCount }
+   */
+  async function subirInventario() {
+    // 1. Validar que hay archivo y período seleccionados
+    const file  = document.getElementById('fileInv').files[0];
+    const mesId = document.getElementById('invMes').value;
+
+    if (!file) {
+      showRes('resInv', 'warn', '⚠️ Selecciona un archivo WMS primero.');
+      return;
+    }
+
+    // 2. Leer credenciales de Supabase desde auth.js (sb.url y sb.key ya existen)
+    const supabaseUrl = sb.url;
+    const supabaseKey = sb.key;
+
+    // 3. Mostrar barra de progreso inicial
+    addLog(`Iniciando ETL Inventario: ${file.name} → ${mesId}`, 'inf');
+    showProg('progInv', 'barInv', 'progInvTxt', 5, 'Leyendo archivo Excel…');
+
+    // 4. Callback de progreso: actualiza el texto y el log en cada paso del ETL
+    function onProgreso(mensaje) {
+      addLog(mensaje, 'inf');
+      showProg('progInv', 'barInv', 'progInvTxt', 50, mensaje);
+    }
+
+    try {
+      // 5. Llamar al ETL de inventario — definido en utils/etl_inv002.js
+      //    procesarInventario() lee ConteoInvxID, calcula EI%, hace upsert en Supabase
+      const resultado = await procesarInventario(
+        file,
+        mesId,
+        supabaseUrl,
+        supabaseKey,
+        onProgreso
+      );
+
+      // 6. Barra al 100% y ocultar después de 1.2s
+      showProg('progInv', 'barInv', 'progInvTxt', 100, 'Completado');
+      hideProg('progInv');
+
+      // 7. Determinar emoji de semáforo para el mensaje de resultado
+      const ei       = resultado.eiPctGlobal;
+      const semEmoji = ei >= 99 ? '🟢' : ei >= 97 ? '🟡' : '🔴';
+
+      // 8. Mostrar resumen del resultado en la tarjeta
+      showRes('resInv', 'ok',
+        `✅ <b>Inventario cargado</b><br>` +
+        `📦 Total SKUs contados: <b>${resultado.totalSKUs}</b><br>` +
+        `✅ SKUs exactos: <b>${resultado.totalExactos}</b><br>` +
+        `❌ SKUs con diferencia: <b>${resultado.totalDifs}</b><br>` +
+        `⚠️ Inconsistentes (excluidos): <b>${resultado.inconsistentesCount}</b><br>` +
+        `${semEmoji} EI%: <b>${ei}%</b> · Meta: ≥ 99%`
+      );
+
+      // 9. Registrar en el log de la pantalla
+      addLog(
+        `✓ Inventario ${mesId}: EI ${ei}% · ` +
+        `${resultado.totalExactos}/${resultado.totalSKUs} SKUs exactos · ` +
+        `${resultado.inconsistentesCount} inconsistentes`,
+        'ok'
+      );
+
+    } catch (e) {
+      // 10. Si ocurre cualquier error, ocultar progreso y mostrar el mensaje de error
+      hideProg('progInv');
+      showRes('resInv', 'err', '❌ ' + e.message);
+      addLog('✗ Error ETL Inventario: ' + e.message, 'err');
     }
   }
 
