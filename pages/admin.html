@@ -544,12 +544,13 @@
    * Lee el archivo WMS_BASE_CLICK_COSMETICS_MES.xlsx seleccionado,
    * llama al ETL de inventario (etl_inv002.js) y muestra el resultado.
    *
-   * La función procesarInventario() viene de utils/etl_inv002.js.
-   * Recibe: (File, periodoId, supabaseUrl, supabaseKey, callbackProgreso)
+   * La funcion procesarInventario() viene de utils/etl_inv002.js.
+   * Recibe: (File, periodoId, callbackProgreso)
+   * Usa sb.rest() internamente — no necesita credenciales externas.
    * Devuelve: { eiPctGlobal, totalSKUs, totalExactos, totalDifs, semaforo, inconsistentesCount }
    */
   async function subirInventario() {
-    // 1. Validar que hay archivo y período seleccionados
+    // 1. Validar archivo y periodo
     const file  = document.getElementById('fileInv').files[0];
     const mesId = document.getElementById('invMes').value;
 
@@ -558,30 +559,18 @@
       return;
     }
 
-    // 2. Leer credenciales de Supabase desde auth.js (sb.url y sb.key ya existen)
-    const supabaseUrl = sb.url;
-    const supabaseKey = sb.key;
-
-    // 3. Mostrar barra de progreso inicial
-    addLog(`Iniciando ETL Inventario: ${file.name} → ${mesId}`, 'inf');
-    showProg('progInv', 'barInv', 'progInvTxt', 5, 'Leyendo archivo Excel…');
-
-    // 4. Callback de progreso: actualiza el texto y el log en cada paso del ETL
+    // 2. Callback de progreso
     function onProgreso(mensaje) {
       addLog(mensaje, 'inf');
       showProg('progInv', 'barInv', 'progInvTxt', 50, mensaje);
     }
 
+    addLog(`Iniciando ETL Inventario: ${file.name} → ${mesId}`, 'inf');
+    showProg('progInv', 'barInv', 'progInvTxt', 5, 'Leyendo archivo Excel…');
+
     try {
-      // 5. Llamar al ETL de inventario — definido en utils/etl_inv002.js
-      //    procesarInventario() lee ConteoInvxID, calcula EI%, hace upsert en Supabase
-      const resultado = await procesarInventario(
-        file,
-        mesId,
-        supabaseUrl,
-        supabaseKey,
-        onProgreso
-      );
+      // 3. Llamar al ETL — usa sb.rest() internamente, no necesita URL/KEY
+      const resultado = await procesarInventario(file, mesId, onProgreso);
 
       // 6. Barra al 100% y ocultar después de 1.2s
       showProg('progInv', 'barInv', 'progInvTxt', 100, 'Completado');
