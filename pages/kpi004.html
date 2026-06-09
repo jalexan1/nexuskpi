@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — KPI-ALI-004</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    /* ── Tabs ── */
+    .tabs-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 1.25rem;gap:.1rem;overflow-x:auto;scrollbar-width:none}
+    .tabs-nav::-webkit-scrollbar{display:none}
+    .tab-btn{padding:.8rem .9rem;font-size:.8rem;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;min-height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    .tab-btn:hover{color:var(--text)}
+    .tab-btn.on{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-panel{display:none}.tab-panel.on{display:block}
+
+    /* ── KPI header ── */
+    .kpi-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem;flex-wrap:wrap}
+    .kpi-hdr h1{font-size:clamp(1rem,3vw,1.25rem);font-weight:800;display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+    .kpi-hdr-sub{font-size:.76rem;color:var(--muted);margin-top:.15rem}
+    .kpi-actions{display:flex;gap:.4rem;align-items:center;flex-shrink:0;flex-wrap:wrap}
+
+    /* ── Banner estado ── */
+    .b-strip{border-radius:var(--r);padding:.75rem 1rem;margin-bottom:1rem;font-size:.82rem;line-height:1.5;display:flex;align-items:flex-start;gap:.65rem}
+    .b-ok  {background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);color:var(--ok)}
+    .b-warn{background:rgba(255,176,32,.07);border:1px solid rgba(255,176,32,.2);color:var(--warn)}
+    .b-crit{background:rgba(255,77,109,.07);border:1px solid rgba(255,77,109,.2);color:var(--error)}
+    .method-strip{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:.6rem 1rem;margin-bottom:1rem;font-size:.74rem;color:var(--muted)}
+
+    /* ── HERO ── */
+    .hero{display:grid;grid-template-columns:220px 1fr;gap:1rem;margin-bottom:1rem}
+    @media(max-width:799px){.hero{grid-template-columns:1fr}}
+    @media(min-width:1920px){.hero{grid-template-columns:280px 1fr}}
+
+    .semaforo{background:var(--surface);border:2px solid var(--border);border-radius:var(--r);padding:1.25rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.5rem;text-align:center}
+    .sem-lbl{font-size:.65rem;font-weight:700;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+    .sem-num{font-size:clamp(2.8rem,7vw,3.8rem);font-weight:900;line-height:1}
+    .sem-unit{font-size:.95rem;color:var(--muted)}
+    .sem-meta{font-size:.72rem;color:var(--muted);line-height:1.7}
+    .sem-pill{font-weight:700;font-size:.78rem;padding:.3rem 1rem;border-radius:20px;border:2px solid}
+    .sem-pill.verde  {background:rgba(0,255,136,.12);color:var(--ok);border-color:var(--ok)}
+    .sem-pill.amarillo{background:rgba(255,176,32,.12);color:var(--warn);border-color:var(--warn)}
+    .sem-pill.rojo   {background:rgba(255,77,109,.12);color:var(--error);border-color:var(--error)}
+    .sem-barra-wrap{width:100%;height:7px;background:var(--surface3);border-radius:9999px;overflow:hidden}
+    .sem-barra{height:7px;border-radius:9999px;transition:width .5s ease}
+    .sem-delta{font-size:.72rem;color:var(--muted)}
+    .sem-circles{display:flex;gap:.75rem;justify-content:center;margin:.15rem 0}
+    .sem-circle{display:flex;flex-direction:column;align-items:center;gap:.1rem}
+    .sem-circle .cn{font-size:1.5rem;font-weight:900;line-height:1}
+    .sem-circle .cl{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+
+    /* Grid 2x3 métricas */
+    .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+    @media(min-width:1200px){.metrics-grid{grid-template-columns:1fr 1fr 1fr}}
+    .mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem 1rem;display:flex;flex-direction:column;gap:.15rem}
+    .mc .ml{font-size:.63rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase}
+    .mc .mv{font-size:clamp(1.2rem,2.5vw,1.55rem);font-weight:800;line-height:1.1}
+    .mc .ms{font-size:.68rem;color:var(--muted)}
+
+    /* ── Charts ── */
+    .charts-2col{display:grid;grid-template-columns:3fr 2fr;gap:.75rem;margin-bottom:.75rem}
+    @media(max-width:799px){.charts-2col{grid-template-columns:1fr}}
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
+    .chart-card.full{margin-bottom:.75rem}
+    .chart-wrap{position:relative}
+    .sec-title{font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.85rem;display:flex;align-items:center;gap:.5rem}
+    .sec-title .bar{width:4px;height:14px;border-radius:2px;flex-shrink:0}
+
+    /* ── Tabla semanal ── */
+    .sec-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:.75rem}
+    .wt{width:100%;border-collapse:collapse}
+    .wt thead tr{background:var(--surface3)}
+    .wt th{padding:.5rem .75rem;font-size:.68rem;font-weight:700;text-align:center;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+    .wt th:first-child{text-align:left}
+    .wt td{padding:.5rem .75rem;font-size:.78rem;text-align:center;border-bottom:1px solid var(--border)}
+    .wt td:first-child{text-align:left;font-weight:600}
+    .wt .tr-tot{background:var(--surface2);font-weight:700}
+    .wt .tr-tot td{border-bottom:none}
+
+    /* ── Detail ── */
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem}
+    @media(max-width:599px){.detail-grid{grid-template-columns:1fr}}
+    .detail-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
+    .detail-card h4{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.65rem}
+    .di{display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px dashed var(--border);font-size:.78rem}
+    .di:last-child{border-bottom:none}
+    .dk{color:var(--muted)}.dv{font-weight:700;color:var(--text)}
+
+    /* ── Toggle tabla diaria ── */
+    .tog-hdr{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:.7rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.4rem;transition:background .15s}
+    .tog-hdr:hover{background:var(--surface2)}
+    .tog-hdr h4{font-size:.8rem;font-weight:700;margin:0;display:flex;align-items:center;gap:.4rem}
+    .tog-arrow{transition:transform .2s;color:var(--muted)}
+    .tog-sec{overflow:hidden;transition:max-height .3s ease;max-height:0}
+    .tog-sec.open{max-height:600px}
+
+    /* ── Comparativo ── */
+    .comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+    @media(max-width:699px){.comp-grid{grid-template-columns:1fr}}
+    .comp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
+    .comp-card h3{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.75rem}
+    .comp-row{display:flex;justify-content:space-between;align-items:center;padding:.38rem 0;border-bottom:1px dashed var(--border);font-size:.78rem}
+    .comp-row:last-child{border-bottom:none}
+    .comp-metric{color:var(--muted);flex:1}
+    .comp-vals{display:flex;gap:.75rem;flex-shrink:0}
+    .v-a{color:var(--accent);font-weight:700;font-family:'Syne',sans-serif}
+    .v-b{color:var(--accent2);font-weight:700;font-family:'Syne',sans-serif}
+    .delta-up{color:var(--ok);font-size:.71rem}
+    .delta-dn{color:var(--error);font-size:.71rem}
+
+    /* ── Misc ── */
+    .c-ok{color:var(--ok)}.c-err{color:var(--error)}.c-warn{color:var(--warn)}.c-acc{color:var(--accent)}
+    .tag{display:inline-block;padding:.1rem .5rem;border-radius:10px;font-weight:700;font-size:.7rem}
+    .tag-ok  {background:rgba(0,255,136,.12);color:var(--ok)}
+    .tag-warn{background:rgba(255,176,32,.12);color:var(--warn)}
+    .tag-crit{background:rgba(255,77,109,.12);color:var(--error)}
+    .mes-bar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:1rem}
+    .mes-bar label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+    .mes-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:.35rem .65rem;cursor:pointer;outline:none}
+    .mes-sel:focus{border-color:var(--accent)}
+
+    /* Regla #2: viewport height correcta en móvil */
+    body { min-height:100dvh; }
+    /* Responsive regla #3: pipeline SVG oculto en móvil */
+    @media(max-width:768px){.pipeline-svg{display:none}}
+    /* Regla #7: TV */
+    @media(min-width:1920px){html{font-size:18px}}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando datos…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-title">KPI-ALI-004</span>
+    <div class="topbar-spacer"></div>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <nav class="tabs-nav">
+    <button class="tab-btn on" onclick="tab('resumen',this)">📊 Resumen</button>
+    <button class="tab-btn"   onclick="tab('comparativo',this)">⚖️ Comparativo</button>
+  </nav>
+
+  <main class="content">
+
+    <!-- KPI header -->
+    <div class="kpi-hdr">
+      <div>
+        <h1>🔧 KPI-ALI-004 <span class="badge badge-ok">En vivo</span> <span class="badge badge-info">DATA REAL</span></h1>
+        <div class="kpi-hdr-sub">Productividad de Alistamiento · PA = Unidades ÷ Σ(Horas ef. por operario) · Meta ≥ 450 u/p/h · Todos los procesos</div>
+      </div>
+      <div class="kpi-actions">
+        <button class="btn" onclick="cargarDatos()" id="btnRefresh">🔄 Actualizar</button>
+        <span id="tsUpdate" style="font-size:.68rem;color:var(--dim)"></span>
+      </div>
+    </div>
+
+    <!-- Selector de meses -->
+    <div class="mes-bar">
+      <label>Mes A</label>
+      <select class="mes-sel" id="selA" onchange="onMesChange()"></select>
+      <span style="color:var(--dim);font-size:.8rem">vs</span>
+      <label>Mes B</label>
+      <select class="mes-sel" id="selB" onchange="onMesChange()"></select>
+      <div style="margin-left:auto;font-size:.7rem;color:var(--dim)" id="statusDatos">—</div>
+    </div>
+
+    <!-- ══ RESUMEN ══════════════════════════════════════════════════════ -->
+    <div class="tab-panel on" id="tab-resumen">
+
+      <!-- Banner estado -->
+      <div id="bannerEstado" class="b-strip b-ok" style="display:none"></div>
+
+      <!-- Banner metodología -->
+      <div class="method-strip">
+        📐 <b>PA = Σ(Unidades alistadas) ÷ Σ(Horas efectivas por operario)</b> &nbsp;·&nbsp;
+        Horas = Σ(FIN PICKING − INICIO PICKING) por operario por día &nbsp;·&nbsp;
+        Fuente: Hoja ALISTAMIENTO · Todos los procesos (B2B + B2C + CLICK + RETAIL + MARKETPLACE)
+      </div>
+
+      <!-- HERO: semáforo + métricas -->
+      <div class="hero" id="heroWrap">
+        <div class="semaforo" id="semaforoBox">
+          <div class="sem-lbl" id="semLbl">PA — Mes</div>
+          <div style="display:flex;align-items:flex-end;gap:3px">
+            <span class="sem-num" id="semNum">—</span><span class="sem-unit">u/p/h</span>
+          </div>
+          <div class="sem-meta" id="semMeta">Meta: ≥ 450 u/p/h</div>
+          <div class="sem-barra-wrap"><div class="sem-barra" id="semBarra" style="width:0%"></div></div>
+          <span class="sem-pill verde" id="semPill">— —</span>
+          <div class="sem-delta">Δ vs. meta 450: <b id="semDelta">—</b></div>
+          <div class="sem-circles" id="semCircles"></div>
+        </div>
+        <div class="metrics-grid" id="metricsGrid"></div>
+      </div>
+
+      <!-- Tabla semanal -->
+      <div class="sec-card">
+        <div class="sec-title">
+          <div class="bar" id="semBarColor" style="background:var(--accent)"></div>
+          📊 Registro Semanal · <span id="semTitleMes">—</span> · Meta ≥ 450 u/p/h
+        </div>
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+          <table class="wt"><thead><tr>
+            <th>Semana</th><th>Unidades</th><th>Cajas</th><th>Horas Ef.</th><th>Operarios</th>
+            <th>PA (u/p/h)</th><th>PA (caj/p/h)</th><th>Mejor Día</th><th>Peor Día</th><th>Estado</th>
+          </tr></thead>
+          <tbody id="weeklyBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Charts: PA diario + Donut estado días -->
+      <div class="charts-2col">
+        <div class="chart-card">
+          <div class="sec-title"><div class="bar" style="background:var(--accent)"></div>PA Unidades/Hora — Evolución Diaria vs. Meta 450</div>
+          <div class="chart-wrap"><canvas id="cDaily" height="110"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="sec-title"><div class="bar" style="background:var(--accent2)"></div>Estado Días del Mes</div>
+          <div class="chart-wrap"><canvas id="cDonut" height="200"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Chart full: Cajas diarias + operarios -->
+      <div class="charts-2col">
+        <div class="chart-card">
+          <div class="sec-title"><div class="bar" style="background:var(--ok)"></div>Cajas Alistadas — Diario</div>
+          <div class="chart-wrap"><canvas id="cCajas" height="110"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="sec-title"><div class="bar" style="background:var(--warn)"></div>Operarios por Día</div>
+          <div class="chart-wrap"><canvas id="cOps" height="110"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Detail cards -->
+      <div class="detail-grid">
+        <div class="detail-card">
+          <h4>🎯 Estado del KPI</h4>
+          <div id="detalleEstado"></div>
+        </div>
+        <div class="detail-card">
+          <h4>📈 Semáforo de Días</h4>
+          <div id="detalleSemaforo"></div>
+        </div>
+      </div>
+
+      <!-- Tabla diaria colapsable -->
+      <div class="tog-hdr" onclick="toggleTabla()" id="togHdr">
+        <h4>📋 Tabla Diaria Detallada</h4>
+        <span class="tog-arrow" id="togArrow">▼</span>
+      </div>
+      <div class="tog-sec" id="togSec">
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);border-top:none;border-radius:0 0 var(--r) var(--r)">
+          <table class="wt"><thead><tr>
+            <th>Fecha</th><th>Cajas</th><th>Unidades</th><th>Operarios</th>
+            <th>Horas Ef.</th><th>h/Op prom</th><th>PA (u/p/h)</th><th>PA (caj/p/h)</th>
+            <th>Δ vs meta</th><th>Estado</th>
+          </tr></thead>
+          <tbody id="dailyBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /tab-resumen -->
+
+    <!-- ══ COMPARATIVO ══════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-comparativo">
+      <div class="comp-grid" id="compWrap">
+        <div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses para comparar</p></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+applyTheme();
+
+let allResumen = {}, allDiario = {}, charts = {};
+const META = 450;
+
+// ── Tabs ─────────────────────────────────────────────────────────────────
+function tab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
+  document.getElementById('tab-' + id).classList.add('on');
+  btn.classList.add('on');
+  if (id === 'comparativo') renderComparativo();
+}
+
+// ── Toggle tabla diaria ─────────────────────────────────────────────────
+function toggleTabla() {
+  const sec = document.getElementById('togSec');
+  const arrow = document.getElementById('togArrow');
+  const open = sec.classList.toggle('open');
+  arrow.textContent = open ? '▲' : '▼';
+}
+
+// ── Cargar datos ─────────────────────────────────────────────────────────
+async function cargarDatos() {
+  const btn = document.getElementById('btnRefresh');
+  btn.disabled = true; btn.textContent = '⏳';
+  document.getElementById('statusDatos').textContent = 'Cargando…';
+  try {
+    const [resumen, diario] = await Promise.all([
+      sb.rest('GET', 'kpi_ali_resumen?order=periodo_id.asc,semana.asc'),
+      sb.rest('GET', 'kpi_ali_diario?order=periodo_id.asc,fecha.asc')
+    ]);
+
+    allResumen = {};
+    (resumen || []).forEach(r => {
+      if (!allResumen[r.periodo_id]) allResumen[r.periodo_id] = [];
+      allResumen[r.periodo_id].push(r);
+    });
+
+    allDiario = {};
+    (diario || []).forEach(r => {
+      if (!allDiario[r.periodo_id]) allDiario[r.periodo_id] = [];
+      allDiario[r.periodo_id].push(r);
+    });
+
+    const periodos = Object.keys(allResumen).sort();
+    poblarSelectores(periodos);
+    document.getElementById('tsUpdate').textContent = new Date().toLocaleTimeString('es-CO');
+    document.getElementById('statusDatos').textContent =
+      `${(resumen || []).length} registros · ${periodos.length} períodos`;
+  } catch (e) {
+    document.getElementById('statusDatos').textContent = '⚠️ ' + e.message.slice(0, 60);
+  }
+  btn.disabled = false; btn.textContent = '🔄 Actualizar';
+}
+
+function poblarSelectores(periodos) {
+  const lbl = id => CONFIG.meses.find(m => m.id === id)?.label || id;
+  ['selA', 'selB'].forEach((sid, i) => {
+    const s = document.getElementById(sid);
+    s.innerHTML = periodos.map((p, j) =>
+      `<option value="${p}" ${j === (i === 0 ? periodos.length - 2 : periodos.length - 1) ? 'selected' : ''}>${lbl(p)}</option>`
+    ).join('');
+    // Si solo hay 1 periodo, seleccionar el mismo en ambos
+    if (periodos.length === 1) s.value = periodos[0];
+  });
+  onMesChange();
+}
+
+function onMesChange() { renderResumen(); }
+
+// ── Render Resumen ────────────────────────────────────────────────────────
+function renderResumen() {
+  const mesId = document.getElementById('selA').value;
+  const resRows = allResumen[mesId] || [];
+  const diaRows = allDiario[mesId]  || [];
+  const label   = CONFIG.meses.find(m => m.id === mesId)?.label || mesId;
+
+  if (!resRows.length) {
+    document.getElementById('metricsGrid').innerHTML =
+      `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📭</div><p>Sin datos para este mes.<br>Carga el archivo desde el Panel de Administración.</p></div>`;
+    document.getElementById('bannerEstado').style.display = 'none';
+    return;
+  }
+
+  // Fila global (semana == null)
+  const global = resRows.find(r => !r.semana) || resRows[0];
+  const semanas = resRows.filter(r => r.semana);
+  const pa = Number(global.pa_und) || 0;
+
+  // ── Semáforo ──
+  const pillarCls = pa >= META ? 'verde' : pa >= 200 ? 'amarillo' : 'rojo';
+  const pillarTxt = pa >= META ? '🟢 BIEN' : pa >= 200 ? '🟡 ALERTA' : '🔴 CRÍTICO';
+  const barColor  = pa >= META ? 'var(--ok)' : pa >= 200 ? 'var(--warn)' : 'var(--error)';
+  const delta     = pa - META;
+
+  document.getElementById('semLbl').textContent = `PA — ${label}`;
+  const numEl = document.getElementById('semNum');
+  numEl.textContent = pa.toLocaleString('es-CO', { maximumFractionDigits: 1 });
+  numEl.style.color = barColor;
+  document.getElementById('semMeta').textContent =
+    `Meta: ≥ ${META} u/p/h · ${global.und_alistadas?.toLocaleString('es-CO')} und · ${diaRows.length} días`;
+  document.getElementById('semBarra').style.width  = Math.min(pa / META * 100, 100) + '%';
+  document.getElementById('semBarra').style.background = barColor;
+  const pill = document.getElementById('semPill');
+  pill.className = `sem-pill ${pillarCls}`; pill.textContent = pillarTxt;
+  const dEl = document.getElementById('semDelta');
+  dEl.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(1) + ' u/p/h';
+  dEl.style.color = delta >= 0 ? 'var(--ok)' : 'var(--error)';
+  document.getElementById('semTitleMes').textContent = label;
+  document.getElementById('semBarColor').style.background = barColor;
+
+  // Semáforo círculos (días BIEN / ALERTA / CRÍTICO)
+  const nBien  = diaRows.filter(d => Number(d.pa_und) >= META).length;
+  const nAlerta= diaRows.filter(d => Number(d.pa_und) >= 200 && Number(d.pa_und) < META).length;
+  const nCrit  = diaRows.filter(d => Number(d.pa_und) < 200).length;
+  document.getElementById('semCircles').innerHTML = `
+    <div class="sem-circle"><span class="cn c-ok">${nBien}</span><span class="cl c-ok">Bien</span></div>
+    <div class="sem-circle"><span class="cn c-warn">${nAlerta}</span><span class="cl c-warn">Alerta</span></div>
+    <div class="sem-circle"><span class="cn c-err">${nCrit}</span><span class="cl c-err">Crítico</span></div>`;
+
+  // Banner estado
+  const banner = document.getElementById('bannerEstado');
+  banner.style.display = 'flex';
+  banner.className = `b-strip ${pa >= META ? 'b-ok' : pa >= 200 ? 'b-warn' : 'b-crit'}`;
+  banner.innerHTML = `<b>${pillarTxt}</b> &nbsp;·&nbsp; PA de ${label}: <b>${pa.toLocaleString('es-CO', { maximumFractionDigits: 1 })} u/p/h</b>
+    &nbsp;·&nbsp; ${delta >= 0 ? 'Supera' : 'Por debajo de'} la meta en <b>${Math.abs(delta).toFixed(1)} u/p/h</b>
+    &nbsp;·&nbsp; ${nBien} de ${diaRows.length} días con productividad ≥ 450 u/p/h`;
+
+  // ── Métricas 3×2 ──
+  const mejorDia  = diaRows.reduce((b, d) => Number(d.pa_und) > Number(b.pa_und) ? d : b, diaRows[0] || {});
+  const peorDia   = diaRows.reduce((b, d) => Number(d.pa_und) < Number(b.pa_und) ? d : b, diaRows[0] || {});
+  const hPorOp    = global.num_operarios_prom > 0
+    ? (Number(global.horas_efectivas) / (Number(global.num_operarios_prom) * diaRows.length)).toFixed(2)
+    : '—';
+  document.getElementById('metricsGrid').innerHTML = [
+    ['Total Unidades Alistadas', (global.und_alistadas || 0).toLocaleString('es-CO'), `Todos los procesos · ${diaRows.length} días`, 'c-acc'],
+    ['PA en Cajas (caj/op/h)',   Number(global.pa_cajas || 0).toFixed(2),             'Cajas / persona / hora efectiva', 'c-ok'],
+    ['Total Cajas Alistadas',    (global.cajas_alistadas || 0).toLocaleString('es-CO'), `Prom. ${diaRows.length ? ((global.cajas_alistadas || 0) / diaRows.length).toFixed(1) : '—'} cajas/día`, 'c-acc'],
+    ['Días en Meta (≥450 u/p/h)',`${nBien} / ${diaRows.length}`, `${diaRows.length ? Math.round(nBien / diaRows.length * 100) : 0}% de los días`, nBien / diaRows.length >= 0.5 ? 'c-ok' : 'c-warn'],
+    ['Mejor Día PA', mejorDia.pa_und ? Number(mejorDia.pa_und).toFixed(1) + ' u/p/h' : '—', mejorDia.fecha ? `${mejorDia.fecha}` : '', 'c-ok'],
+    ['Horas Ef. Prom/Op', hPorOp + ' h', `Total horas: ${Number(global.horas_efectivas || 0).toFixed(1)} h · Ops prom/día: ${Number(global.num_operarios_prom || 0).toFixed(1)}`, 'c-acc'],
+  ].map(([l, v, s, c]) =>
+    `<div class="mc"><div class="ml">${l}</div><div class="mv ${c}">${v}</div><div class="ms">${s}</div></div>`
+  ).join('');
+
+  // ── Tabla semanal ──
+  const tot = {
+    und: semanas.reduce((s, r) => s + (r.und_alistadas || 0), 0),
+    cajas: semanas.reduce((s, r) => s + (r.cajas_alistadas || 0), 0),
+    horas: semanas.reduce((s, r) => s + Number(r.horas_efectivas || 0), 0),
+    ops:   semanas.reduce((s, r) => s + Number(r.num_operarios_prom || 0), 0),
+  };
+  const totPA     = tot.horas > 0 ? (tot.und   / tot.horas).toFixed(1) : '—';
+  const totPACaj  = tot.horas > 0 ? (tot.cajas / tot.horas).toFixed(2) : '—';
+  document.getElementById('weeklyBody').innerHTML =
+    semanas.sort((a, b) => a.semana < b.semana ? -1 : 1).map(r => {
+      const paS = Number(r.pa_und || 0);
+      const cls = paS >= META ? 'c-ok' : paS >= 200 ? 'c-warn' : 'c-err';
+      const pill= paS >= META ? '🟢 BIEN' : paS >= 200 ? '🟡 ALERTA' : '🔴 CRÍTICO';
+      return `<tr>
+        <td>${r.semana}</td>
+        <td>${(r.und_alistadas || 0).toLocaleString('es-CO')}</td>
+        <td>${(r.cajas_alistadas || 0).toLocaleString('es-CO')}</td>
+        <td>${Number(r.horas_efectivas || 0).toFixed(1)} h</td>
+        <td>${Number(r.num_operarios_prom || 0).toFixed(1)}</td>
+        <td class="${cls}"><b>${paS.toFixed(1)}</b></td>
+        <td>${Number(r.pa_cajas || 0).toFixed(2)}</td>
+        <td class="c-ok">${r.mejor_dia_pa != null ? Number(r.mejor_dia_pa).toFixed(1) : '—'}</td>
+        <td class="c-err">${r.peor_dia_pa  != null ? Number(r.peor_dia_pa ).toFixed(1) : '—'}</td>
+        <td>${pill}</td>
+      </tr>`;
+    }).join('') + `<tr class="tr-tot">
+      <td>TOTAL PERÍODO</td>
+      <td>${tot.und.toLocaleString('es-CO')}</td>
+      <td>${tot.cajas.toLocaleString('es-CO')}</td>
+      <td>${tot.horas.toFixed(1)} h</td>
+      <td>${semanas.length ? (tot.ops / semanas.length).toFixed(1) : '—'}</td>
+      <td class="${Number(totPA) >= META ? 'c-ok' : Number(totPA) >= 200 ? 'c-warn' : 'c-err'}"><b>${totPA}</b></td>
+      <td>${totPACaj}</td>
+      <td class="c-ok">${global.mejor_dia_pa != null ? Number(global.mejor_dia_pa).toFixed(1) : '—'}</td>
+      <td class="c-err">${global.peor_dia_pa  != null ? Number(global.peor_dia_pa ).toFixed(1) : '—'}</td>
+      <td>${Number(totPA) >= META ? '🟢 BIEN' : Number(totPA) >= 200 ? '🟡 ALERTA' : '🔴 CRÍTICO'}</td>
+    </tr>`;
+
+  // ── Tabla diaria ──
+  document.getElementById('dailyBody').innerHTML = [...diaRows]
+    .sort((a, b) => a.fecha < b.fecha ? -1 : 1)
+    .map(d => {
+      const pa = Number(d.pa_und || 0);
+      const delta = pa - META;
+      const cls   = pa >= META ? 'c-ok' : pa >= 200 ? 'c-warn' : 'c-err';
+      const pill  = pa >= META ? '<span class="tag tag-ok">🟢 BIEN</span>'
+                  : pa >= 200  ? '<span class="tag tag-warn">🟡 ALERTA</span>'
+                  :               '<span class="tag tag-crit">🔴 CRÍTICO</span>';
+      const hPorOpD = d.num_operarios > 0
+        ? (Number(d.horas_efectivas || 0) / d.num_operarios).toFixed(2) : '—';
+      return `<tr>
+        <td><b>${d.fecha}</b></td>
+        <td>${(d.cajas_alistadas || 0).toLocaleString('es-CO')}</td>
+        <td>${(d.und_alistadas || 0).toLocaleString('es-CO')}</td>
+        <td>${d.num_operarios || 0}</td>
+        <td>${Number(d.horas_efectivas || 0).toFixed(2)} h</td>
+        <td>${hPorOpD}</td>
+        <td class="${cls}"><b>${pa.toFixed(1)}</b></td>
+        <td>${Number(d.pa_cajas || 0).toFixed(2)}</td>
+        <td class="${delta >= 0 ? 'c-ok' : 'c-err'}">${delta >= 0 ? '+' : ''}${delta.toFixed(1)}</td>
+        <td>${pill}</td>
+      </tr>`;
+    }).join('');
+
+  // ── Detail cards ──
+  document.getElementById('detalleEstado').innerHTML = [
+    ['Fórmula', '<span class="dv c-acc">Σ(Und) ÷ Σ(h ef. por operario)</span>'],
+    ['PA Período', `<span class="dv ${pillarCls === 'verde' ? 'c-ok' : pillarCls === 'amarillo' ? 'c-warn' : 'c-err'}">${pa.toFixed(1)} u/p/h — ${pillarTxt}</span>`],
+    ['Meta', `<span class="dv">≥ ${META} u/p/h</span>`],
+    ['Δ vs meta', `<span class="dv ${delta >= 0 ? 'c-ok' : 'c-err'}">${delta >= 0 ? '+' : ''}${delta.toFixed(1)} u/p/h</span>`],
+    ['Total horas ef.', `<span class="dv">${Number(global.horas_efectivas || 0).toFixed(1)} h</span>`],
+    ['Semáforo', '<span class="dv">🔴&lt;200 · 🟡200–449 · 🟢≥450 u/p/h</span>'],
+  ].map(([k, v]) => `<div class="di"><span class="dk">${k}</span>${v}</div>`).join('');
+
+  document.getElementById('detalleSemaforo').innerHTML = [
+    ['Días BIEN (≥450 u/p/h)', `<span class="dv c-ok">${nBien} días (${diaRows.length ? Math.round(nBien / diaRows.length * 100) : 0}%)</span>`],
+    ['Días ALERTA (200–449)', `<span class="dv c-warn">${nAlerta} días (${diaRows.length ? Math.round(nAlerta / diaRows.length * 100) : 0}%)</span>`],
+    ['Días CRÍTICO (<200)', `<span class="dv c-err">${nCrit} días (${diaRows.length ? Math.round(nCrit / diaRows.length * 100) : 0}%)</span>`],
+    ['Mejor día PA', `<span class="dv c-ok">${mejorDia.fecha || '—'}: ${mejorDia.pa_und != null ? Number(mejorDia.pa_und).toFixed(1) : '—'} u/p/h</span>`],
+    ['Peor día PA',  `<span class="dv c-err">${peorDia.fecha  || '—'}: ${peorDia.pa_und  != null ? Number(peorDia.pa_und ).toFixed(1) : '—'} u/p/h</span>`],
+    ['Días medidos', `<span class="dv">${diaRows.length} días</span>`],
+  ].map(([k, v]) => `<div class="di"><span class="dk">${k}</span>${v}</div>`).join('');
+
+  renderCharts(diaRows);
+}
+
+// ── Charts ─────────────────────────────────────────────────────────────
+function destroyChart(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function colorPA(v) {
+  return v >= META ? '#00FF88' : v >= 200 ? '#FFB020' : '#FF4D6D';
+}
+
+function renderCharts(diaRows) {
+  const sorted = [...diaRows].sort((a, b) => a.fecha < b.fecha ? -1 : 1);
+  const fechas  = sorted.map(d => d.fecha.slice(5));  // MM-DD
+  const paVals  = sorted.map(d => Number(d.pa_und || 0));
+  const paCapped= paVals.map(v => Math.min(v, 1200)); // cap para visual
+  const cajas   = sorted.map(d => d.cajas_alistadas || 0);
+  const ops     = sorted.map(d => d.num_operarios || 0);
+
+  // Línea PA diario
+  destroyChart('cDaily');
+  charts.cDaily = new Chart(document.getElementById('cDaily'), {
+    type: 'line',
+    data: {
+      labels: fechas,
+      datasets: [
+        {
+          label: 'PA u/p/h', data: paCapped,
+          borderColor: '#00D4FF', backgroundColor: 'rgba(0,212,255,.07)', fill: true, tension: .35,
+          pointRadius: 5, pointBackgroundColor: paVals.map(colorPA),
+          pointStyle: paVals.map(v => v > 1200 ? 'triangle' : 'circle'),
+          spanGaps: false
+        },
+        {
+          label: `Meta ${META}`, data: fechas.map(() => META),
+          borderColor: 'rgba(255,176,32,.55)', borderDash: [4, 3], pointRadius: 0, fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              if (ctx.datasetIndex === 0) {
+                const real = paVals[ctx.dataIndex];
+                return ` PA: ${real > 1200 ? '⬆ ' + real.toLocaleString('es-CO') + ' u/p/h (pico)' : real.toLocaleString('es-CO') + ' u/p/h'}`;
+              }
+              return ` Meta: ${META} u/p/h`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: { min: 0, ticks: { callback: v => v, font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.04)' } },
+        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxTicksLimit: 12 } }
+      }
+    }
+  });
+
+  // Donut estado días
+  const nBien  = paVals.filter(v => v >= META).length;
+  const nAlerta= paVals.filter(v => v >= 200 && v < META).length;
+  const nCrit  = paVals.filter(v => v < 200).length;
+  destroyChart('cDonut');
+  charts.cDonut = new Chart(document.getElementById('cDonut'), {
+    type: 'doughnut',
+    data: {
+      labels: [`🟢 BIEN (${nBien})`, `🟡 ALERTA (${nAlerta})`, `🔴 CRÍTICO (${nCrit})`],
+      datasets: [{ data: [nBien, nAlerta, nCrit], backgroundColor: ['rgba(0,255,136,.8)', 'rgba(255,176,32,.8)', 'rgba(255,77,109,.8)'], borderWidth: 2, borderColor: 'var(--surface)' }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } } }
+  });
+
+  // Barras cajas
+  destroyChart('cCajas');
+  charts.cCajas = new Chart(document.getElementById('cCajas'), {
+    type: 'bar',
+    data: {
+      labels: fechas,
+      datasets: [{ label: 'Cajas', data: cajas, backgroundColor: cajas.map(v => v >= 300 ? 'rgba(0,255,136,.65)' : v >= 150 ? 'rgba(0,212,255,.55)' : 'rgba(123,47,255,.5)'), borderRadius: 3 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { ticks: { font: { size: 10 } } }, x: { grid: { display: false }, ticks: { font: { size: 9 }, maxTicksLimit: 12 } } } }
+  });
+
+  // Barras operarios
+  destroyChart('cOps');
+  charts.cOps = new Chart(document.getElementById('cOps'), {
+    type: 'bar',
+    data: {
+      labels: fechas,
+      datasets: [{ label: 'Operarios', data: ops, backgroundColor: 'rgba(123,47,255,.6)', borderRadius: 3 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, stepSize: 1, ticks: { font: { size: 10 } } }, x: { grid: { display: false }, ticks: { font: { size: 9 }, maxTicksLimit: 12 } } } }
+  });
+}
+
+// ── Comparativo ──────────────────────────────────────────────────────────
+function renderComparativo() {
+  const idA = document.getElementById('selA').value;
+  const idB = document.getElementById('selB').value;
+  const gA  = (allResumen[idA] || []).find(r => !r.semana);
+  const gB  = (allResumen[idB] || []).find(r => !r.semana);
+  const lblA = CONFIG.meses.find(m => m.id === idA)?.label || idA;
+  const lblB = CONFIG.meses.find(m => m.id === idB)?.label || idB;
+  const wrap = document.getElementById('compWrap');
+
+  if (!gA || !gB) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses con datos cargados</p></div>`;
+    return;
+  }
+
+  const dA = allDiario[idA] || [];
+  const dB = allDiario[idB] || [];
+  const nBienA = dA.filter(d => Number(d.pa_und) >= META).length;
+  const nBienB = dB.filter(d => Number(d.pa_und) >= META).length;
+
+  const d = (a, b, fmt = v => v.toFixed(1), inv = false) => {
+    const diff = b - a; const up = inv ? diff < 0 : diff > 0;
+    return `<span class="${up ? 'delta-up' : diff < 0 ? 'delta-dn' : ''}">${diff > 0 ? '+' : ''}${fmt(diff)}</span>`;
+  };
+
+  const rows = [
+    ['PA Unidades (u/p/h)', `${Number(gA.pa_und || 0).toFixed(1)}`, `${Number(gB.pa_und || 0).toFixed(1)}`, d(Number(gA.pa_und || 0), Number(gB.pa_und || 0))],
+    ['PA Cajas (caj/op/h)', `${Number(gA.pa_cajas || 0).toFixed(2)}`, `${Number(gB.pa_cajas || 0).toFixed(2)}`, d(Number(gA.pa_cajas || 0), Number(gB.pa_cajas || 0))],
+    ['Total Unidades', (gA.und_alistadas || 0).toLocaleString('es-CO'), (gB.und_alistadas || 0).toLocaleString('es-CO'), d(gA.und_alistadas || 0, gB.und_alistadas || 0, v => Math.round(v).toLocaleString('es-CO'))],
+    ['Total Cajas', (gA.cajas_alistadas || 0).toLocaleString('es-CO'), (gB.cajas_alistadas || 0).toLocaleString('es-CO'), d(gA.cajas_alistadas || 0, gB.cajas_alistadas || 0, v => Math.round(v).toLocaleString('es-CO'))],
+    ['Horas Efectivas', `${Number(gA.horas_efectivas || 0).toFixed(1)} h`, `${Number(gB.horas_efectivas || 0).toFixed(1)} h`, d(Number(gA.horas_efectivas || 0), Number(gB.horas_efectivas || 0), v => v.toFixed(1) + 'h')],
+    ['Operarios prom/día', `${Number(gA.num_operarios_prom || 0).toFixed(1)}`, `${Number(gB.num_operarios_prom || 0).toFixed(1)}`, d(Number(gA.num_operarios_prom || 0), Number(gB.num_operarios_prom || 0))],
+    ['Días medidos', dA.length, dB.length, d(dA.length, dB.length, v => Math.round(v) + '')],
+    ['Días BIEN (≥450)', `${nBienA}/${dA.length}`, `${nBienB}/${dB.length}`, ''],
+    ['Mejor Día PA', `${Number(gA.mejor_dia_pa || 0).toFixed(1)}`, `${Number(gB.mejor_dia_pa || 0).toFixed(1)}`, ''],
+    ['Peor Día PA',  `${Number(gA.peor_dia_pa  || 0).toFixed(1)}`, `${Number(gB.peor_dia_pa  || 0).toFixed(1)}`, ''],
+  ];
+
+  wrap.innerHTML = `
+    <div class="comp-card">
+      <h3>${lblA} vs ${lblB}</h3>
+      <div class="comp-row" style="font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.07em">
+        <span class="comp-metric">Indicador</span>
+        <div class="comp-vals"><span class="v-a">${lblA.split(' ')[0]}</span><span class="v-b">${lblB.split(' ')[0]}</span></div>
+        <span style="width:55px;text-align:right;font-size:.66rem;color:var(--muted)">Var.</span>
+      </div>
+      ${rows.map(([m, a, b, dv]) => `<div class="comp-row">
+        <span class="comp-metric">${m}</span>
+        <div class="comp-vals"><span class="v-a">${a}</span><span class="v-b">${b}</span></div>
+        <span style="width:55px;text-align:right">${dv}</span>
+      </div>`).join('')}
+    </div>
+    <div class="comp-card">
+      <h3>Visual Comparativo</h3>
+      <div class="chart-wrap" style="height:280px"><canvas id="cComp"></canvas></div>
+    </div>`;
+
+  new Chart(document.getElementById('cComp'), {
+    type: 'bar',
+    data: {
+      labels: ['PA u/p/h', 'Mejor Día', 'Meta 450'],
+      datasets: [
+        { label: lblA.split(' ')[0], data: [Number(gA.pa_und || 0), Number(gA.mejor_dia_pa || 0), META], backgroundColor: 'rgba(0,212,255,.7)', borderRadius: 5 },
+        { label: lblB.split(' ')[0], data: [Number(gB.pa_und || 0), Number(gB.mejor_dia_pa || 0), META], backgroundColor: 'rgba(123,47,255,.7)', borderRadius: 5 },
+        { label: 'Meta', data: [META, META, META], type: 'line', borderColor: 'rgba(255,176,32,.7)', borderDash: [5, 3], pointRadius: 0, fill: false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+      scales: { y: { min: 0, ticks: { font: { size: 10 } } } }
+    }
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  const user = await checkAuth(); if (!user) return;
+  renderUser();
+  await cargarDatos();
+  const ol = document.getElementById('overlay');
+  setTimeout(() => ol.classList.add('out'), 100);
+  setTimeout(() => ol.remove(), 500);
+});
+</script>
+</body>
+</html>
