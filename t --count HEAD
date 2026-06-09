@@ -1,0 +1,20 @@
+[33mdfaddc1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m cambio para kpi002 vista, admin.html mas completo, kpi003 etl proceso validar pruebas
+[33m0b6f8ec[m fix: admin asigna la contraseña del usuario
+[33m5c9c74c[m resolve problem create users
+[33m118e9a9[m varios errores se modifica el etl003 ns y se adiciona proceso y fecha entre otros
+[33m47c87c2[m varios errores se modifica el etl003 ns y se adiciona proceso y fecha entre otros
+[33m0d653d1[m feat: KPI-DES-003 Nivel de Servicio CEDI
+[33m1358133[m fix: kpi002 usa shell del sistema — topbar, base.css, auth, sb.rest
+[33m9f16376[m fix: etl_inv002 usa sb.rest() en lugar de fetch directo — resuelve undefined URL/KEY
+[33m3e90aa5[m fix: remove export keywords from etl_inv002 — script clasico no soporta ES modules
+[33m461efc6[m versionamiento de kpi2 se activa el config.js
+[33m59e9b2b[m versionamiento de kpi2 se activa el config.js
+[33mdb9ad0f[m versionamiento de kpi2 se activa el config.js
+[33m7a548a7[m versionamiento de kpi002 inventario
+[33m93a65bc[m mejorar la interfaz a la vista del kpi001
+[33m6426e2f[m mejorar la interfaz a la vista del kpi001
+[33m2ad6c6b[m adiciona boton reprocesar para quitar registros cuarentena y reprocesa sin cargar de nuevo el archivo seguimiento
+[33m44e4b6d[m adiciona boton reprocesar para quitar registros cuarentena y reprocesa sin cargar de nuevo el archivo seguimiento
+[33m5d50ffe[m ajuste en campo HORA TT RECIBO2 logica
+[33m2c7657d[m cambios en la vista para adicionar responsive a la aplicacion
+[33m90e3f4c[m NexusKPI v2
