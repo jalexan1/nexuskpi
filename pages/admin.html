@@ -85,7 +85,7 @@
     .usr-form { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); padding:1rem; display:none; margin-bottom:.8rem; }
     .usr-form.show { display:block; }
     .uf-grid { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
-    @media (min-width:700px) { .uf-grid { grid-template-columns:1fr 1fr 120px; } }
+    @media (min-width:700px) { .uf-grid { grid-template-columns:1fr 1fr 1fr 120px; } }
     .uf-field label { display:block; font-size:.66rem; color:var(--muted); letter-spacing:.07em; text-transform:uppercase; margin-bottom:.28rem; }
     .uf-field input,.uf-field select {
       width:100%; background:var(--surface); border:1px solid var(--border2);
@@ -202,6 +202,7 @@
           <div class="uf-grid">
             <div class="uf-field"><label>Correo</label><input type="email" id="uEmail" placeholder="correo@empresa.com" inputmode="email"/></div>
             <div class="uf-field"><label>Nombre completo</label><input type="text" id="uNombre" placeholder="Nombre completo"/></div>
+            <div class="uf-field"><label>Contraseña</label><input type="password" id="uPass" placeholder="mín. 8 caracteres"/></div>
             <div class="uf-field"><label>Rol</label><select id="uRol"><option value="viewer">Viewer</option><option value="admin">Admin</option></select></div>
           </div>
           <div style="margin-top:.75rem;display:flex;gap:.45rem;flex-wrap:wrap">
@@ -538,12 +539,18 @@
   async function crearUsuario() {
     const email  = document.getElementById('uEmail').value.trim();
     const nombre = document.getElementById('uNombre').value.trim();
+    const pass   = document.getElementById('uPass').value;
     const rol    = document.getElementById('uRol').value;
     const res    = document.getElementById('resUsr');
 
-    if (!email || !nombre) {
+    if (!email || !nombre || !pass) {
       res.className = 'result-box show err';
-      res.textContent = 'Correo y nombre son obligatorios.';
+      res.textContent = 'Correo, nombre y contraseña son obligatorios.';
+      return;
+    }
+    if (pass.length < 8) {
+      res.className = 'result-box show err';
+      res.textContent = 'La contraseña debe tener mínimo 8 caracteres.';
       return;
     }
 
@@ -551,12 +558,11 @@
     res.textContent = 'Creando usuario…';
 
     try {
-      const data = await callAdminFn({ accion: 'crear', email, nombre, rol });
+      const data = await callAdminFn({ accion: 'crear', email, nombre, rol, password: pass });
       res.className = 'result-box show ok';
-      res.innerHTML = `✅ Usuario <b>${email}</b> creado como <b>${rol}</b>.<br>
-        🔑 Contraseña temporal: <b style="font-family:monospace;font-size:1rem">${data.password}</b><br>
-        <small style="color:var(--muted)">Entrega esta contraseña al usuario. Solo se muestra una vez.</small>`;
+      res.innerHTML = `✅ Usuario <b>${email}</b> creado como <b>${rol}</b>.`;
       addLog(`Usuario creado: ${email} (${rol})`, 'ok');
+      document.getElementById('uPass').value = '';
       loadUsuarios();
     } catch(e) {
       res.className = 'result-box show err';
