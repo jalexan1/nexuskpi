@@ -284,6 +284,46 @@
         </div>
         <div class="result-box" id="resDes"></div>
       </div>
+	  
+	  <!-- ── Carga KPI-ALI-004 Productividad Alistamiento ── -->
+      <div class="a-card" style="animation-delay:.19s">
+        <h2>🔧 Cargar Productividad Alistamiento (KPI-ALI-004)</h2>
+        <p class="desc">
+          Sube <code>SEGUIMIENTO_CLICK_MES.xlsx</code>. El ETL lee la hoja
+          <code>ALISTAMIENTO</code>, calcula PA = Σ(Unidades) ÷ Σ(FIN−INICIO por operario)
+          e incluye <b>todos los procesos</b> (B2B + B2C + CLICK + RETAIL + MARKETPLACE).
+        </p>
+        <div class="meta-row">
+          <label>Período</label>
+          <select class="meta-sel" id="aliMes">
+            <!-- Poblado dinámicamente desde CONFIG.meses en el init -->
+          </select>
+        </div>
+        <div class="drop-zone" id="dropAli"
+             onclick="document.getElementById('fileAli').click()"
+             ondragover="onDragOver(event,'dropAli')"
+             ondragleave="onDragLeave('dropAli')"
+             ondrop="onDrop(event,'fileAli','dropAli')">
+          <input type="file" id="fileAli" accept=".xlsx,.xls"
+                 onchange="onFilePicked('fileAli','lblAli')"/>
+          <div class="drop-icon">🔧</div>
+          <p>Toca para seleccionar o arrastra el archivo</p>
+          <p class="hint">SEGUIMIENTO_CLICK_*.xlsx · Máx. 50 MB</p>
+          <p class="picked" id="lblAli"></p>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" style="flex:1" onclick="subirAlistamiento()">
+            ⬆️ Procesar y Cargar Alistamiento
+          </button>
+        </div>
+        <div class="prog-box" id="progAli">
+          <span id="progAliTxt">Procesando…</span>
+          <div class="prog-bar-wrap">
+            <div class="prog-bar" id="barAli" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="result-box" id="resAli"></div>
+      </div>
 
       <!-- ── Usuarios ── -->
       <div class="a-card full-col" style="animation-delay:.15s">
@@ -332,6 +372,8 @@
 <script src="../utils/etl.js"></script>
 <script src="../utils/etl_inv002.js"></script>
 <script src="../utils/etl_des003.js"></script>
+<script src="../utils/etl_ali004.js"></script>
+
 <script>
   applyTheme();
 
@@ -701,7 +743,61 @@
       addLog('✗ Error ETL NS: ' + e.message, 'err');
     }
   }
+	
+  // ── KPI-ALI-004: Productividad de Alistamiento ────────────────────────
+  async function subirAlistamiento() {
+    const file  = document.getElementById('fileAli').files[0];
+    const mesId = document.getElementById('aliMes').value;
 
+    if (!file) {
+      showRes('resAli', 'warn', '⚠️ Selecciona el archivo SEGUIMIENTO_CLICK_MES.xlsx primero.');
+      return;
+    }
+
+    function onProgreso(mensaje) {
+      addLog(mensaje, 'inf');
+      showProg('progAli', 'barAli', 'progAliTxt', 50, mensaje);
+    }
+
+    addLog(`Iniciando ETL Alistamiento: ${file.name} → ${mesId}`, 'inf');
+    showProg('progAli', 'barAli', 'progAliTxt', 5, 'Leyendo archivo Excel…');
+
+    try {
+      const resultado = await procesarAlistamiento(file, mesId, onProgreso);
+
+      showProg('progAli', 'barAli', 'progAliTxt', 100, 'Completado');
+      hideProg('progAli');
+
+      const pa       = resultado.paUnd;
+      const semEmoji = pa >= 450 ? '🟢' : pa >= 200 ? '🟡' : '🔴';
+
+      showRes('resAli', 'ok',
+        `✅ <b>Productividad Alistamiento cargada</b><br>` +
+        `📅 Período guardado: <b>${resultado.label}</b><br>` +
+        `${semEmoji} PA: <b>${pa.toFixed(1)} u/p/h</b> · Meta: ≥ 450 u/p/h<br>` +
+        `📦 Unidades alistadas: <b>${resultado.undAlistadas.toLocaleString('es-CO')}</b><br>` +
+        `📦 Cajas alistadas: <b>${resultado.cajasAlistadas.toLocaleString('es-CO')}</b><br>` +
+        `📅 ${resultado.dias} días medidos · ${resultado.horasEfectivas.toFixed(1)} h efectivas totales<br>` +
+        `🔧 PA Cajas: <b>${resultado.paCajas.toFixed(2)} caj/op/h</b>`
+      );
+
+      addLog(
+        `✓ ALI ${resultado.periodoId}: PA ${pa.toFixed(1)} u/p/h · ` +
+        `${resultado.undAlistadas.toLocaleString('es-CO')} und · ` +
+        `${resultado.cajasAlistadas.toLocaleString('es-CO')} cajas · ` +
+        `${resultado.dias} días`,
+        'ok'
+      );
+
+    } catch (e) {
+      hideProg('progAli');
+      showRes('resAli', 'err',
+        `❌ <b>Error al cargar Productividad Alistamiento</b><br>${e.message}`
+      );
+      addLog('✗ Error ETL Alistamiento: ' + e.message, 'err');
+    }
+  }
+  
   // ── WMS ────────────────────────────────────────────────────────────────
   async function subirWms() {
     const file=document.getElementById('fileWms').files[0];
@@ -772,7 +868,7 @@
     renderUser();
     document.getElementById('wmsDate').value=new Date().toISOString().split('T')[0];
     // Poblar selectores de mes desde CONFIG.meses (sin hardcodear opciones)
-    ['uploadMes','desMes'].forEach(selId => {
+    ['uploadMes','desMes','aliMes'].forEach(selId => {
       const sel = document.getElementById(selId);
       if (!sel) return;
       sel.innerHTML = CONFIG.meses.map((m,i) =>
