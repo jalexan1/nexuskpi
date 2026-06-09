@@ -85,7 +85,7 @@
     .usr-form { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); padding:1rem; display:none; margin-bottom:.8rem; }
     .usr-form.show { display:block; }
     .uf-grid { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
-    @media (min-width:700px) { .uf-grid { grid-template-columns:1fr 1fr 1fr 120px; } }
+    @media (min-width:700px) { .uf-grid { grid-template-columns:1fr 1fr 120px; } }
     .uf-field label { display:block; font-size:.66rem; color:var(--muted); letter-spacing:.07em; text-transform:uppercase; margin-bottom:.28rem; }
     .uf-field input,.uf-field select {
       width:100%; background:var(--surface); border:1px solid var(--border2);
@@ -192,99 +192,6 @@
         <div class="result-box" id="resWms"></div>
       </div>
 
-      <!-- ── Carga KPI-INV-002 Inventario ── -->
-      <div class="a-card" style="animation-delay:.13s">
-        <h2>📦 Cargar Inventario (KPI-INV-002)</h2>
-        <p class="desc">
-          Sube <code>WMS_BASE_CLICK_COSMETICS_MES.xlsx</code>. El ETL lee la hoja
-          <code>ConteoInvxID</code>, filtra bodega <code>021</code> y calcula la
-          Exactitud de Inventario (EI%). Los resultados se guardan en Supabase.
-        </p>
-
-        <!-- Selector de mes -->
-        <div class="meta-row">
-          <label>Período</label>
-          <select class="meta-sel" id="invMes">
-            <option value="2026-05" selected>Mayo 2026</option>
-            <option value="2026-06">Junio 2026</option>
-            <option value="2026-07">Julio 2026</option>
-          </select>
-        </div>
-
-        <!-- Drop zone -->
-        <div class="drop-zone" id="dropInv"
-             onclick="document.getElementById('fileInv').click()"
-             ondragover="onDragOver(event,'dropInv')"
-             ondragleave="onDragLeave('dropInv')"
-             ondrop="onDrop(event,'fileInv','dropInv')">
-          <input type="file" id="fileInv" accept=".xlsx,.xls"
-                 onchange="onFilePicked('fileInv','lblInv')"/>
-          <div class="drop-icon">🔢</div>
-          <p>Toca para seleccionar o arrastra el archivo</p>
-          <p class="hint">WMS_BASE_CLICK_COSMETICS_*.xlsx · Máx. 100 MB</p>
-          <p class="picked" id="lblInv"></p>
-        </div>
-
-        <!-- Botones -->
-        <div class="btn-row">
-          <button class="btn btn-primary" style="flex:1" onclick="subirInventario()">
-            ⬆️ Procesar y Cargar Inventario
-          </button>
-        </div>
-
-        <!-- Progreso -->
-        <div class="prog-box" id="progInv">
-          <span id="progInvTxt">Procesando…</span>
-          <div class="prog-bar-wrap">
-            <div class="prog-bar" id="barInv" style="width:0%"></div>
-          </div>
-        </div>
-
-        <!-- Resultado -->
-        <div class="result-box" id="resInv"></div>
-      </div>
-
-
-      <!-- ── Carga KPI-DES-003 Nivel de Servicio ── -->
-      <div class="a-card" style="animation-delay:.16s">
-        <h2>🏭 Cargar Nivel de Servicio (KPI-DES-003)</h2>
-        <p class="desc">
-          Sube <code>SEGUIMIENTO_CLICK_MES.xlsx</code>. El ETL lee las hojas
-          <code>ALISTAMIENTO</code> (col. Facturado, PROCESO=B2B) y <code>PICKING WMS</code>
-          (col. cantidad), cruza por Comprobante y calcula el NS%.
-        </p>
-        <div class="meta-row">
-          <label>Período</label>
-          <select class="meta-sel" id="desMes">
-            <!-- Poblado dinámicamente desde CONFIG.meses en el init -->
-          </select>
-        </div>
-        <div class="drop-zone" id="dropDes"
-             onclick="document.getElementById('fileDes').click()"
-             ondragover="onDragOver(event,'dropDes')"
-             ondragleave="onDragLeave('dropDes')"
-             ondrop="onDrop(event,'fileDes','dropDes')">
-          <input type="file" id="fileDes" accept=".xlsx,.xls"
-                 onchange="onFilePicked('fileDes','lblDes')"/>
-          <div class="drop-icon">🏭</div>
-          <p>Toca para seleccionar o arrastra el archivo</p>
-          <p class="hint">SEGUIMIENTO_CLICK_*.xlsx · Máx. 50 MB</p>
-          <p class="picked" id="lblDes"></p>
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-primary" style="flex:1" onclick="subirNivelServicio()">
-            ⬆️ Procesar y Cargar NS
-          </button>
-        </div>
-        <div class="prog-box" id="progDes">
-          <span id="progDesTxt">Procesando…</span>
-          <div class="prog-bar-wrap">
-            <div class="prog-bar" id="barDes" style="width:0%"></div>
-          </div>
-        </div>
-        <div class="result-box" id="resDes"></div>
-      </div>
-
       <!-- ── Usuarios ── -->
       <div class="a-card full-col" style="animation-delay:.15s">
         <div class="usr-toolbar">
@@ -294,8 +201,7 @@
         <div class="usr-form" id="usrForm">
           <div class="uf-grid">
             <div class="uf-field"><label>Correo</label><input type="email" id="uEmail" placeholder="correo@empresa.com" inputmode="email"/></div>
-            <div class="uf-field"><label>Contraseña</label><input type="password" id="uPass" placeholder="mín. 6 caracteres"/></div>
-            <div class="uf-field"><label>Nombre</label><input type="text" id="uNombre" placeholder="Nombre completo"/></div>
+            <div class="uf-field"><label>Nombre completo</label><input type="text" id="uNombre" placeholder="Nombre completo"/></div>
             <div class="uf-field"><label>Rol</label><select id="uRol"><option value="viewer">Viewer</option><option value="admin">Admin</option></select></div>
           </div>
           <div style="margin-top:.75rem;display:flex;gap:.45rem;flex-wrap:wrap">
@@ -330,8 +236,6 @@
 <script src="../config/config.js"></script>
 <script src="../utils/auth.js"></script>
 <script src="../utils/etl.js"></script>
-<script src="../utils/etl_inv002.js"></script>
-<script src="../utils/etl_des003.js"></script>
 <script>
   applyTheme();
 
@@ -581,127 +485,6 @@
     }
   }
 
-  // ── KPI-INV-002: Carga Inventario ──────────────────────────────────────
-  /**
-   * Lee el archivo WMS_BASE_CLICK_COSMETICS_MES.xlsx seleccionado,
-   * llama al ETL de inventario (etl_inv002.js) y muestra el resultado.
-   *
-   * La funcion procesarInventario() viene de utils/etl_inv002.js.
-   * Recibe: (File, periodoId, callbackProgreso)
-   * Usa sb.rest() internamente — no necesita credenciales externas.
-   * Devuelve: { eiPctGlobal, totalSKUs, totalExactos, totalDifs, semaforo, inconsistentesCount }
-   */
-  async function subirInventario() {
-    // 1. Validar archivo y periodo
-    const file  = document.getElementById('fileInv').files[0];
-    const mesId = document.getElementById('invMes').value;
-
-    if (!file) {
-      showRes('resInv', 'warn', '⚠️ Selecciona un archivo WMS primero.');
-      return;
-    }
-
-    // 2. Callback de progreso
-    function onProgreso(mensaje) {
-      addLog(mensaje, 'inf');
-      showProg('progInv', 'barInv', 'progInvTxt', 50, mensaje);
-    }
-
-    addLog(`Iniciando ETL Inventario: ${file.name} → ${mesId}`, 'inf');
-    showProg('progInv', 'barInv', 'progInvTxt', 5, 'Leyendo archivo Excel…');
-
-    try {
-      // 3. Llamar al ETL — usa sb.rest() internamente, no necesita URL/KEY
-      const resultado = await procesarInventario(file, mesId, onProgreso);
-
-      // 6. Barra al 100% y ocultar después de 1.2s
-      showProg('progInv', 'barInv', 'progInvTxt', 100, 'Completado');
-      hideProg('progInv');
-
-      // 7. Determinar emoji de semáforo para el mensaje de resultado
-      const ei       = resultado.eiPctGlobal;
-      const semEmoji = ei >= 99 ? '🟢' : ei >= 97 ? '🟡' : '🔴';
-
-      // 8. Mostrar resumen del resultado en la tarjeta
-      showRes('resInv', 'ok',
-        `✅ <b>Inventario cargado</b><br>` +
-        `📦 Total SKUs contados: <b>${resultado.totalSKUs}</b><br>` +
-        `✅ SKUs exactos: <b>${resultado.totalExactos}</b><br>` +
-        `❌ SKUs con diferencia: <b>${resultado.totalDifs}</b><br>` +
-        `⚠️ Inconsistentes (excluidos): <b>${resultado.inconsistentesCount}</b><br>` +
-        `${semEmoji} EI%: <b>${ei}%</b> · Meta: ≥ 99%`
-      );
-
-      // 9. Registrar en el log de la pantalla
-      addLog(
-        `✓ Inventario ${mesId}: EI ${ei}% · ` +
-        `${resultado.totalExactos}/${resultado.totalSKUs} SKUs exactos · ` +
-        `${resultado.inconsistentesCount} inconsistentes`,
-        'ok'
-      );
-
-    } catch (e) {
-      // 10. Si ocurre cualquier error, ocultar progreso y mostrar el mensaje de error
-      hideProg('progInv');
-      showRes('resInv', 'err', '❌ ' + e.message);
-      addLog('✗ Error ETL Inventario: ' + e.message, 'err');
-    }
-  }
-
-  // ── KPI-DES-003: Nivel de Servicio ────────────────────────────────────
-  async function subirNivelServicio() {
-    const file  = document.getElementById('fileDes').files[0];
-    const mesId = document.getElementById('desMes').value;
-
-    if (!file) {
-      showRes('resDes', 'warn', '⚠️ Selecciona el archivo SEGUIMIENTO_CLICK_MES.xlsx primero.');
-      return;
-    }
-
-    function onProgreso(mensaje) {
-      addLog(mensaje, 'inf');
-      showProg('progDes', 'barDes', 'progDesTxt', 50, mensaje);
-    }
-
-    addLog(`Iniciando ETL NS: ${file.name} → ${mesId}`, 'inf');
-    showProg('progDes', 'barDes', 'progDesTxt', 5, 'Leyendo archivo Excel…');
-
-    try {
-      const resultado = await procesarNivelServicio(file, mesId, onProgreso);
-
-      showProg('progDes', 'barDes', 'progDesTxt', 100, 'Completado');
-      hideProg('progDes');
-
-      const ns       = resultado.nsPct;
-      const semEmoji = ns >= 98 ? '🟢' : ns >= 90 ? '🟡' : '🔴';
-
-      showRes('resDes', 'ok',
-        `✅ <b>Nivel de Servicio cargado</b><br>` +
-        `📅 Periodo guardado: <b>${resultado.periodoId}</b><br>` +
-        `${semEmoji} NS%: <b>${ns.toFixed(2)}%</b> · <b>${resultado.estado}</b><br>` +
-        `📦 Und. pedidas: <b>${resultado.undPedidas.toLocaleString('es-CO')}</b><br>` +
-        `✅ Und. despachadas: <b>${resultado.undDesp.toLocaleString('es-CO')}</b><br>` +
-        `❌ Und. cortadas: <b>${resultado.undCortadas.toLocaleString('es-CO')}</b><br>` +
-        `📅 ${resultado.semanas} semanas · ${resultado.dias} días · ${resultado.skus} SKUs`
-      );
-
-      addLog(
-        `✓ NS ${mesId}: ${ns.toFixed(2)}% · ` +
-        `${resultado.undDesp.toLocaleString('es-CO')} desp / ${resultado.undPedidas.toLocaleString('es-CO')} ped · ` +
-        `${resultado.semanas} semanas · ${resultado.skus} SKUs`,
-        'ok'
-      );
-
-    } catch (e) {
-      hideProg('progDes');
-      // e.message ya incluye el mes afectado porque el ETL usa _labelPeriodo()
-      showRes('resDes', 'err',
-        `❌ <b>Error al cargar Nivel de Servicio</b><br>${e.message}`
-      );
-      addLog('✗ Error ETL NS: ' + e.message, 'err');
-    }
-  }
-
   // ── WMS ────────────────────────────────────────────────────────────────
   async function subirWms() {
     const file=document.getElementById('fileWms').files[0];
@@ -711,46 +494,85 @@
   }
 
   // ── Usuarios ───────────────────────────────────────────────────────────
+  // ── Llamar Edge Function admin-usuarios ─────────────────────────────
+  async function callAdminFn(body) {
+    const token = _getToken();
+    const r = await fetch(`${CONFIG.supabase.url}/functions/v1/admin-usuarios`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error || 'Error desconocido');
+    return data;
+  }
+
   async function loadUsuarios() {
     try {
-      const data=await sb.rest('GET','kpi_usuarios?order=created_at.asc');
-      renderUsersTable(data||[]);
-    } catch {
-      document.getElementById('usrBody').innerHTML=`<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem;font-size:.78rem">Conecta Supabase para ver usuarios.</td></tr>`;
+      const data = await callAdminFn({ accion: 'listar' });
+      renderUsersTable(data.usuarios || []);
+    } catch(e) {
+      document.getElementById('usrBody').innerHTML=`<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem;font-size:.78rem">Error cargando usuarios: ${e.message}</td></tr>`;
     }
   }
+
   function renderUsersTable(users) {
-    const tbody=document.getElementById('usrBody');
-    if(!users.length){ tbody.innerHTML=`<tr><td colspan="4"><div class="empty"><p>Sin usuarios registrados</p></div></td></tr>`; return; }
-    tbody.innerHTML=users.map(u=>`<tr>
+    const tbody = document.getElementById('usrBody');
+    if (!users.length) {
+      tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><p>Sin usuarios registrados</p></div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = users.map(u => `<tr>
       <td style="word-break:break-all">${u.email}</td>
       <td>${u.nombre||'—'}</td>
       <td><span class="badge ${u.rol==='admin'?'badge-warn':'badge-info'}">${u.rol}</span></td>
       <td><button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.id}','${u.email}')">Eliminar</button></td>
     </tr>`).join('');
   }
-  function toggleUsrForm(){ document.getElementById('usrForm').classList.toggle('show'); }
+
+  function toggleUsrForm() { document.getElementById('usrForm').classList.toggle('show'); }
+
   async function crearUsuario() {
-    const email=document.getElementById('uEmail').value.trim();
-    const pass=document.getElementById('uPass').value;
-    const nombre=document.getElementById('uNombre').value.trim();
-    const rol=document.getElementById('uRol').value;
-    const res=document.getElementById('resUsr');
-    if(!email||!pass||!nombre){ res.className='result-box show err'; res.textContent='Todos los campos son obligatorios.'; return; }
-    if(pass.length<6){ res.className='result-box show err'; res.textContent='Contraseña mínimo 6 caracteres.'; return; }
+    const email  = document.getElementById('uEmail').value.trim();
+    const nombre = document.getElementById('uNombre').value.trim();
+    const rol    = document.getElementById('uRol').value;
+    const res    = document.getElementById('resUsr');
+
+    if (!email || !nombre) {
+      res.className = 'result-box show err';
+      res.textContent = 'Correo y nombre son obligatorios.';
+      return;
+    }
+
+    res.className = 'result-box show warn';
+    res.textContent = 'Creando usuario…';
+
     try {
-      await sb.rest('POST','kpi_usuarios',[{email,nombre,rol}],{'Prefer':'return=minimal'});
-      res.className='result-box show ok'; res.textContent=`✅ Usuario "${email}" (${rol}) creado.`;
-      addLog(`Usuario creado: ${email} (${rol})`,'ok');
-      toggleUsrForm(); loadUsuarios();
-    } catch(e){ res.className='result-box show err'; res.textContent='❌ '+e.message; }
+      const data = await callAdminFn({ accion: 'crear', email, nombre, rol });
+      res.className = 'result-box show ok';
+      res.innerHTML = `✅ Usuario <b>${email}</b> creado como <b>${rol}</b>.<br>
+        🔑 Contraseña temporal: <b style="font-family:monospace;font-size:1rem">${data.password}</b><br>
+        <small style="color:var(--muted)">Entrega esta contraseña al usuario. Solo se muestra una vez.</small>`;
+      addLog(`Usuario creado: ${email} (${rol})`, 'ok');
+      loadUsuarios();
+    } catch(e) {
+      res.className = 'result-box show err';
+      res.textContent = '❌ ' + e.message;
+    }
   }
-  async function eliminarUsuario(id,email) {
-    if(!confirm(`¿Eliminar "${email}"?`)) return;
+
+  async function eliminarUsuario(id, email) {
+    if (!confirm(`¿Eliminar el usuario "${email}"? Esta acción no se puede deshacer.`)) return;
     try {
-      await sb.rest('DELETE',`kpi_usuarios?id=eq.${id}`,null,{'Prefer':'return=minimal'});
-      addLog(`Eliminado: ${email}`,'warn'); loadUsuarios();
-    } catch(e){ alert('Error: '+e.message); }
+      await callAdminFn({ accion: 'eliminar', user_id: id, email });
+      addLog(`Usuario eliminado: ${email}`, 'warn');
+      loadUsuarios();
+    } catch(e) {
+      alert('Error al eliminar: ' + e.message);
+    }
   }
 
   // ── ETL Log ────────────────────────────────────────────────────────────
@@ -771,14 +593,6 @@
     const user=await checkAuth('admin'); if(!user) return;
     renderUser();
     document.getElementById('wmsDate').value=new Date().toISOString().split('T')[0];
-    // Poblar selectores de mes desde CONFIG.meses (sin hardcodear opciones)
-    ['uploadMes','desMes'].forEach(selId => {
-      const sel = document.getElementById(selId);
-      if (!sel) return;
-      sel.innerHTML = CONFIG.meses.map((m,i) =>
-        `<option value="${m.id}" ${i===CONFIG.meses.length-1?'selected':''}>${m.label}</option>`
-      ).join('');
-    });
     cargarMesesReprocesar();
     loadEtlLog();
     loadUsuarios();
