@@ -80,7 +80,15 @@
     .lg-err { color:var(--error); }
     .lg-inf { color:var(--accent); }
     .lg-warn{ color:var(--warn); }
-    .usr-toolbar { display:flex; align-items:center; gap:.5rem; margin-bottom:.8rem; flex-wrap:wrap; }
+    /* ── Tabs nav ── */
+    .tabs-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 1.25rem;gap:.1rem;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--topbar-h);z-index:90;}
+    .tabs-nav::-webkit-scrollbar{display:none}
+    .tab-btn{padding:.75rem .95rem;font-size:.82rem;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;min-height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+    .tab-btn:hover{color:var(--text)}
+    .tab-btn.on{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-panel{display:none}.tab-panel.on{display:block}
+
+        .usr-toolbar { display:flex; align-items:center; gap:.5rem; margin-bottom:.8rem; flex-wrap:wrap; }
     .usr-toolbar h2 { flex:1; font-size:.95rem; font-weight:700; }
     .usr-form { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); padding:1rem; display:none; margin-bottom:.8rem; }
     .usr-form.show { display:block; }
@@ -111,6 +119,11 @@
     <div class="topbar-user" id="topbarUser"></div>
   </header>
 
+  <nav class="tabs-nav">
+    <button class="tab-btn on" onclick="tab('cargue',this)">📦 Cargue de Datos</button>
+    <button class="tab-btn"   onclick="tab('usuarios',this)">👥 Usuarios</button>
+  </nav>
+
   <main class="content">
     <div class="admin-hdr">
       <div class="eyebrow">⚙️ Panel de Administración</div>
@@ -118,7 +131,8 @@
       <p>Carga de archivos Excel, reprocesamiento de meses, gestión de usuarios y log de operaciones</p>
     </div>
 
-    <div class="grid-admin">
+    <div id="tab-cargue" class="tab-panel on">
+      <div class="grid-admin">
 
       <!-- ── Carga Seguimiento ── -->
       <div class="a-card" style="animation-delay:.05s">
@@ -325,6 +339,11 @@
         <div class="result-box" id="resAli"></div>
       </div>
 
+      </div>
+    </div>
+
+    <div id="tab-usuarios" class="tab-panel">
+      <div class="grid-admin">
       <!-- ── Usuarios ── -->
       <div class="a-card full-col" style="animation-delay:.15s">
         <div class="usr-toolbar">
@@ -363,7 +382,9 @@
         </div>
       </div>
 
+      </div>
     </div>
+
   </main>
 </div>
 
@@ -375,7 +396,15 @@
 <script src="../utils/etl_ali004.js"></script>
 
 <script>
-  applyTheme();
+  // ── Tabs ──────────────────────────────────────────────────────────────
+  function tab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
+    document.getElementById('tab-' + id).classList.add('on');
+    btn.classList.add('on');
+  }
+
+    applyTheme();
 
   // ── Drag & Drop ────────────────────────────────────────────────────────
   function onDragOver(e,id){ e.preventDefault(); document.getElementById(id).classList.add('over'); }
