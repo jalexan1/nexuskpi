@@ -24,7 +24,7 @@
     _buildSVG() {
       const ns = 'http://www.w3.org/2000/svg';
       const svg = document.createElementNS(ns, 'svg');
-      svg.setAttribute('viewBox', '0 0 900 165');
+      svg.setAttribute('viewBox', '0 0 900 160');
       svg.setAttribute('xmlns', ns);
       svg.style.cssText = 'width:100%;height:100%;overflow:visible;';
       svg.setAttribute('aria-label', 'Animación Cadena Logística');
@@ -44,9 +44,8 @@
           .ws-wheel { fill: #0a1520; stroke: rgba(0,212,255,0.6); stroke-width:1.2; }
           .ws-label { font-family: 'Syne', 'Arial', sans-serif; font-size: 7px; font-weight:700;
                       letter-spacing:.08em; text-transform:uppercase; }
-          .ws-scene-label { font-family: 'Syne', 'Arial', sans-serif; font-size: 9px; font-weight:800;
-                            letter-spacing:.15em; text-transform:uppercase; fill: rgba(0,212,255,0.9);
-                            text-shadow: 0 0 8px rgba(0,212,255,0.6); }
+          .ws-scene-label { font-family: 'Syne', 'Arial', sans-serif; font-size: 6.5px; font-weight:700;
+                            letter-spacing:.12em; text-transform:uppercase; fill: rgba(0,212,255,0.55); }
           .ws-glow  { filter: drop-shadow(0 0 3px rgba(0,212,255,0.7)); }
           .ws-scanbeam { stroke:#00FF88; stroke-width:1.5; stroke-linecap:round; opacity:0; }
           .ws-divider { stroke: rgba(0,212,255,0.08); stroke-width:1; stroke-dasharray:3,4; }
@@ -99,8 +98,7 @@
 
       <!-- ═══ SCENE 1: RECIBO — worker unloading truck ═══ -->
       <g id="ws-scene1">
-        <rect x="70" y="140" width="80" height="14" fill="rgba(0,212,255,0.08)" stroke="rgba(0,212,255,0.25)" stroke-width="0.8" rx="4"/>
-        <text class="ws-scene-label" x="110" y="150" text-anchor="middle">① Recibo</text>
+        <text class="ws-scene-label" x="110" y="12" text-anchor="middle">① Recibo</text>
 
         <!-- Truck body -->
         <g id="ws-truck1" style="animation:ws-truck-in 1s 0.2s cubic-bezier(.34,1.56,.64,1) both">
@@ -169,8 +167,7 @@
 
       <!-- ═══ SCENE 2: INVENTARIO — worker at computer/shelves ═══ -->
       <g id="ws-scene2">
-        <rect x="280" y="140" width="110" height="14" fill="rgba(0,212,255,0.08)" stroke="rgba(0,212,255,0.25)" stroke-width="0.8" rx="4"/>
-        <text class="ws-scene-label" x="335" y="150" text-anchor="middle">② Inventario</text>
+        <text class="ws-scene-label" x="335" y="12" text-anchor="middle">② Inventario</text>
 
         <!-- Shelving unit -->
         <rect x="230" y="55" width="60" height="65" fill="rgba(13,20,32,0.8)" stroke="rgba(0,212,255,0.2)" stroke-width="1" rx="2"/>
@@ -259,8 +256,7 @@
 
       <!-- ═══ SCENE 3: PICKING — worker scanning with gun ═══ -->
       <g id="ws-scene3">
-        <rect x="510" y="140" width="100" height="14" fill="rgba(0,212,255,0.08)" stroke="rgba(0,212,255,0.25)" stroke-width="0.8" rx="4"/>
-        <text class="ws-scene-label" x="560" y="150" text-anchor="middle">③ Picking</text>
+        <text class="ws-scene-label" x="560" y="12" text-anchor="middle">③ Picking</text>
 
         <!-- Shelving unit right -->
         <rect x="458" y="55" width="55" height="65" fill="rgba(13,20,32,0.8)" stroke="rgba(0,212,255,0.2)" stroke-width="1" rx="2"/>
@@ -336,8 +332,7 @@
 
       <!-- ═══ SCENE 4: CARGA & EMBARQUE — loading truck, door closing ═══ -->
       <g id="ws-scene4">
-        <rect x="725" y="140" width="120" height="14" fill="rgba(0,212,255,0.08)" stroke="rgba(0,212,255,0.25)" stroke-width="0.8" rx="4"/>
-        <text class="ws-scene-label" x="785" y="150" text-anchor="middle">④ Despacho</text>
+        <text class="ws-scene-label" x="785" y="12" text-anchor="middle">④ Despacho</text>
 
         <!-- Delivery truck (rear view perspective) -->
         <g id="ws-truck2">
