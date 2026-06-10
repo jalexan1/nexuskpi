@@ -234,7 +234,7 @@ async function procesarAlistamiento(file, periodoId, onProgress) {
       cajas_alistadas: totalCajas,
       horas_efectivas: Math.round(totalHoras * 10000) / 10000,
       num_operarios:   numOperarios,
-      num_cuarentena:  numCuarentena,
+
       pa_und:          paUnd,
       pa_cajas:        paCajas,
     });
