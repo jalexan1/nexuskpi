@@ -36,10 +36,8 @@
     @media (max-width:1023px) { .hero-scene { height:110px; } }
 
     /* Pipeline SVG — se adapta al ancho */
-    .pipeline-wrap { width:100%; margin-bottom:2rem; overflow:visible; }
 
     /* En móvil el pipeline desaparece (muy pequeño para 8 nodos) */
-    @media (max-width:767px) { .pipeline-wrap { display:none; } }
 
     /* KPI Grid */
     .kpi-grid {
@@ -97,6 +95,39 @@
       .admin-link { flex-wrap:wrap; }
       .admin-link p { display:none; }
     }
+
+    /* ── Tabs nav ── */
+    .tabs-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 1.25rem;gap:.1rem;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--topbar-h);z-index:90;}
+    .tabs-nav::-webkit-scrollbar{display:none}
+    .tab-btn{padding:.75rem .95rem;font-size:.82rem;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;min-height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+    .tab-btn:hover{color:var(--text)}
+    .tab-btn.on{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-btn.admin-tab.on{color:var(--warn);border-bottom-color:var(--warn)}
+    .tab-panel{display:none}.tab-panel.on{display:block}
+
+    /* ── Admin panel ── */
+    .admin-panel-hdr{display:flex;align-items:center;gap:.75rem;background:rgba(255,176,32,.05);border:1px solid rgba(255,176,32,.15);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:1.5rem;}
+    .admin-panel-hdr h2{font-size:1rem;font-weight:800;color:var(--warn);margin:0;}
+    .admin-panel-hdr p{font-size:.76rem;color:var(--muted);margin:0;}
+    .admin-quick{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-bottom:1.5rem;}
+    @media(max-width:479px){.admin-quick{grid-template-columns:1fr 1fr;gap:.5rem;}}
+    .aq-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;display:flex;flex-direction:column;gap:.35rem;cursor:pointer;transition:all .18s;text-decoration:none;animation:fadeUp .35s ease both;}
+    .aq-card:hover{border-color:var(--warn);background:var(--surface2);transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,176,32,.1);}
+    .aq-icon{font-size:1.4rem;}
+    .aq-title{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:var(--text);}
+    .aq-desc{font-size:.7rem;color:var(--muted);line-height:1.4;}
+    .aq-arrow{color:var(--warn);font-size:.85rem;margin-top:auto;padding-top:.35rem;}
+    .admin-sec-title{font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.65rem;margin-top:1.25rem;}
+    .kpi-status-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.6rem;}
+    @media(max-width:479px){.kpi-status-grid{grid-template-columns:1fr;}}
+    .ks-row{display:flex;align-items:center;gap:.65rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:.6rem .85rem;animation:fadeUp .35s ease both;}
+    .ks-icon{font-size:1rem;width:28px;text-align:center;flex-shrink:0;}
+    .ks-info{flex:1;min-width:0;}
+    .ks-code{font-size:.62rem;font-weight:700;color:var(--muted);letter-spacing:.07em;}
+    .ks-name{font-size:.75rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .ks-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .ks-dot.live{background:var(--ok);box-shadow:0 0 6px var(--ok);}
+    .ks-dot.next{background:var(--dim);}
   </style>
 </head>
 <body>
@@ -112,7 +143,13 @@
     <div class="topbar-user" id="topbarUser"></div>
   </header>
 
+  <nav class="tabs-nav" id="tabsNav" style="display:none">
+    <button class="tab-btn on"        onclick="tab('kpis',this)">📊 Indicadores</button>
+    <button class="tab-btn admin-tab" onclick="tab('admin',this)">⚙️ Administración</button>
+  </nav>
+
   <main class="content">
+    <div class="tab-panel on" id="tab-kpis">
     <div class="hero-header">
       <div class="hero-text">
         <div class="eyebrow">Plataforma de Indicadores</div>
@@ -122,31 +159,59 @@
       <div class="hero-scene" id="warehouseScene" aria-hidden="true"></div>
     </div>
 
-    <!-- Pipeline (solo desktop/tablet) -->
-    <svg class="pipeline-wrap" viewBox="0 0 1100 72" preserveAspectRatio="xMidYMid meet">
-      <defs>
-        <linearGradient id="pg" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#00D4FF" stop-opacity=".8"/>
-          <stop offset="100%" stop-color="#00FF88" stop-opacity=".6"/>
-        </linearGradient>
-        <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-          <path d="M0,0 L6,3 L0,6Z" fill="rgba(0,212,255,.5)"/>
-        </marker>
-      </defs>
-      <line x1="55" y1="36" x2="1045" y2="36" stroke="url(#pg)" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr)"/>
-      <g id="pipeNodes"></g>
-    </svg>
-
     <div class="kpi-grid" id="kpiGrid"></div>
 
-    <a href="admin.html" class="admin-link" id="adminLink" style="display:none">
-      <div style="font-size:1.3rem;width:36px;text-align:center;flex-shrink:0">⚙️</div>
-      <div style="min-width:0">
-        <h4>Panel de Administración</h4>
-        <p>Cargar archivos Excel, gestionar usuarios y ver log de cargues</p>
+
+    </div><!-- /tab-kpis -->
+
+    <!-- ══ TAB: ADMINISTRACIÓN ════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-admin">
+
+      <div class="admin-panel-hdr">
+        <div style="font-size:1.5rem">⚙️</div>
+        <div>
+          <h2>Panel de Administración</h2>
+          <p>Carga de archivos Excel · Gestión de usuarios · Log de operaciones</p>
+        </div>
+        <a href="admin.html" class="btn btn-sm" style="margin-left:auto;border-color:rgba(255,176,32,.4);color:var(--warn);flex-shrink:0">
+          Abrir Admin completo →
+        </a>
       </div>
-      <div style="margin-left:auto;color:var(--warn);font-size:1.1rem;flex-shrink:0">→</div>
-    </a>
+
+      <div class="admin-sec-title">⚡ Accesos Rápidos</div>
+      <div class="admin-quick">
+        <a href="admin.html" class="aq-card" style="animation-delay:.05s">
+          <div class="aq-icon">📤</div>
+          <div class="aq-title">Cargar Seguimiento</div>
+          <div class="aq-desc">KPI-REC-001 · SEGUIMIENTO_CLICK_MES.xlsx</div>
+          <div class="aq-arrow">→</div>
+        </a>
+        <a href="admin.html" class="aq-card" style="animation-delay:.08s">
+          <div class="aq-icon">🏭</div>
+          <div class="aq-title">Cargar NS / Alistamiento</div>
+          <div class="aq-desc">KPI-DES-003 · KPI-ALI-004 · Mismo archivo fuente</div>
+          <div class="aq-arrow">→</div>
+        </a>
+        <a href="admin.html" class="aq-card" style="animation-delay:.11s">
+          <div class="aq-icon">📦</div>
+          <div class="aq-title">Cargar Inventario</div>
+          <div class="aq-desc">KPI-INV-002 · WMS_BASE_CLICK_COSMETICS_MES.xlsx</div>
+          <div class="aq-arrow">→</div>
+        </a>
+        <a href="admin.html" class="aq-card" style="animation-delay:.14s">
+          <div class="aq-icon">👥</div>
+          <div class="aq-title">Gestión de Usuarios</div>
+          <div class="aq-desc">Crear, eliminar y gestionar roles de acceso</div>
+          <div class="aq-arrow">→</div>
+        </a>
+      </div>
+
+      <div class="admin-sec-title">📡 Estado de KPIs en Producción</div>
+      <div class="kpi-status-grid" id="kpiStatusGrid"></div>
+
+    </div><!-- /tab-admin -->
+
+
   </main>
 </div>
 
@@ -156,23 +221,8 @@
   applyTheme();
 
   function buildPipeline() {
-    const g    = document.getElementById('pipeNodes');
-    const kpis = CONFIG.kpis;
-    kpis.forEach((k, i) => {
-      const x    = 55 + (i / (kpis.length - 1)) * 990;
-      const vivo = k.activo;
-      const c    = vivo ? '#00D4FF' : 'rgba(122,139,166,.35)';
-      if (vivo) {
-        g.innerHTML += `<circle cx="${x}" cy="36" r="20" fill="none" stroke="#00D4FF" stroke-width="1" opacity=".3">
-          <animate attributeName="r" values="13;21;13" dur="2s" repeatCount="indefinite"/>
-          <animate attributeName="opacity" values=".4;0;.4" dur="2s" repeatCount="indefinite"/>
-        </circle>`;
-      }
-      g.innerHTML += `
-        <circle cx="${x}" cy="36" r="12" fill="${vivo?'#00D4FF':'var(--surface2)'}" stroke="${c}" stroke-width="1.5"/>
-        <text x="${x}" y="40" text-anchor="middle" font-size="8" fill="${vivo?'#06090F':'rgba(122,139,166,.4)'}" font-family="Syne" font-weight="700">${i+1}</text>
-        <text x="${x}" y="60" text-anchor="middle" font-size="7" fill="${vivo?'rgba(0,212,255,.7)':'rgba(122,139,166,.3)'}" font-family="DM Sans">${k.code.split('-')[1]}</text>`;
-    });
+    const g = document.getElementById('pipeNodes');
+    if (!g) return; // Pipeline SVG removido — no-op seguro
   }
 
   function buildGrid() {
@@ -197,16 +247,42 @@
     }).join('');
   }
 
+  // ── Tabs ─────────────────────────────────────────────────────────────
+  function tab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
+    document.getElementById('tab-' + id).classList.add('on');
+    btn.classList.add('on');
+  }
+
+  // ── Admin tab: estado KPIs ────────────────────────────────────────────
+  function buildKpiStatus() {
+    const el = document.getElementById('kpiStatusGrid');
+    if (!el) return;
+    el.innerHTML = CONFIG.kpis.map((k, i) => `
+      <div class="ks-row" style="animation-delay:${.04*(i+1)}s">
+        <div class="ks-icon">${k.icon}</div>
+        <div class="ks-info">
+          <div class="ks-code">${k.code}</div>
+          <div class="ks-name">${k.name}</div>
+        </div>
+        <div class="ks-dot ${k.activo ? 'live' : 'next'}" title="${k.activo ? 'En producción' : 'Pendiente'}"></div>
+      </div>`
+    ).join('');
+  }
+
   window.addEventListener('load', async () => {
     const user = await checkAuth(); if (!user) return;
     renderUser();
     buildPipeline();
     buildGrid();
-    if (getRole() === 'admin') document.getElementById('adminLink').style.display = 'flex';
+    if (getRole() === 'admin') {
+      document.getElementById('tabsNav').style.display = 'flex';
+      buildKpiStatus();
+    }
     const ol = document.getElementById('overlay');
     setTimeout(() => ol.classList.add('out'), 150);
     setTimeout(() => ol.remove(), 550);
-    // Init warehouse scene animation
     if (typeof WarehouseScene !== 'undefined') WarehouseScene.init('warehouseScene');
   });
 </script>
