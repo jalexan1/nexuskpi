@@ -134,35 +134,14 @@
     <div id="tab-cargue" class="tab-panel on">
       <div class="grid-admin">
 
-      <!-- ── Carga Seguimiento ── -->
-      <div class="a-card" style="animation-delay:.05s">
-        <h2>📤 Cargar Seguimiento KPI</h2>
-        <p class="desc">Sube <code>SEGUIMIENTO_CLICK_MES.xlsx</code>. El ETL corre en el browser y hace upsert en Supabase.</p>
-        <div class="meta-row">
-          <label>Mes</label>
-          <select class="meta-sel" id="uploadMes">
-            <option value="2026-03">Marzo 2026</option>
-            <option value="2026-04">Abril 2026</option>
-            <option value="2026-05" selected>Mayo 2026</option>
-            <option value="2026-06">Junio 2026</option>
-          </select>
+      <!-- ── KPI-REC-001: enlace a pantalla dedicada ── -->
+      <div class="a-card" style="animation-delay:.05s;border-color:rgba(0,212,255,.25);cursor:pointer" onclick="location.href='cargue_rec001.html'">
+        <h2>📦 KPI-REC-001 — Recepción a Tiempo</h2>
+        <p class="desc" style="margin-bottom:.75rem">Carga el archivo mensual SEGUIMIENTO CLICK, reprocesa meses y revisa la cuarentena de errores.</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.2);border-radius:var(--r-sm)">
+          <span style="font-size:.82rem;color:var(--muted)">Pantalla dedicada de cargue</span>
+          <span style="font-size:1.1rem;color:var(--accent)">→</span>
         </div>
-        <div class="drop-zone" id="dropKpi"
-             onclick="document.getElementById('fileKpi').click()"
-             ondragover="onDragOver(event,'dropKpi')"
-             ondragleave="onDragLeave('dropKpi')"
-             ondrop="onDrop(event,'fileKpi','dropKpi')">
-          <input type="file" id="fileKpi" accept=".xlsx,.xls" onchange="onFilePicked('fileKpi','lblKpi')"/>
-          <div class="drop-icon">📊</div>
-          <p>Toca para seleccionar o arrastra el archivo</p>
-          <p class="hint">SEGUIMIENTO_CLICK_*.xlsx · Máx. 50 MB</p>
-          <p class="picked" id="lblKpi"></p>
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-primary" style="flex:1" onclick="subirKpi()">⬆️ Procesar y Cargar</button>
-        </div>
-        <div class="prog-box" id="progKpi"><span id="progKpiTxt">Procesando…</span><div class="prog-bar-wrap"><div class="prog-bar" id="barKpi" style="width:0%"></div></div></div>
-        <div class="result-box" id="resKpi"></div>
       </div>
 
       <!-- ── Reprocesar mes ── -->
