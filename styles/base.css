@@ -29,6 +29,12 @@
   --accent:#0077CC; --accent2:#5B1FBF; --ok:#007A38; --warn:#B86D00; --error:#CC2244;
   --text:#0D1A2D; --muted:#556070; --dim:#8090A8;
 }
+[data-theme="sepia"] {
+  --bg:#F5EFE0; --surface:#FDF6E8; --surface2:#EDE3CF; --surface3:#E2D4B8;
+  --border:rgba(120,90,40,.12); --border2:rgba(120,90,40,.22);
+  --accent:#8B5E2A; --accent2:#6B3E8A; --ok:#3A6B2A; --warn:#9B6A00; --error:#B83A2A;
+  --text:#2C1E0E; --muted:#7A6040; --dim:#B09060;
+}
 
 /* ── Reset & Base ──────────────────────────────────────────── */
 *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }

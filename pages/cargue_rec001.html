@@ -160,13 +160,23 @@
         <button class="btn" onclick="document.getElementById('etlLog').innerHTML=''">🗑️ Limpiar vista</button>
       </div>
 
-      <!-- Cuarentena con edición -->
+      <!-- Cuarentena con filtros + edición -->
       <div class="cua-hdr" id="secCuaHdr" style="display:none">
         <div class="cua-title">
           ⚠️ Cuarentena — Requieren Revisión
           <span class="badge badge-warn" id="cntCua"></span>
         </div>
         <button class="btn" onclick="descargarInconsistentes()">📥 Descargar Excel</button>
+      </div>
+      <!-- Filtros cuarentena -->
+      <div id="cuaFiltros" style="display:none;display:none;gap:.4rem;align-items:center;flex-wrap:wrap;padding:.6rem .85rem;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);margin-bottom:.5rem">
+        <select id="cfMes"  onchange="filtrarCuarentena()" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.76rem;padding:.28rem .55rem;outline:none;cursor:pointer"><option value="">Todos los meses</option></select>
+        <select id="cfProv" onchange="filtrarCuarentena()" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.76rem;padding:.28rem .55rem;outline:none;cursor:pointer;max-width:150px"><option value="">Proveedor</option></select>
+        <select id="cfTipo" onchange="filtrarCuarentena()" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.76rem;padding:.28rem .55rem;outline:none;cursor:pointer"><option value="">Tipo</option><option value="PT">PT</option><option value="MP">MP</option></select>
+        <input id="cfDoc"     oninput="filtrarCuarentena()" placeholder="Doc..." style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.76rem;padding:.28rem .55rem;outline:none;width:90px"/>
+        <input id="cfAnalisis" oninput="filtrarCuarentena()" placeholder="Buscar en análisis…" style="background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.76rem;padding:.28rem .55rem;outline:none;flex:1;min-width:120px"/>
+        <button class="btn btn-sm" onclick="limpiarFiltrosCua()">✕</button>
+        <span id="cfCount" style="font-size:.7rem;color:var(--muted);margin-left:auto"></span>
       </div>
       <div class="tbl-wrap" id="cuaWrap" style="display:none">
         <div class="tbl-scroll">
@@ -354,14 +364,51 @@ async function subirKpi(){
 // ── Cuarentena: mostrar con celdas editables ───────────────────────────────
 let cuarentenaData=[]; // cache para descarga Excel
 
+function filtrarCuarentena(){
+  const mes     = document.getElementById('cfMes')?.value||'';
+  const prov    = document.getElementById('cfProv')?.value||'';
+  const tipo    = document.getElementById('cfTipo')?.value||'';
+  const doc     = (document.getElementById('cfDoc')?.value||'').toLowerCase();
+  const analisis= (document.getElementById('cfAnalisis')?.value||'').toLowerCase();
+  let filtrados = cuarentenaData.slice();
+  if(mes)     filtrados=filtrados.filter(r=>r.mes_id===mes);
+  if(prov)    filtrados=filtrados.filter(r=>r.proveedor===prov);
+  if(tipo)    filtrados=filtrados.filter(r=>r.tipo===tipo);
+  if(doc)     filtrados=filtrados.filter(r=>(r.documento||'').toLowerCase().includes(doc));
+  if(analisis)filtrados=filtrados.filter(r=>getAnalisis(r.causal_inconsistencia).toLowerCase().includes(analisis)||(r.causal_inconsistencia||'').toLowerCase().includes(analisis));
+  const cnt=document.getElementById('cfCount');
+  if(cnt) cnt.textContent=`${filtrados.length} de ${cuarentenaData.length}`;
+  renderCuarentena(filtrados);
+}
+function limpiarFiltrosCua(){
+  ['cfMes','cfProv','cfTipo','cfDoc','cfAnalisis'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  filtrarCuarentena();
+}
 function mostrarCuarentena(incs){
   cuarentenaData=incs||[];
-  const hdr  =document.getElementById('secCuaHdr');
-  const wrap =document.getElementById('cuaWrap');
-  const body =document.getElementById('cuaBody');
-  if(!incs||!incs.length){ hdr.style.display='none'; wrap.style.display='none'; return; }
+  const hdr   =document.getElementById('secCuaHdr');
+  const wrap  =document.getElementById('cuaWrap');
+  const ftrs  =document.getElementById('cuaFiltros');
+  if(!incs||!incs.length){
+    hdr.style.display='none'; wrap.style.display='none';
+    if(ftrs) ftrs.style.display='none';
+    return;
+  }
   hdr.style.display='flex'; wrap.style.display='block';
+  if(ftrs) ftrs.style.display='flex';
   document.getElementById('cntCua').textContent=incs.length;
+
+  // Poblar filtros
+  const meses=[...new Set(incs.map(r=>r.mes_id))].sort();
+  const provs =[...new Set(incs.map(r=>r.proveedor))].sort();
+  const cfMes =document.getElementById('cfMes');
+  const cfProv=document.getElementById('cfProv');
+  if(cfMes){
+    const lbl=id=>CONFIG.meses.find(m=>m.id===id)?.label||id;
+    cfMes.innerHTML=`<option value="">Todos los meses</option>`+meses.map(m=>`<option value="${m}">${lbl(m)}</option>`).join('');
+  }
+  if(cfProv) cfProv.innerHTML=`<option value="">Proveedor</option>`+provs.map(p=>`<option value="${p}">${p}</option>`).join('');
+
   renderCuarentena(incs);
 }
 
@@ -565,6 +612,29 @@ async function reprocesarMes(mesId){
   }
 }
 
+async function eliminarMes(mesId, label){
+  if(!confirm(`⚠️ ¿Eliminar TODOS los datos de "${label}"?\n\nEsta acción es irreversible. Se borrarán todos los registros del mes de Supabase.\n\nPresiona Cancelar si tienes dudas.`)) return;
+  try{
+    addLog(`Eliminando ${label}…`,'warn');
+    // Borrar recepciones del mes
+    await sb.rest('DELETE',`kpi_recibo_recepciones?mes_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
+    // Borrar resumen del mes
+    await sb.rest('DELETE',`kpi_recibo_resumen?mes_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
+    addLog(`✓ ${label} eliminado completamente de Supabase`,'warn');
+    // Limpiar cuarentena si era del mes eliminado
+    cuarentenaData=cuarentenaData.filter(r=>r.mes_id!==mesId);
+    if(!cuarentenaData.length){
+      document.getElementById('secCuaHdr').style.display='none';
+      document.getElementById('cuaWrap').style.display='none';
+      const ftrs=document.getElementById('cuaFiltros');
+      if(ftrs) ftrs.style.display='none';
+    } else { mostrarCuarentena(cuarentenaData); }
+    cargarMeses();
+  }catch(e){
+    addLog('✗ Error al eliminar: '+e.message,'err');
+    alert('Error al eliminar el mes: '+e.message);
+  }
+}
 async function cargarMeses(){
   const lista=document.getElementById('reproList');
   try{
@@ -581,7 +651,10 @@ async function cargarMeses(){
           <span class="repro-label">${c.label}</span>
           <span class="repro-stats">${c.total} registros · TRT <b>${c.trt??'—'}%</b> · Cuarentena: <span class="${c.inc>0?'inc':'ok'}">${c.inc}</span></span>
         </div>
-        <button class="btn btn-sm" onclick="reprocesarMes('${c.mesId}')">🔄 Reprocesar</button>
+        <div style="display:flex;gap:.35rem">
+          <button class="btn btn-sm" onclick="reprocesarMes('${c.mesId}')">🔄 Reprocesar</button>
+          <button class="btn btn-sm btn-danger" onclick="eliminarMes('${c.mesId}','${c.label}')">🗑️</button>
+        </div>
       </div>`).join('');
   }catch(e){
     lista.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">Sin conexión a Supabase.</div>`;
