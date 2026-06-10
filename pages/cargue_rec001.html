@@ -9,35 +9,35 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
     .page{display:flex;flex-direction:column;min-height:100vh}
-    .content{flex:1;padding:1.5rem;max-width:900px;margin:0 auto;width:100%}
-
+    .content{flex:1;padding:1.5rem;max-width:920px;margin:0 auto;width:100%}
     .pg-hdr{margin-bottom:1.5rem}
     .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:.3rem}
     .pg-hdr h1{font-size:clamp(1.2rem,3vw,1.5rem);font-weight:800}
     .pg-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem}
 
-    /* ── Tarjeta principal de cargue ── */
-    .cargue-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.5rem;margin-bottom:1.25rem}
-    .cargue-card h2{font-size:1rem;font-weight:700;margin-bottom:1.1rem;display:flex;align-items:center;gap:.5rem}
+    /* ── Cards ── */
+    .cargue-card,.repro-card,.log-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.5rem;margin-bottom:1.25rem}
+    .cargue-card h2,.repro-card h2,.log-card h2{font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+    .repro-card{border-color:rgba(0,212,255,.18)}
+    .card-sub{font-size:.78rem;color:var(--muted);margin-top:-.5rem;margin-bottom:.85rem;line-height:1.5}
 
+    /* ── Meta row ── */
     .meta-row{display:flex;gap:.65rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
     .meta-row label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
     .meta-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;padding:.4rem .75rem;outline:none;cursor:pointer;min-width:140px}
     .meta-sel:focus{border-color:var(--accent)}
 
     /* ── Drop zone ── */
-    .drop-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:2rem 1.5rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:1rem;position:relative}
+    .drop-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:1.75rem 1.5rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:1rem}
     .drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:rgba(0,212,255,.04)}
     .drop-zone input{display:none}
-    .drop-icon{font-size:2rem;margin-bottom:.5rem}
-    .drop-zona-txt{font-size:.85rem;color:var(--muted);margin-bottom:.25rem}
-    /* AJUSTE: nombre correcto del archivo esperado */
-    .drop-nombre{font-size:.82rem;color:var(--text);font-weight:600;margin-bottom:.2rem}
-    /* AJUSTE: tamaño máximo con color destacado */
-    .drop-limite{display:inline-block;background:rgba(255,176,32,.12);color:var(--warn);border:1px solid rgba(255,176,32,.3);border-radius:6px;font-size:.72rem;font-weight:600;padding:.1rem .55rem;margin-top:.3rem}
+    .drop-icon{font-size:1.8rem;margin-bottom:.4rem}
+    .drop-txt{font-size:.85rem;color:var(--muted);margin-bottom:.2rem}
+    .drop-nombre{font-size:.82rem;color:var(--text);font-weight:600;margin-bottom:.25rem}
+    .drop-limite{display:inline-block;background:rgba(255,176,32,.12);color:var(--warn);border:1px solid rgba(255,176,32,.3);border-radius:6px;font-size:.72rem;font-weight:600;padding:.12rem .55rem}
     .drop-picked{font-size:.8rem;color:var(--accent);font-weight:600;margin-top:.5rem;word-break:break-all}
 
-    /* ── Botones ── */
+    /* ── Botón cargue ── */
     .btn-cargue{width:100%;padding:.85rem;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:var(--r-sm);color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:transform .15s,opacity .2s;min-height:48px}
     .btn-cargue:hover{transform:translateY(-1px);opacity:.92}
     .btn-cargue:disabled{opacity:.5;cursor:not-allowed;transform:none}
@@ -45,7 +45,7 @@
     /* ── Progress ── */
     .prog-box{display:none;background:var(--surface2);border-radius:var(--r-sm);padding:.75rem 1rem;margin-top:.75rem;font-size:.8rem}
     .prog-box.show{display:block}
-    .prog-bar-wrap{height:6px;background:var(--surface3);border-radius:3px;margin-top:.45rem;overflow:hidden}
+    .prog-bar-wrap{height:6px;background:var(--surface3);border-radius:3px;margin-top:.4rem;overflow:hidden}
     .prog-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .3s}
 
     /* ── Result ── */
@@ -56,34 +56,41 @@
     .result-box.err {background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25);color:var(--error)}
 
     /* ── Reprocesar ── */
-    .repro-card{background:var(--surface);border:1px solid rgba(0,212,255,.18);border-radius:var(--r-lg);padding:1.25rem;margin-bottom:1.25rem}
-    .repro-card h2{font-size:.95rem;font-weight:700;margin-bottom:.3rem;display:flex;align-items:center;gap:.5rem}
-    .repro-card .sub{font-size:.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.5}
     .repro-list{display:flex;flex-direction:column;gap:.45rem;margin-bottom:.85rem}
     .repro-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:.6rem .85rem;gap:.75rem;flex-wrap:wrap}
     .repro-item-info{display:flex;flex-direction:column;gap:.1rem}
-    .repro-item-label{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700}
-    .repro-item-stats{font-size:.7rem;color:var(--muted)}
-    .repro-item-stats .inc{color:var(--warn);font-weight:600}
-    .repro-item-stats .ok{color:var(--ok);font-weight:600}
+    .repro-label{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700}
+    .repro-stats{font-size:.7rem;color:var(--muted)}
+    .repro-stats .inc{color:var(--warn);font-weight:600}
+    .repro-stats .ok {color:var(--ok);font-weight:600}
 
-    /* ── Log + tabla cuarentena ── */
-    .log-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.25rem;margin-bottom:1.25rem}
-    .log-card h2{font-size:.95rem;font-weight:700;margin-bottom:.85rem;display:flex;align-items:center;gap:.5rem}
-    .log-area{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:.7rem;font-family:'Courier New',monospace;font-size:.7rem;color:var(--muted);max-height:200px;overflow-y:auto;word-break:break-word}
+    /* ── Log ── */
+    .log-area{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:.7rem;font-family:'Courier New',monospace;font-size:.7rem;color:var(--muted);max-height:190px;overflow-y:auto;word-break:break-word}
     .lg-ok{color:var(--ok)}.lg-err{color:var(--error)}.lg-inf{color:var(--accent)}.lg-warn{color:var(--warn)}
     .log-btns{display:flex;gap:.45rem;margin-top:.6rem;flex-wrap:wrap}
 
-    /* Tabla cuarentena */
-    .cua-title{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:var(--warn);margin:1.1rem 0 .55rem;display:flex;align-items:center;gap:.45rem}
+    /* ── Cuarentena ── */
+    .cua-hdr{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin:1.1rem 0 .55rem}
+    .cua-title{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:var(--warn);display:flex;align-items:center;gap:.45rem}
     .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
-    .tbl-scroll{overflow-x:auto;max-height:360px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    .tbl-scroll{overflow-x:auto;max-height:380px;overflow-y:auto;-webkit-overflow-scrolling:touch}
     table{width:100%;border-collapse:collapse;font-size:.79rem}
-    thead th{text-align:left;padding:.5rem .7rem;font-size:.66rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:1;white-space:nowrap}
+    thead th{text-align:left;padding:.5rem .7rem;font-size:.64rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:1;white-space:nowrap}
     tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
     tbody tr:hover{background:var(--surface2)}
-    tbody td{padding:.48rem .7rem;vertical-align:middle}
+    tbody td{padding:.46rem .7rem;vertical-align:middle}
     .row-inc td:first-child{border-left:3px solid var(--warn)}
+
+    /* ── Celda editable ── */
+    .cell-edit{background:transparent;border:none;border-bottom:1px dashed var(--border2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.78rem;width:100%;min-width:80px;padding:.1rem .2rem;outline:none;cursor:pointer}
+    .cell-edit:focus{border-bottom-color:var(--accent);background:rgba(0,212,255,.04);border-radius:3px}
+    select.cell-edit{cursor:pointer}
+
+    /* ── Botón guardar fila ── */
+    .btn-guardar-fila{padding:.2rem .55rem;font-size:.7rem;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--ok);border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap}
+    .btn-guardar-fila:hover{background:rgba(0,255,136,.2)}
+    .btn-guardar-fila.guardando{opacity:.6;cursor:not-allowed}
+    .saved-ok{color:var(--ok);font-size:.72rem}
   </style>
 </head>
 <body>
@@ -91,10 +98,8 @@
 <div class="page">
   <header class="topbar">
     <a href="admin.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
-    <span class="topbar-sep">/</span>
-    <span class="topbar-title" style="color:var(--warn)">⚙️ Admin</span>
-    <span class="topbar-sep">/</span>
-    <span class="topbar-title">📦 KPI-REC-001</span>
+    <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--warn)">⚙️ Admin</span>
+    <span class="topbar-sep">/</span><span class="topbar-title">📦 KPI-REC-001</span>
     <div class="topbar-spacer"></div>
     <a href="admin.html" class="btn btn-sm">← Volver</a>
     <div class="theme-bar">
@@ -108,18 +113,16 @@
     <div class="pg-hdr">
       <div class="eyebrow">📦 Carga de Datos</div>
       <h1>KPI-REC-001 — Tasa de Recepción a Tiempo</h1>
-      <p>Carga el archivo mensual de seguimiento, revisa el log y gestiona los registros en cuarentena.</p>
+      <p>Carga el archivo mensual, revisa el log y gestiona los registros en cuarentena.</p>
     </div>
 
-    <!-- ── Cargue principal ── -->
+    <!-- ── Cargue ── -->
     <div class="cargue-card">
       <h2>⬆️ Cargar KPI-REC-001</h2>
-
       <div class="meta-row">
         <label>Mes a cargar</label>
         <select class="meta-sel" id="uploadMes"></select>
       </div>
-
       <div class="drop-zone" id="dropKpi"
            onclick="document.getElementById('fileKpi').click()"
            ondragover="onDragOver(event,'dropKpi')"
@@ -127,64 +130,57 @@
            ondrop="onDrop(event,'fileKpi','dropKpi')">
         <input type="file" id="fileKpi" accept=".xlsx,.xls" onchange="onFilePicked(this)"/>
         <div class="drop-icon">📊</div>
-        <p class="drop-zona-txt">Toca para seleccionar o arrastra el archivo</p>
-        <!-- AJUSTE: nombre correcto del archivo -->
+        <p class="drop-txt">Toca para seleccionar o arrastra el archivo</p>
         <p class="drop-nombre">SEGUIMIENTO CLICK MES AÑO.xlsx</p>
-        <!-- AJUSTE: tamaño máximo destacado -->
         <span class="drop-limite">⚠️ Tamaño máximo: 50 MB</span>
         <p class="drop-picked" id="lblKpi"></p>
       </div>
-
       <button class="btn-cargue" id="btnCargar" onclick="subirKpi()">⬆️ Cargar KPI-REC-001</button>
-
-      <div class="prog-box" id="progKpi">
-        <span id="progKpiTxt">Procesando…</span>
-        <div class="prog-bar-wrap"><div class="prog-bar" id="barKpi" style="width:0%"></div></div>
-      </div>
+      <div class="prog-box" id="progKpi"><span id="progKpiTxt">Procesando…</span><div class="prog-bar-wrap"><div class="prog-bar" id="barKpi" style="width:0%"></div></div></div>
       <div class="result-box" id="resKpi"></div>
     </div>
 
-    <!-- ── Reprocesar mes ── -->
+    <!-- ── Reprocesar ── -->
     <div class="repro-card">
       <h2>🔄 Reprocesar Mes</h2>
-      <p class="sub">Recalcula los indicadores de un mes ya cargado usando la lógica ETL actual — sin necesidad de volver a subir el archivo.</p>
+      <p class="card-sub">Recalcula los indicadores de un mes ya cargado sin necesidad de volver a subir el archivo.</p>
       <div class="repro-list" id="reproList">
         <div style="text-align:center;color:var(--muted);font-size:.8rem;padding:.5rem">Cargando meses…</div>
       </div>
-      <div class="prog-box" id="progRepro">
-        <span id="progReproTxt">Reprocesando…</span>
-        <div class="prog-bar-wrap"><div class="prog-bar" id="barRepro" style="width:0%"></div></div>
-      </div>
+      <div class="prog-box" id="progRepro"><span id="progReproTxt">Reprocesando…</span><div class="prog-bar-wrap"><div class="prog-bar" id="barRepro" style="width:0%"></div></div></div>
       <div class="result-box" id="resRepro"></div>
     </div>
 
-    <!-- ── Log de cargues ── -->
+    <!-- ── Log ── -->
     <div class="log-card">
-      <h2>📋 Log de Cargues — KPI-REC-001</h2>
+      <h2>📋 Log de Cargues</h2>
       <div class="log-area" id="etlLog"></div>
       <div class="log-btns">
         <button class="btn" onclick="loadEtlLog()">🔄 Refrescar</button>
-        <button class="btn" onclick="document.getElementById('etlLog').innerHTML=''">🗑️ Limpiar</button>
+        <button class="btn" onclick="document.getElementById('etlLog').innerHTML=''">🗑️ Limpiar vista</button>
       </div>
 
-      <!-- Tabla cuarentena del último cargue -->
-      <div class="cua-title" id="secCua" style="display:none">
-        ⚠️ Cuarentena — Requieren Revisión
-        <span class="badge badge-warn" id="cntCua"></span>
+      <!-- Cuarentena con edición -->
+      <div class="cua-hdr" id="secCuaHdr" style="display:none">
+        <div class="cua-title">
+          ⚠️ Cuarentena — Requieren Revisión
+          <span class="badge badge-warn" id="cntCua"></span>
+        </div>
+        <button class="btn" onclick="descargarInconsistentes()">📥 Descargar Excel</button>
       </div>
       <div class="tbl-wrap" id="cuaWrap" style="display:none">
         <div class="tbl-scroll">
           <table>
             <thead><tr>
-              <th>Documento</th><th>Fecha</th><th>Proveedor</th>
-              <th>Tipo</th><th>Causal</th><th>Análisis — Qué revisar</th>
+              <th>Documento</th><th>Fecha</th><th>Proveedor</th><th>Tipo</th>
+              <th>¿Inconsistente?</th><th>Causal / Gestión realizada</th>
+              <th>Análisis — Qué revisar</th><th>Guardar</th>
             </tr></thead>
             <tbody id="cuaBody"></tbody>
           </table>
         </div>
       </div>
     </div>
-
   </main>
 </div>
 
@@ -194,27 +190,13 @@
 <script>
 applyTheme();
 
-// ── Validación nombre de archivo (AJUSTE) ────────────────────────────────
-function validarNombreArchivo(nombre) {
-  // Normalizar: mayúsculas, quitar guiones y espacios extra
-  const n = nombre.toUpperCase().replace(/[-_\s]+/g, ' ').trim();
-  // Debe contener al menos el 80% de "SEGUIMIENTO CLICK"
-  // Variantes: SEGUIMIENTO CLICK, SEGUIM CLICK, SEGUIMIENTO CLI, etc.
-  const patrones = [
-    /SEGUIMIENTO\s*CLICK/,
-    /SEGUIM\w*\s*CLICK/,
-    /SEGUIMIENTO\s*CLI/,
-  ];
-  return patrones.some(p => p.test(n));
-}
-
-// ── Análisis por causal ──────────────────────────────────────────────────
+// ── Análisis por causal ────────────────────────────────────────────────────
 const ANALISIS = {
-  'Fecha Ingresa vacía':            'Verificar columna "Fecha Ingresa" en el Excel. Puede estar en blanco o con formato incorrecto.',
-  'HORA CITA y HORA INICIO vacías': 'El documento no tiene hora de cita ni de inicio. Revisar si el proveedor llegó sin cita registrada.',
-  'HORA TT vacía':                  'No se registró la hora de finalización del recibo en el WMS. Confirmar con el operario si el proceso fue completado.',
-  'Tiempo calculado = 0':           'Hora de cita y hora TT son iguales o muy cercanas. Verificar si el cierre del recibo fue registrado correctamente.',
-  default:                          'Revisar el registro en el archivo Excel fuente y validar con el coordinador de recibo.',
+  'Fecha vacía': 'Verificar columnas Fecha Recibo y Fecha Ingresa en el Excel. Ambas están en blanco para este documento.',
+  'HORA CITA y HORA INICIO vacías': 'El documento no tiene hora de cita ni de inicio registrada. Revisar si el proveedor llegó sin cita.',
+  'HORA TT RECIBO vacía': 'No se registró la hora de finalización del recibo en el WMS. Confirmar con el operario si el proceso fue completado.',
+  'Tiempo calculado = 0': 'Hora de cita y hora TT son iguales o muy cercanas. Verificar si el cierre del recibo fue registrado correctamente.',
+  default: 'Revisar el registro en el archivo Excel fuente y validar con el coordinador de recibo.',
 };
 function getAnalisis(causal) {
   if (!causal) return ANALISIS.default;
@@ -222,336 +204,421 @@ function getAnalisis(causal) {
   return k ? ANALISIS[k] : ANALISIS.default;
 }
 
-// ── Drag & Drop ──────────────────────────────────────────────────────────
-function onDragOver(e, id) { e.preventDefault(); document.getElementById(id).classList.add('over'); }
-function onDragLeave(id)   { document.getElementById(id).classList.remove('over'); }
-function onDrop(e, inputId, zoneId) {
+// ── Validar nombre ─────────────────────────────────────────────────────────
+function validarNombre(nombre) {
+  const n = nombre.toUpperCase().replace(/[-_\s]+/g,' ').trim();
+  return [/SEGUIMIENTO\s*CLICK/, /SEGUIM\w*\s*CLICK/, /SEGUIMIENTO\s*CLI/].some(p => p.test(n));
+}
+
+// ── Drag & Drop ────────────────────────────────────────────────────────────
+function onDragOver(e,id){ e.preventDefault(); document.getElementById(id).classList.add('over'); }
+function onDragLeave(id) { document.getElementById(id).classList.remove('over'); }
+function onDrop(e,inputId,zoneId){
   e.preventDefault(); onDragLeave(zoneId);
-  const f = e.dataTransfer.files[0]; if (!f) return;
-  const dt = new DataTransfer(); dt.items.add(f);
-  document.getElementById(inputId).files = dt.files;
+  const f=e.dataTransfer.files[0]; if(!f) return;
+  const dt=new DataTransfer(); dt.items.add(f);
+  document.getElementById(inputId).files=dt.files;
   document.getElementById(inputId).dispatchEvent(new Event('change'));
 }
-function onFilePicked(input) {
-  const f = input.files[0]; if (!f) return;
-  // AJUSTE: validar nombre antes de mostrar
-  if (!validarNombreArchivo(f.name)) {
+function onFilePicked(input){
+  const f=input.files[0]; if(!f) return;
+  if(!validarNombre(f.name)){
     alert('El archivo que va a cargar es incorrecto y tiene nombre diferente.\n\nPor favor revisa que el archivo sea el correcto.\nEl nombre del archivo debe ser: SEGUIMIENTO CLICK MES AÑO');
-    input.value = '';
-    document.getElementById('lblKpi').textContent = '';
-    return;
+    input.value=''; document.getElementById('lblKpi').textContent=''; return;
   }
-  document.getElementById('lblKpi').textContent = `📎 ${f.name}  (${(f.size/1024/1024).toFixed(1)} MB)`;
+  document.getElementById('lblKpi').textContent=`📎 ${f.name}  (${(f.size/1024/1024).toFixed(1)} MB)`;
 }
 
-// ── UI helpers ────────────────────────────────────────────────────────────
-function showProg(pId, bId, tId, pct, msg) {
-  document.getElementById(pId).classList.add('show');
-  document.getElementById(bId).style.width = pct + '%';
-  document.getElementById(tId).textContent = msg;
-}
-function hideProg(id) { setTimeout(() => document.getElementById(id).classList.remove('show'), 1200); }
-function showRes(id, type, msg) {
-  const el = document.getElementById(id);
-  el.className = `result-box show ${type}`;
-  el.innerHTML = msg;
-}
-function addLog(msg, tipo = 'inf') {
-  const log = document.getElementById('etlLog');
-  const d = document.createElement('div');
-  d.className = 'lg-' + tipo;
-  d.textContent = `[${new Date().toLocaleTimeString('es-CO')}] ${msg}`;
-  log.appendChild(d);
-  log.scrollTop = log.scrollHeight;
+// ── Helpers UI ─────────────────────────────────────────────────────────────
+function showProg(pId,bId,tId,pct,msg){ document.getElementById(pId).classList.add('show'); document.getElementById(bId).style.width=pct+'%'; document.getElementById(tId).textContent=msg; }
+function hideProg(id){ setTimeout(()=>document.getElementById(id).classList.remove('show'),1200); }
+function showRes(id,type,msg){ const el=document.getElementById(id); el.className=`result-box show ${type}`; el.innerHTML=msg; }
+function addLog(msg,tipo='inf'){
+  const log=document.getElementById('etlLog');
+  const d=document.createElement('div'); d.className='lg-'+tipo;
+  d.textContent=`[${new Date().toLocaleTimeString('es-CO')}] ${msg}`;
+  log.appendChild(d); log.scrollTop=log.scrollHeight;
 }
 
-// ── Upsert + resumen ──────────────────────────────────────────────────────
-async function upsertLotes(records, onProg) {
-  const BATCH = 100; let ins = 0, act = 0;
-  const ex = await sb.rest('GET', `kpi_recibo_recepciones?mes_id=eq.${records[0].mes_id}&select=documento`);
-  const set = new Set((ex||[]).map(r=>r.documento));
-  for (let i = 0; i < records.length; i += BATCH) {
-    const lote = records.slice(i, i + BATCH);
-    await sb.rest('POST', 'kpi_recibo_recepciones', lote, {'Prefer':'resolution=merge-duplicates,return=minimal'});
-    lote.forEach(r => set.has(r.documento) ? act++ : ins++);
-    if (onProg) onProg(Math.round(((i+lote.length)/records.length)*100));
+// ── Upsert + resumen ───────────────────────────────────────────────────────
+async function upsertLotes(records, onProg){
+  const BATCH=100; let ins=0,act=0;
+  const ex=await sb.rest('GET',`kpi_recibo_recepciones?mes_id=eq.${records[0].mes_id}&select=documento`);
+  const set=new Set((ex||[]).map(r=>r.documento));
+  for(let i=0;i<records.length;i+=BATCH){
+    const lote=records.slice(i,i+BATCH);
+    await sb.rest('POST','kpi_recibo_recepciones',lote,{'Prefer':'resolution=merge-duplicates,return=minimal'});
+    lote.forEach(r=>set.has(r.documento)?act++:ins++);
+    if(onProg) onProg(Math.round(((i+lote.length)/records.length)*100));
   }
-  return {ins, act};
+  return {ins,act};
+}
+async function upsertResumen(mesId,stats){
+  const label=CONFIG.meses.find(m=>m.id===mesId)?.label||mesId;
+  const payload={label,total_oc:stats.total,ok_12h:stats.ok,late_12h:stats.late,trt_12h:stats.trt,avg_h:stats.avgH,max_h:stats.maxH,cert_count:stats.cert,pt_total:stats.pt,mp_total:stats.mp,last_etl_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+  const ex=await sb.rest('GET',`kpi_recibo_resumen?mes_id=eq.${mesId}&select=id`);
+  if(ex&&ex.length){ await sb.rest('PATCH',`kpi_recibo_resumen?mes_id=eq.${mesId}`,payload,{'Prefer':'return=minimal'}); }
+  else { await sb.rest('POST','kpi_recibo_resumen',[{...payload,mes_id:mesId}],{'Prefer':'return=minimal'}); }
 }
 
-async function upsertResumen(mesId, stats) {
-  const label = CONFIG.meses.find(m=>m.id===mesId)?.label || mesId;
-  const payload = {
-    label, total_oc:stats.total, ok_12h:stats.ok, late_12h:stats.late,
-    trt_12h:stats.trt, avg_h:stats.avgH, max_h:stats.maxH,
-    cert_count:stats.cert, pt_total:stats.pt, mp_total:stats.mp,
-    last_etl_at:new Date().toISOString(), updated_at:new Date().toISOString(),
-  };
-  const ex = await sb.rest('GET', `kpi_recibo_resumen?mes_id=eq.${mesId}&select=id`);
-  if (ex && ex.length) {
-    await sb.rest('PATCH', `kpi_recibo_resumen?mes_id=eq.${mesId}`, payload, {'Prefer':'return=minimal'});
-  } else {
-    await sb.rest('POST', 'kpi_recibo_resumen', [{...payload, mes_id:mesId}], {'Prefer':'return=minimal'});
-  }
+// ── Traducir errores ───────────────────────────────────────────────────────
+function traducirError(msg){
+  if(!msg) return 'Error desconocido. Contacta al desarrollador del sistema.';
+  if(msg.includes('Cannot read properties')&&msg.includes('mes_id')) return 'El archivo no tiene la estructura esperada. Verifica que sea el archivo SEGUIMIENTO CLICK correcto.';
+  if(msg.includes('Cannot read properties')&&msg.includes('undefined')) return 'El archivo no tiene los datos esperados. Puede estar vacío o con un formato diferente.';
+  if(msg.includes('RECIB')) return 'No se encontró la hoja RECIBOS en el archivo. Verifica que el archivo sea el correcto.';
+  if(msg.includes('zip')||msg.includes('archive')) return 'El archivo está dañado o no es un Excel válido. Intenta guardarlo de nuevo desde Excel.';
+  return `Error técnico: ${msg}`;
 }
 
-// ── Cargue principal ──────────────────────────────────────────────────────
-async function subirKpi() {
+// ── Cargue principal ───────────────────────────────────────────────────────
+async function subirKpi(){
   const file  = document.getElementById('fileKpi').files[0];
-  const mesId = document.getElementById('uploadMes').value;
-
-  if (!file) { showRes('resKpi','warn','⚠️ Selecciona un archivo primero.'); return; }
-
-  // Doble validación de nombre por si el usuario llegó sin pasar por onFilePicked
-  if (!validarNombreArchivo(file.name)) {
-    showRes('resKpi','err',
-      '❌ El archivo que va a cargar es incorrecto y tiene nombre diferente.<br>' +
-      'Por favor revisa que el archivo sea el correcto.<br>' +
-      'El nombre debe ser: <b>SEGUIMIENTO CLICK MES AÑO</b>');
+  const mesSeleccionado = document.getElementById('uploadMes').value;
+  if(!file){ showRes('resKpi','warn','⚠️ Selecciona un archivo primero.'); return; }
+  if(!validarNombre(file.name)){
+    showRes('resKpi','err','❌ El archivo es incorrecto. El nombre debe contener <b>SEGUIMIENTO CLICK</b>.');
     return;
   }
 
-  const runId = `run-${Date.now()}`;
-  const btn   = document.getElementById('btnCargar');
-  btn.disabled = true;
-  addLog(`Iniciando cargue: ${file.name} → ${mesId}`, 'inf');
-  showProg('progKpi','barKpi','progKpiTxt', 5, 'Leyendo archivo…');
+  const btn=document.getElementById('btnCargar');
+  btn.disabled=true;
+  const runId=`run-${Date.now()}`;
+  addLog(`Iniciando cargue: ${file.name}…`,'inf');
+  showProg('progKpi','barKpi','progKpiTxt',5,'Leyendo archivo…');
 
-  try {
-    await sb.rest('POST','etl_log',[{run_id:runId, mes_id:mesId, archivo:file.name, estado:'iniciado'}],{'Prefer':'return=minimal'});
-  } catch(e) { addLog('Advertencia etl_log: '+e.message,'warn'); }
+  try{
+    await sb.rest('POST','etl_log',[{run_id:runId,mes_id:mesSeleccionado,archivo:file.name,estado:'iniciado'}],{'Prefer':'return=minimal'});
+  }catch(e){ addLog('Advertencia etl_log: '+e.message,'warn'); }
 
-  try {
-    const buf = await file.arrayBuffer();
-    showProg('progKpi','barKpi','progKpiTxt', 20, 'Aplicando lógica ETL…');
+  try{
+    const buf=await file.arrayBuffer();
+    showProg('progKpi','barKpi','progKpiTxt',20,'Analizando archivo…');
 
     let result;
-    try {
-      result = procesarExcel(buf, mesId);
-    } catch(e) {
-      // AJUSTE: errores técnicos traducidos o con escalamiento
-      const msg = traducirError(e.message);
-      throw new Error(msg);
+    try{ result=procesarExcel(buf,mesSeleccionado); }
+    catch(e){ throw new Error(traducirError(e.message)); }
+
+    const {records,inconsistencias,stats,mesPredominante,mesConflicto}=result;
+    const mesId=mesPredominante||mesSeleccionado;
+    const labelMes=CONFIG.meses.find(m=>m.id===mesId)?.label||mesId;
+    const labelSel=CONFIG.meses.find(m=>m.id===mesSeleccionado)?.label||mesSeleccionado;
+
+    // ── Conflicto de mes: avisar y confirmar ──────────────────────────────
+    if(mesConflicto){
+      const continuar=confirm(
+        `⚠️ Seleccionó el mes "${labelSel}" pero las fechas del archivo corresponden a "${labelMes}".\n\n` +
+        `¿Desea continuar y registrarlo como "${labelMes}" (recomendado)?\n\n` +
+        `Presione Aceptar para registrar como ${labelMes}.\nPresione Cancelar para detener el cargue y revisar el archivo.`
+      );
+      if(!continuar){
+        hideProg('progKpi');
+        showRes('resKpi','warn',`⚠️ Cargue detenido. Las fechas del archivo corresponden a <b>${labelMes}</b>. Revisa la selección del mes y vuelve a intentarlo.`);
+        btn.disabled=false; return;
+      }
+      addLog(`Mes corregido automáticamente: ${labelSel} → ${labelMes}`,'warn');
     }
 
-    const { records, inconsistencias, stats } = result;
-    addLog(`ETL completado: ${records.length} documentos · ${inconsistencias.length} en cuarentena`, 'inf');
-    showProg('progKpi','barKpi','progKpiTxt', 55, 'Guardando en Supabase…');
+    addLog(`ETL completado: ${records.length} documentos · ${inconsistencias.length} en cuarentena · mes: ${labelMes}`,'inf');
+    showProg('progKpi','barKpi','progKpiTxt',55,'Guardando en Supabase…');
 
-    const {ins, act} = await upsertLotes(records, p =>
-      showProg('progKpi','barKpi','progKpiTxt', 55+Math.round(p*0.35), `Guardando registros…`)
-    );
+    const {ins,act}=await upsertLotes(records,p=>showProg('progKpi','barKpi','progKpiTxt',55+Math.round(p*.35),`Guardando registros…`));
+    showProg('progKpi','barKpi','progKpiTxt',95,'Actualizando resumen…');
+    await upsertResumen(mesId,stats);
+    await sb.rest('PATCH',`etl_log?run_id=eq.${runId}`,{estado:'completado',mes_id:mesId,docs_procesados:records.length,docs_insertados:ins,docs_actualizados:act,completado_at:new Date().toISOString()},{'Prefer':'return=minimal'});
 
-    showProg('progKpi','barKpi','progKpiTxt', 95, 'Actualizando resumen…');
-    await upsertResumen(mesId, stats);
-    await sb.rest('PATCH', `etl_log?run_id=eq.${runId}`, {
-      estado:'completado', docs_procesados:records.length,
-      docs_insertados:ins, docs_actualizados:act,
-      completado_at:new Date().toISOString(),
-    }, {'Prefer':'return=minimal'});
-
-    showProg('progKpi','barKpi','progKpiTxt', 100, 'Completado');
+    showProg('progKpi','barKpi','progKpiTxt',100,'Completado');
     hideProg('progKpi');
 
-    const sem = stats.trt != null ? (stats.trt>=95?'🟢':stats.trt>=80?'🟡':'🔴') : '';
+    const sem=stats.trt!=null?(stats.trt>=95?'🟢':stats.trt>=80?'🟡':'🔴'):'';
+    const msgConflicto=mesConflicto?`<br>ℹ️ Registrado como <b>${labelMes}</b> (mes corregido automáticamente)`:'';
     showRes('resKpi','ok',
-      `✅ <b>Cargue completado</b><br>` +
-      `📥 Insertados: <b>${ins}</b> · 🔄 Actualizados: <b>${act}</b><br>` +
-      `⚠️ En cuarentena: <b>${inconsistencias.length}</b><br>` +
+      `✅ <b>Cargue completado</b>${msgConflicto}<br>`+
+      `📥 Insertados: <b>${ins}</b> · 🔄 Actualizados: <b>${act}</b><br>`+
+      `⚠️ En cuarentena: <b>${inconsistencias.length}</b><br>`+
       `${sem} TRT: <b>${stats.trt??'—'}%</b> · T.Prom: <b>${stats.avgH??'—'}h</b>`
     );
-    addLog(`✓ ${mesId}: TRT ${stats.trt}% · ${ins} ins · ${act} act · ${inconsistencias.length} cuarentena`, 'ok');
+    addLog(`✓ ${labelMes}: TRT ${stats.trt}% · ${ins} ins · ${act} act · ${inconsistencias.length} cuarentena`,'ok');
 
-    // Mostrar tabla de cuarentena si hay registros
     mostrarCuarentena(inconsistencias);
     cargarMeses();
-
-  } catch(e) {
+  }catch(e){
     hideProg('progKpi');
-    // AJUSTE: error con instrucción de escalamiento si no se pudo traducir
-    showRes('resKpi','err',
-      `❌ <b>Error al cargar el archivo</b><br>${e.message}<br>` +
-      `<small style="color:var(--muted)">Si el problema persiste, contacta al desarrollador del sistema.</small>`
-    );
-    addLog('✗ ' + e.message, 'err');
-    try {
-      await sb.rest('PATCH', `etl_log?run_id=eq.${runId}`,
-        { estado:'error', error_msg:e.message, completado_at:new Date().toISOString() },
-        {'Prefer':'return=minimal'}
-      );
-    } catch {}
+    showRes('resKpi','err',`❌ <b>Error al cargar</b><br>${e.message}<br><small style="color:var(--muted)">Si el problema persiste, contacta al desarrollador del sistema.</small>`);
+    addLog('✗ '+e.message,'err');
+    try{ await sb.rest('PATCH',`etl_log?run_id=eq.${runId}`,{estado:'error',error_msg:e.message,completado_at:new Date().toISOString()},{'Prefer':'return=minimal'}); }catch{}
   }
-  btn.disabled = false;
+  btn.disabled=false;
 }
 
-// ── Traducción de errores técnicos (AJUSTE) ───────────────────────────────
-function traducirError(msg) {
-  if (!msg) return 'Error desconocido. Contacta al desarrollador del sistema.';
-  if (msg.includes("Cannot read properties") && msg.includes("mes_id"))
-    return 'El archivo no tiene la estructura esperada. Verifica que sea el archivo SEGUIMIENTO CLICK correcto.';
-  if (msg.includes("Cannot read properties") && msg.includes("undefined"))
-    return 'El archivo no tiene los datos esperados. Puede estar vacío o con un formato diferente.';
-  if (msg.includes("RECIB"))
-    return 'No se encontró la hoja RECIBOS en el archivo. Verifica que el archivo sea el correcto.';
-  if (msg.includes("zip") || msg.includes("ZIP") || msg.includes("archive"))
-    return 'El archivo está dañado o no es un Excel válido. Intenta guardarlo de nuevo desde Excel.';
-  // Si no se puede traducir, mostrar original con instrucción de escalamiento
-  return `Error técnico: ${msg}<br><small>Contacta al desarrollador del sistema e indica este mensaje.</small>`;
+// ── Cuarentena: mostrar con celdas editables ───────────────────────────────
+let cuarentenaData=[]; // cache para descarga Excel
+
+function mostrarCuarentena(incs){
+  cuarentenaData=incs||[];
+  const hdr  =document.getElementById('secCuaHdr');
+  const wrap =document.getElementById('cuaWrap');
+  const body =document.getElementById('cuaBody');
+  if(!incs||!incs.length){ hdr.style.display='none'; wrap.style.display='none'; return; }
+  hdr.style.display='flex'; wrap.style.display='block';
+  document.getElementById('cntCua').textContent=incs.length;
+  renderCuarentena(incs);
 }
 
-// ── Mostrar cuarentena ────────────────────────────────────────────────────
-function mostrarCuarentena(incs) {
-  const sec  = document.getElementById('secCua');
-  const wrap = document.getElementById('cuaWrap');
-  const body = document.getElementById('cuaBody');
-  if (!incs || !incs.length) { sec.style.display='none'; wrap.style.display='none'; return; }
-  sec.style.display = 'flex';
-  wrap.style.display = 'block';
-  document.getElementById('cntCua').textContent = incs.length;
-  body.innerHTML = incs.map(r => `<tr class="row-inc">
+function renderCuarentena(incs){
+  const body=document.getElementById('cuaBody');
+  body.innerHTML=incs.map((r,i)=>`<tr class="row-inc" id="row-cua-${i}">
     <td><b>${r.documento}</b></td>
     <td>${r.fecha||'—'}</td>
-    <td>${r.proveedor}</td>
+    <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.proveedor}">${r.proveedor}</td>
     <td>${r.tipo||'—'}</td>
-    <td style="color:var(--warn);font-size:.76rem">${r.causal_inconsistencia||'Sin causal'}</td>
-    <td style="font-size:.75rem;color:var(--muted)">${getAnalisis(r.causal_inconsistencia)}</td>
+    <td>
+      <select class="cell-edit" id="inc-${i}" onchange="marcarCambio(${i})">
+        <option value="true"  ${r.is_inconsistente?'selected':''}>Sí (en cuarentena)</option>
+        <option value="false" ${!r.is_inconsistente?'selected':''}>No (levantar marca)</option>
+      </select>
+    </td>
+    <td>
+      <input class="cell-edit" type="text" id="causal-${i}"
+        value="${(r.causal_inconsistencia||'').replace(/"/g,'&quot;')}"
+        placeholder="Describe la gestión realizada…"
+        onchange="marcarCambio(${i})"/>
+    </td>
+    <td style="font-size:.74rem;color:var(--muted);max-width:180px">${getAnalisis(r.causal_inconsistencia)}</td>
+    <td><button class="btn-guardar-fila" id="save-${i}" onclick="guardarFila(${i},${JSON.stringify(r.documento)},${JSON.stringify(r.mes_id||'')})" disabled>Guardar</button></td>
   </tr>`).join('');
 }
 
-// ── Reprocesar mes ────────────────────────────────────────────────────────
-async function reprocesarMes(mesId) {
-  const label = CONFIG.meses.find(m=>m.id===mesId)?.label || mesId;
-  addLog(`Reprocesando ${label}…`, 'inf');
-  showProg('progRepro','barRepro','progReproTxt', 10, `Leyendo ${label} desde Supabase…`);
-  try {
-    const rows = await sb.rest('GET', `kpi_recibo_recepciones?mes_id=eq.${mesId}&order=documento.asc`);
-    if (!rows || !rows.length) {
-      showRes('resRepro','warn','⚠️ No hay registros para este mes en Supabase.');
-      hideProg('progRepro'); return;
-    }
-    showProg('progRepro','barRepro','progReproTxt', 30, `Recalculando ${rows.length} registros…`);
+function marcarCambio(i){
+  document.getElementById(`save-${i}`).disabled=false;
+}
 
-    const recalculados = rows.map(r => {
-      let tiempoH=null, slaOk=null, causal=null, esInc=false;
-      if (!r.fecha) { causal='Fecha vacía'; esInc=true; }
-      else if (!r.hora_inicio && !r.hora_cita) { causal='HORA CITA y HORA INICIO vacías'; esInc=true; }
-      else if (!r.hora_tt) { causal='HORA TT vacía'; esInc=true; }
-      else {
-        try {
-          const horaRef = r.hora_cita || r.hora_inicio;
-          const [rh,rm] = horaRef.split(':').map(Number);
-          const [th,tm] = r.hora_tt.split(':').map(Number);
-          const [y,mo,d] = r.fecha.split('-').map(Number);
-          const dtIni = new Date(y,mo-1,d,rh,rm,0);
-          let   dtFin = new Date(y,mo-1,d,th,tm,0);
-          if (dtFin < dtIni) dtFin.setDate(dtFin.getDate()+1);
-          tiempoH = tiempoEfectivoHoras(dtIni, dtFin);
-          if (tiempoH === null && dtFin > dtIni) {
-            const fin17 = new Date(y,mo-1,d,17,0,0);
-            if (dtIni < fin17) tiempoH = Math.round((fin17-dtIni)/36000)/100;
+// ── Guardar edición de una fila de cuarentena ─────────────────────────────
+async function guardarFila(i, documento, mesId){
+  const btn     = document.getElementById(`save-${i}`);
+  const esInc   = document.getElementById(`inc-${i}`).value === 'true';
+  const causalInput = document.getElementById(`causal-${i}`);
+  const causalNueva = causalInput.value.trim();
+
+  btn.disabled=true; btn.classList.add('guardando'); btn.textContent='…';
+
+  try{
+    // Traer causal actual de Supabase para concatenar (no borrar historial)
+    const actual=await sb.rest('GET',`kpi_recibo_recepciones?mes_id=eq.${mesId}&documento=eq.${encodeURIComponent(documento)}&select=causal_inconsistencia,is_inconsistente`);
+    const causalAnterior=(actual&&actual[0]?.causal_inconsistencia)||'';
+
+    // ── Regla de concatenación ────────────────────────────────────────────
+    // - Si se levanta la marca (esInc=false): concatenar "| OK [fecha] gestión"
+    // - Si sigue en cuarentena: concatenar la nueva gestión al final
+    // - NUNCA borrar el historial anterior
+    let causalFinal;
+    const ts=new Date().toLocaleDateString('es-CO');
+    if(!esInc){
+      // Se levanta la marca — marcar como levantado manualmente + gestión
+      const gestion=causalNueva?` | Gestión: ${causalNueva}`:'';
+      causalFinal=causalAnterior
+        ? `${causalAnterior} | ✅ LEVANTADO MANUALMENTE ${ts}${gestion}`
+        : `✅ LEVANTADO MANUALMENTE ${ts}${gestion}`;
+    } else {
+      // Sigue en cuarentena — agregar gestión al final si es nueva
+      causalFinal=causalNueva && causalNueva!==causalAnterior
+        ? (causalAnterior ? `${causalAnterior} | ${causalNueva}` : causalNueva)
+        : causalAnterior;
+    }
+
+    await sb.rest('PATCH',
+      `kpi_recibo_recepciones?mes_id=eq.${mesId}&documento=eq.${encodeURIComponent(documento)}`,
+      { is_inconsistente:esInc, causal_inconsistencia:causalFinal, updated_at:new Date().toISOString() },
+      {'Prefer':'return=minimal'}
+    );
+
+    // Actualizar cache local
+    if(cuarentenaData[i]){
+      cuarentenaData[i].is_inconsistente=esInc;
+      cuarentenaData[i].causal_inconsistencia=causalFinal;
+    }
+    // Actualizar input con la causal final
+    causalInput.value=causalFinal;
+
+    btn.classList.remove('guardando');
+    btn.textContent='✓';
+    btn.style.cssText='background:rgba(0,255,136,.15);border-color:var(--ok);color:var(--ok)';
+    addLog(`${esInc?'Cuarentena actualizada':'Marca levantada'}: ${documento} — ${ts}`,'ok');
+
+    setTimeout(()=>{ btn.textContent='Guardar'; btn.style.cssText=''; btn.disabled=true; },2500);
+
+  }catch(e){
+    btn.classList.remove('guardando');
+    btn.textContent='Error';
+    btn.style.cssText='background:rgba(255,77,109,.1);border-color:var(--error);color:var(--error)';
+    addLog('✗ Error guardando: '+e.message,'err');
+    setTimeout(()=>{ btn.textContent='Guardar'; btn.style.cssText=''; btn.disabled=false; },3000);
+  }
+}
+
+// ── Descargar inconsistentes como Excel ───────────────────────────────────
+function descargarInconsistentes(){
+  if(!cuarentenaData.length){ alert('No hay registros en cuarentena para descargar.'); return; }
+
+  const mesId=cuarentenaData[0]?.mes_id||'';
+  const label=CONFIG.meses.find(m=>m.id===mesId)?.label||mesId;
+
+  // Construir datos con columna que indica pertenencia al archivo fuente
+  const filas=cuarentenaData.map(r=>({
+    'Archivo Fuente':  'SEGUIMIENTO CLICK '+label,
+    'Mes':             label,
+    'Documento':       r.documento,
+    'Fecha':           r.fecha||'',
+    'Semana':          r.semana||'',
+    'Proveedor':       r.proveedor,
+    'Tipo':            r.tipo||'',
+    'SKUs':            r.skus||0,
+    'Unidades':        r.unidades||0,
+    'H. Cita':         r.hora_cita||'',
+    'H. Inicio':       r.hora_inicio||'',
+    'TT Recibo':       r.hora_tt||'',
+    'Tiempo Ef. (h)':  r.tiempo_h||'',
+    'SLA 12h':         r.sla_ok_12===true?'A TIEMPO':r.sla_ok_12===false?'FUERA SLA':'SIN DATO',
+    'Inconsistente':   r.is_inconsistente?'Sí':'No',
+    'Causal / Gestión':r.causal_inconsistencia||'',
+    'Análisis':        getAnalisis(r.causal_inconsistencia),
+  }));
+
+  const wb  = XLSX.utils.book_new();
+  const ws  = XLSX.utils.json_to_sheet(filas);
+  // Ancho de columnas
+  ws['!cols']=[{wch:30},{wch:14},{wch:16},{wch:12},{wch:8},{wch:30},{wch:6},{wch:6},{wch:10},{wch:8},{wch:8},{wch:8},{wch:12},{wch:10},{wch:12},{wch:40},{wch:50}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Cuarentena');
+  XLSX.writeFile(wb, `Inconsistentes_Recibo_KPI001_${label.replace(/\s/g,'_')}.xlsx`);
+  addLog(`Excel descargado: Inconsistentes_Recibo_KPI001_${label}.xlsx`,'ok');
+}
+
+// ── Reprocesar ────────────────────────────────────────────────────────────
+async function reprocesarMes(mesId){
+  const label=CONFIG.meses.find(m=>m.id===mesId)?.label||mesId;
+  addLog(`Reprocesando ${label}…`,'inf');
+  showProg('progRepro','barRepro','progReproTxt',10,`Leyendo ${label} desde Supabase…`);
+  try{
+    const rows=await sb.rest('GET',`kpi_recibo_recepciones?mes_id=eq.${mesId}&order=documento.asc`);
+    if(!rows||!rows.length){ showRes('resRepro','warn','⚠️ No hay registros para este mes.'); hideProg('progRepro'); return; }
+    showProg('progRepro','barRepro','progReproTxt',30,`Recalculando ${rows.length} registros…`);
+
+    const recalculados=rows.map(r=>{
+      let tiempoH=null,slaOk=null,causal=null,esInc=false;
+      if(!r.fecha){ causal='Fecha vacía'; esInc=true; }
+      else if(!r.hora_inicio&&!r.hora_cita){ causal='HORA CITA y HORA INICIO vacías'; esInc=true; }
+      else if(!r.hora_tt){ causal='HORA TT RECIBO vacía'; esInc=true; }
+      else{
+        try{
+          const horaRef=r.hora_cita||r.hora_inicio;
+          const [rh,rm]=horaRef.split(':').map(Number);
+          const [th,tm]=r.hora_tt.split(':').map(Number);
+          const [y,mo,d]=r.fecha.split('-').map(Number);
+          const dtIni=new Date(y,mo-1,d,rh,rm,0);
+          let dtFin=new Date(y,mo-1,d,th,tm,0);
+          if(dtFin<dtIni) dtFin.setDate(dtFin.getDate()+1);
+          tiempoH=tiempoEfectivoHoras(dtIni,dtFin);
+          if(tiempoH===null&&dtFin>dtIni){
+            const fin17=new Date(y,mo-1,d,17,0,0);
+            if(dtIni<fin17) tiempoH=Math.round((fin17-dtIni)/36000)/100;
           }
-          if (tiempoH===null||tiempoH<=0) { causal='Tiempo calculado = 0'; esInc=true; }
-          else slaOk = tiempoH <= CONFIG.kpiRec001.slaHoras;
-        } catch(e) { causal=`Error: ${e.message}`; esInc=true; }
+          if(tiempoH===null||tiempoH<=0){ causal='Tiempo calculado = 0'; esInc=true; }
+          else slaOk=tiempoH<=CONFIG.kpiRec001.slaHoras;
+        }catch(e){ causal=`Error: ${e.message}`; esInc=true; }
       }
-      return { ...r, tiempo_h:tiempoH, sla_ok_12:slaOk, is_inconsistente:esInc, causal_inconsistencia:causal, updated_at:new Date().toISOString() };
+
+      // ── Preservar historial: concatenar al principio si ahora es OK ──────
+      let causalFinal = r.causal_inconsistencia||'';
+      if(!esInc && causalFinal && !causalFinal.includes('✅ REPROCESADO OK')){
+        const ts=new Date().toLocaleDateString('es-CO');
+        causalFinal=`✅ REPROCESADO OK ${ts} | ${causalFinal}`;
+      }
+      if(esInc && causal && !causalFinal.includes(causal)){
+        causalFinal=causalFinal?`${causalFinal} | ${causal}`:causal;
+      }
+
+      return{...r,tiempo_h:tiempoH,sla_ok_12:slaOk,is_inconsistente:esInc,causal_inconsistencia:causalFinal,updated_at:new Date().toISOString()};
     });
 
-    showProg('progRepro','barRepro','progReproTxt', 60, 'Guardando en Supabase…');
+    showProg('progRepro','barRepro','progReproTxt',60,'Guardando en Supabase…');
     const BATCH=100;
-    for (let i=0; i<recalculados.length; i+=BATCH) {
+    for(let i=0;i<recalculados.length;i+=BATCH){
       await sb.rest('POST','kpi_recibo_recepciones',recalculados.slice(i,i+BATCH),{'Prefer':'resolution=merge-duplicates,return=minimal'});
-      showProg('progRepro','barRepro','progReproTxt', Math.min(60+Math.round(((i+BATCH)/recalculados.length)*30),90), `Guardando lote…`);
+      showProg('progRepro','barRepro','progReproTxt',Math.min(60+Math.round(((i+BATCH)/recalculados.length)*30),90),`Guardando lote…`);
     }
-    showProg('progRepro','barRepro','progReproTxt', 95, 'Actualizando resumen…');
-
-    const med = recalculados.filter(r=>r.sla_ok_12!==null);
-    const ok  = med.filter(r=>r.sla_ok_12).length;
-    const inc = recalculados.filter(r=>r.is_inconsistente);
-    const times = recalculados.filter(r=>r.tiempo_h).map(r=>r.tiempo_h);
-    await upsertResumen(mesId, {
-      total:recalculados.length, ok, late:med.length-ok,
-      trt:med.length>0?Math.round(ok/med.length*1000)/10:null,
-      avgH:times.length?Math.round(times.reduce((a,b)=>a+b,0)/times.length*100)/100:null,
-      maxH:times.length?Math.max(...times):null,
-      cert:recalculados.filter(r=>r.is_cert).length,
-      pt:recalculados.filter(r=>r.tipo==='PT').length,
-      mp:recalculados.filter(r=>r.tipo==='MP').length,
-    });
-
+    showProg('progRepro','barRepro','progReproTxt',95,'Actualizando resumen…');
+    const med=recalculados.filter(r=>r.sla_ok_12!==null);
+    const ok=med.filter(r=>r.sla_ok_12).length;
+    const inc=recalculados.filter(r=>r.is_inconsistente);
+    const times=recalculados.filter(r=>r.tiempo_h).map(r=>r.tiempo_h);
+    await upsertResumen(mesId,{total:recalculados.length,ok,late:med.length-ok,trt:med.length>0?Math.round(ok/med.length*1000)/10:null,avgH:times.length?Math.round(times.reduce((a,b)=>a+b,0)/times.length*100)/100:null,maxH:times.length?Math.max(...times):null,cert:recalculados.filter(r=>r.is_cert).length,pt:recalculados.filter(r=>r.tipo==='PT').length,mp:recalculados.filter(r=>r.tipo==='MP').length});
     showProg('progRepro','barRepro','progReproTxt',100,'Completado');
     hideProg('progRepro');
-    const sem = (med.length>0&&ok/med.length>=.95)?'🟢':(ok/med.length>=.80)?'🟡':'🔴';
-    showRes('resRepro','ok',
-      `✅ <b>${label} reprocesado</b><br>` +
-      `📊 ${recalculados.length} registros · Cuarentena: <b>${inc.length}</b>`
-    );
-    addLog(`✓ Reprocesado ${label}: cuarentena ${inc.length}`, 'ok');
+    showRes('resRepro','ok',`✅ <b>${label} reprocesado</b><br>📊 ${recalculados.length} registros · Cuarentena: <b>${inc.length}</b>`);
+    addLog(`✓ Reprocesado ${label}: cuarentena ${inc.length}`,'ok');
     mostrarCuarentena(inc);
     cargarMeses();
-  } catch(e) {
+  }catch(e){
     hideProg('progRepro');
     showRes('resRepro','err','❌ '+e.message);
     addLog('✗ Reproceso error: '+e.message,'err');
   }
 }
 
-async function cargarMeses() {
-  const lista = document.getElementById('reproList');
-  try {
-    const res = await sb.rest('GET','kpi_recibo_resumen?order=mes_id.asc');
-    if (!res || !res.length) {
-      lista.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">No hay meses cargados aún.</div>`;
-      return;
-    }
-    const counts = await Promise.all(res.map(r =>
+async function cargarMeses(){
+  const lista=document.getElementById('reproList');
+  try{
+    const res=await sb.rest('GET','kpi_recibo_resumen?order=mes_id.asc');
+    if(!res||!res.length){ lista.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">No hay meses cargados aún.</div>`; return; }
+    const counts=await Promise.all(res.map(r=>
       sb.rest('GET',`kpi_recibo_recepciones?mes_id=eq.${r.mes_id}&is_inconsistente=eq.true&select=id`)
-        .then(rows=>({mesId:r.mes_id, label:r.label||r.mes_id, trt:r.trt_12h, total:r.total_oc, inc:(rows||[]).length}))
-        .catch(()=>({mesId:r.mes_id, label:r.label||r.mes_id, trt:r.trt_12h, total:r.total_oc, inc:'?'}))
+        .then(rows=>({mesId:r.mes_id,label:r.label||r.mes_id,trt:r.trt_12h,total:r.total_oc,inc:(rows||[]).length}))
+        .catch(()=>({mesId:r.mes_id,label:r.label||r.mes_id,trt:r.trt_12h,total:r.total_oc,inc:'?'}))
     ));
-    lista.innerHTML = counts.map(c=>`
+    lista.innerHTML=counts.map(c=>`
       <div class="repro-item">
         <div class="repro-item-info">
-          <span class="repro-item-label">${c.label}</span>
-          <span class="repro-item-stats">
-            ${c.total} registros · TRT <b>${c.trt??'—'}%</b> ·
-            Cuarentena: <span class="${c.inc>0?'inc':'ok'}">${c.inc}</span>
-          </span>
+          <span class="repro-label">${c.label}</span>
+          <span class="repro-stats">${c.total} registros · TRT <b>${c.trt??'—'}%</b> · Cuarentena: <span class="${c.inc>0?'inc':'ok'}">${c.inc}</span></span>
         </div>
         <button class="btn btn-sm" onclick="reprocesarMes('${c.mesId}')">🔄 Reprocesar</button>
       </div>`).join('');
-  } catch(e) {
-    lista.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">Sin conexión a Supabase.</div>`;
+  }catch(e){
+    lista.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">Sin conexión a Supabase.</div>`;
   }
 }
 
-// ── ETL Log desde Supabase ────────────────────────────────────────────────
-async function loadEtlLog() {
-  try {
-    const rows = await sb.rest('GET','etl_log?order=iniciado_at.desc&limit=20');
-    if (!rows||!rows.length) { addLog('Sin registros de cargue aún.','inf'); return; }
+async function loadEtlLog(){
+  try{
+    const rows=await sb.rest('GET','etl_log?order=iniciado_at.desc&limit=20');
+    if(!rows||!rows.length){ addLog('Sin registros de cargue aún.','inf'); return; }
     rows.forEach(r=>{
-      const dt = new Date(r.iniciado_at).toLocaleString('es-CO');
-      const tp = r.estado==='completado'?'ok':r.estado==='error'?'err':'inf';
-      addLog(`[${dt}] ${r.mes_id||'—'} | ${r.archivo||'—'} | ${r.estado} | insertados:${r.docs_insertados} actualizados:${r.docs_actualizados}`,tp);
+      const dt=new Date(r.iniciado_at).toLocaleString('es-CO');
+      const tp=r.estado==='completado'?'ok':r.estado==='error'?'err':'inf';
+      addLog(`[${dt}] ${r.mes_id||'—'} | ${r.archivo||'—'} | ${r.estado} | ins:${r.docs_insertados} act:${r.docs_actualizados}`,tp);
     });
-  } catch(e) { addLog('No se pudo cargar el historial: '+e.message,'warn'); }
+  }catch(e){ addLog('No se pudo cargar el historial: '+e.message,'warn'); }
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────
-window.addEventListener('load', async () => {
-  const user = await checkAuth('admin'); if (!user) return;
+// ── Cargar cuarentena actual desde Supabase al entrar ─────────────────────
+async function cargarCuarentenaActual(){
+  try{
+    const rows=await sb.rest('GET','kpi_recibo_recepciones?is_inconsistente=eq.true&order=mes_id.asc,documento.asc');
+    if(rows&&rows.length) mostrarCuarentena(rows);
+  }catch(e){ addLog('No se pudo cargar cuarentena: '+e.message,'warn'); }
+}
+
+window.addEventListener('load',async()=>{
+  const user=await checkAuth('admin'); if(!user) return;
   renderUser();
-  // Poblar selector de mes desde config
-  const sel = document.getElementById('uploadMes');
-  sel.innerHTML = CONFIG.meses.map((m,i) =>
-    `<option value="${m.id}" ${i===CONFIG.meses.length-1?'selected':''}>${m.label}</option>`
-  ).join('');
+  const sel=document.getElementById('uploadMes');
+  sel.innerHTML=CONFIG.meses.map((m,i)=>`<option value="${m.id}" ${i===CONFIG.meses.length-1?'selected':''}>${m.label}</option>`).join('');
   cargarMeses();
   loadEtlLog();
-  const ol = document.getElementById('overlay');
-  setTimeout(()=>ol.classList.add('out'), 200);
-  setTimeout(()=>ol.remove(), 600);
+  cargarCuarentenaActual();
+  const ol=document.getElementById('overlay');
+  setTimeout(()=>ol.classList.add('out'),200);
+  setTimeout(()=>ol.remove(),600);
 });
 </script>
 </body>

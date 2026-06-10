@@ -48,120 +48,190 @@ function semanaISO(fs){
     return `Sem ${Math.ceil(((thu-j1)/86400000+1)/7)}`;
   }catch{return null;}
 }
-function procesarExcel(arrayBuffer,mesId){
-  const wb=XLSX.read(new Uint8Array(arrayBuffer),{type:'array',cellDates:true});
-  const sn=wb.SheetNames.find(n=>n.toUpperCase().includes('RECIB'))||wb.SheetNames[0];
-  if(!sn) throw new Error('No se encontró la hoja RECIBOS.');
-  const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:null,raw:false,cellDates:true});
-  if(rows.length<2) throw new Error('La hoja RECIBOS está vacía.');
-  const headers=rows[0].map(h=>String(h||'').trim().toUpperCase());
-  const idx=nombres=>{for(const n of nombres){const i=headers.findIndex(h=>h.includes(n.toUpperCase()));if(i>=0)return i;}return -1;};
-  const C={
-    ref:idx(['REFERENCIA']),prov:idx(['PROVEEDOR']),doc:idx(['DOCUMENTO']),
-    fechaIngresa:idx(['FECHA INGRESA','FECHA_INGRESA']),
-    cantUds:idx(['CANTIDAD RECIBO UNIDADES','CANT RECIBO']),oc:idx(['O.C','OC']),
-    horaCita:idx(['HORA CITA']),horaInicio:idx(['HORA INICIO DESCARGUE','HORA INICIO']),
-    horaFinal:idx(['HORA FINAL DESCARGUE2','HORA FINAL DESCARGUE','HORA FINAL']),
-    horaTT:mesId==='2026-03'?idx(['HORA TT RECIBO2']):idx(['HORA TT RECIBO']),
-    cert:idx(['CERTIFICACION']),familia:idx(['FAMILIA']),
+
+/**
+ * detectarMesPredominante(rows, C)
+ * Lee todas las filas y cuenta la frecuencia de cada mes en Fecha Ingresa / Fecha Recibo.
+ * Retorna el mes predominante en formato 'YYYY-MM'.
+ * Fallback: Fecha Ingresa si Fecha Recibo viene vacía.
+ */
+function detectarMesPredominante(rows, C) {
+  const conteo = {};
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || r.every(v => v === null)) continue;
+    // Tomar Fecha Recibo primero, fallback Fecha Ingresa
+    const rawFecha = r[C.fechaRecibo] || r[C.fechaIngresa];
+    const fecha    = toISODate(parseExcelDate(rawFecha));
+    if (!fecha) continue;
+    const mesAnio  = fecha.slice(0, 7); // 'YYYY-MM'
+    conteo[mesAnio] = (conteo[mesAnio] || 0) + 1;
+  }
+  if (!Object.keys(conteo).length) return null;
+  return Object.entries(conteo).sort((a, b) => b[1] - a[1])[0][0];
+}
+
+/**
+ * procesarExcel(arrayBuffer, mesIdSeleccionado)
+ * Retorna: { records, inconsistencias, stats, mesPredominante, mesConflicto }
+ * - mesPredominante: mes detectado en el archivo (ej: '2026-04')
+ * - mesConflicto: true si el mes seleccionado difiere del predominante
+ */
+function procesarExcel(arrayBuffer, mesIdSeleccionado) {
+  const wb  = XLSX.read(new Uint8Array(arrayBuffer), {type:'array', cellDates:true});
+  const sn  = wb.SheetNames.find(n => n.toUpperCase().includes('RECIB')) || wb.SheetNames[0];
+  if (!sn) throw new Error('No se encontró la hoja RECIBOS en el archivo.');
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:null, raw:false, cellDates:true});
+  if (rows.length < 2) throw new Error('La hoja RECIBOS está vacía.');
+
+  const headers = rows[0].map(h => String(h||'').trim().toUpperCase());
+  const idx = nombres => {
+    for (const n of nombres) {
+      const i = headers.findIndex(h => h.includes(n.toUpperCase()));
+      if (i >= 0) return i;
+    }
+    return -1;
   };
-  const excluir=CONFIG.kpiRec001.excluirProveedores;
-  const docMap=new Map();
-  for(let i=1;i<rows.length;i++){
-    const r=rows[i];
-    if(!r||r.every(v=>v===null)) continue;
-    const prov=String(r[C.prov]||'').trim();
-    const doc =String(r[C.doc ]||'').trim();
-    if(!doc||!prov) continue;
-    if(excluir.some(e=>prov.toLowerCase().includes(e))) continue;
-    if(!docMap.has(doc)) docMap.set(doc,[]);
+
+  const C = {
+    ref:         idx(['REFERENCIA']),
+    prov:        idx(['PROVEEDOR']),
+    doc:         idx(['DOCUMENTO']),
+    fechaIngresa:idx(['FECHA INGRESA','FECHA_INGRESA']),
+    fechaRecibo: idx(['FECHA RECIBO','FECHA_RECIBO']),
+    cantUds:     idx(['CANTIDAD RECIBO UNIDADES','CANT RECIBO']),
+    oc:          idx(['O.C','OC']),
+    horaCita:    idx(['HORA CITA']),
+    horaInicio:  idx(['HORA INICIO DESCARGUE','HORA INICIO']),
+    horaFinal:   idx(['HORA FINAL DESCARGUE2','HORA FINAL DESCARGUE','HORA FINAL']),
+    horaTT:      mesIdSeleccionado==='2026-03' ? idx(['HORA TT RECIBO2']) : idx(['HORA TT RECIBO']),
+    cert:        idx(['CERTIFICACION']),
+    familia:     idx(['FAMILIA']),
+  };
+
+  // ── Detectar mes predominante en el archivo ────────────────────────────
+  const mesPredominante = detectarMesPredominante(rows, C);
+  const mesConflicto    = mesPredominante && mesPredominante !== mesIdSeleccionado;
+  // El mes que se grabará es siempre el predominante del archivo
+  const mesId = mesPredominante || mesIdSeleccionado;
+
+  const excluir = CONFIG.kpiRec001.excluirProveedores;
+  const docMap  = new Map();
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || r.every(v => v === null)) continue;
+    const prov = String(r[C.prov]||'').trim();
+    const doc  = String(r[C.doc] ||'').trim();
+    if (!doc || !prov) continue;
+    if (excluir.some(e => prov.toLowerCase().includes(e))) continue;
+    if (!docMap.has(doc)) docMap.set(doc, []);
     docMap.get(doc).push(r);
   }
-  const records=[],inconsistencias=[];
-  for(const [doc,filas] of docMap){
-    const f0=filas[0];
-    const proveedor=String(f0[C.prov]||'').trim();
-    const fechaStr =toISODate(parseExcelDate(f0[C.fechaIngresa]));
-    const oc       =String(f0[C.oc]||'').trim()||null;
-    const horaCitaRaw=f0[C.horaCita];
-    const horaCita   =parseHoraSimple(horaCitaRaw);
-    let horaIni=null;
-    for(const f of filas){
-      const t=parseHoraSimple(f[C.horaInicio]);
-      if(!t) continue;
-      if(!horaIni||(t.h*60+t.m)<(horaIni.h*60+horaIni.m)) horaIni=t;
+
+  const records = [], inconsistencias = [];
+
+  for (const [doc, filas] of docMap) {
+    const f0 = filas[0];
+    const proveedor = String(f0[C.prov]||'').trim();
+
+    // ── Fecha: Recibo → fallback Ingresa → cuarentena si ambas vacías ──
+    const rawRecibo  = f0[C.fechaRecibo];
+    const rawIngresa = f0[C.fechaIngresa];
+    const fechaStr   = toISODate(parseExcelDate(rawRecibo)) || toISODate(parseExcelDate(rawIngresa));
+
+    const oc           = String(f0[C.oc]||'').trim() || null;
+    const horaCitaRaw  = f0[C.horaCita];
+    const horaCita     = parseHoraSimple(horaCitaRaw);
+
+    let horaIni = null;
+    for (const f of filas) {
+      const t = parseHoraSimple(f[C.horaInicio]);
+      if (!t) continue;
+      if (!horaIni || (t.h*60+t.m) < (horaIni.h*60+horaIni.m)) horaIni = t;
     }
-    let horaTT=null;
-    const ttRaw=f0[C.horaTT];
-    if(ttRaw){ const p=parseHoraTT(ttRaw,mesId); if(p) horaTT=p; }
-    if(!horaTT){
-      let mx=null;
-      for(const f of filas){
-        const t=parseHoraSimple(f[C.horaFinal]);
-        if(!t) continue;
-        if(!mx||(t.h*60+t.m)>(mx.h*60+mx.m)) mx=t;
+
+    let horaTT = null;
+    const ttRaw = f0[C.horaTT];
+    if (ttRaw) { const p = parseHoraTT(ttRaw, mesId); if (p) horaTT = p; }
+    if (!horaTT) {
+      let mx = null;
+      for (const f of filas) {
+        const t = parseHoraSimple(f[C.horaFinal]);
+        if (!t) continue;
+        if (!mx || (t.h*60+t.m) > (mx.h*60+mx.m)) mx = t;
       }
-      horaTT=mx?{...mx,fecha:null}:null;
+      horaTT = mx ? {...mx, fecha:null} : null;
     }
-    let tiempoH=null,slaOk=null,causal=null,esInc=false;
-    const horaRef=horaCita||horaIni;
-    if(!fechaStr){
-      causal='Fecha Ingresa vacía'; esInc=true;
-    } else if(!horaRef){
-      causal='HORA CITA y HORA INICIO vacías'; esInc=true;
-    } else if(!horaTT){
-      causal='HORA TT RECIBO vacía'; esInc=true;
+
+    let tiempoH = null, slaOk = null, causal = null, esInc = false;
+    const horaRef = horaCita || horaIni;
+
+    if (!fechaStr) {
+      causal = 'Fecha vacía en Fecha Recibo y Fecha Ingresa'; esInc = true;
+    } else if (!horaRef) {
+      causal = 'HORA CITA y HORA INICIO vacías'; esInc = true;
+    } else if (!horaTT) {
+      causal = 'HORA TT RECIBO vacía'; esInc = true;
     } else {
-      try{
-        const [y,mo,d]=fechaStr.split('-').map(Number);
-        const dtIni=new Date(y,mo-1,d,horaRef.h,horaRef.m,0);
-        let dtFin  =new Date(y,mo-1,d,horaTT.h, horaTT.m, 0);
+      try {
+        const [y,mo,d] = fechaStr.split('-').map(Number);
+        const dtIni    = new Date(y, mo-1, d, horaRef.h, horaRef.m, 0);
+        let   dtFin    = new Date(y, mo-1, d, horaTT.h,  horaTT.m,  0);
+        if (dtFin < dtIni) dtFin.setDate(dtFin.getDate() + 1);
 
-        // ── CRUCE DE MEDIANOCHE ───────────────────────────────────────
-        // HORA TT RECIBO2 siempre trae la fecha del día de ingreso
-        // aunque el proceso haya terminado al día siguiente.
-        // Si dtFin < dtIni → cruzó medianoche → sumar 1 día y calcular normal.
-        if(dtFin < dtIni) dtFin.setDate(dtFin.getDate()+1);
-        // ─────────────────────────────────────────────────────────────
-
-        tiempoH=tiempoEfectivoHoras(dtIni,dtFin);
-        if(tiempoH===null){ causal='Tiempo calculado = 0'; esInc=true; }
-        else slaOk=tiempoH<=CONFIG.kpiRec001.slaHoras;
-      }catch(e){ causal=`Error: ${e.message}`; esInc=true; }
+        tiempoH = tiempoEfectivoHoras(dtIni, dtFin);
+        if (tiempoH === null && dtFin > dtIni) {
+          const fin17 = new Date(y, mo-1, d, 17, 0, 0);
+          if (dtIni < fin17) tiempoH = Math.round((fin17-dtIni)/36000)/100;
+        }
+        if (tiempoH === null || tiempoH <= 0) {
+          causal = 'Tiempo calculado = 0'; esInc = true;
+        } else {
+          slaOk = tiempoH <= CONFIG.kpiRec001.slaHoras;
+        }
+      } catch(e) { causal = `Error: ${e.message}`; esInc = true; }
     }
-    const familiaRaw=String(f0[C.familia]||'').trim().toUpperCase();
-    const tipo=(familiaRaw.includes('RAW')||familiaRaw.includes('MATERIAL'))?'MP':'PT';
-    const familia=familiaRaw?familiaRaw.charAt(0)+familiaRaw.slice(1).toLowerCase():null;
-    const skus    =new Set(filas.map(f=>String(f[C.ref]||'')).filter(Boolean)).size;
-    const unidades=filas.reduce((s,f)=>s+(parseInt(f[C.cantUds])||0),0);
-    const isCert  =filas.some(f=>f[C.cert]!==null&&f[C.cert]!==undefined&&f[C.cert]!=='');
-    const record={
-      mes_id:mesId,documento:doc,oc,fecha:fechaStr,semana:semanaISO(fechaStr),
-      proveedor,familia,tipo,skus,unidades,
-      hora_cita:fmtHora(horaCitaRaw),
-      hora_inicio:horaIni?`${String(horaIni.h).padStart(2,'0')}:${String(horaIni.m).padStart(2,'0')}`:null,
-      hora_tt:horaTT?`${String(horaTT.h).padStart(2,'0')}:${String(horaTT.m).padStart(2,'0')}`:null,
-      tiempo_h:tiempoH,sla_ok_12:slaOk,is_cert:isCert,
-      is_inconsistente:esInc,causal_inconsistencia:causal,
+
+    const familiaRaw = String(f0[C.familia]||'').trim().toUpperCase();
+    const tipo       = (familiaRaw.includes('RAW')||familiaRaw.includes('MATERIAL')) ? 'MP' : 'PT';
+    const familia    = familiaRaw ? familiaRaw.charAt(0)+familiaRaw.slice(1).toLowerCase() : null;
+    const skus       = new Set(filas.map(f=>String(f[C.ref]||'')).filter(Boolean)).size;
+    const unidades   = filas.reduce((s,f) => s+(parseInt(f[C.cantUds])||0), 0);
+    const isCert     = filas.some(f => f[C.cert]!==null && f[C.cert]!==undefined && f[C.cert]!=='');
+
+    const record = {
+      mes_id: mesId, documento:doc, oc,
+      fecha:fechaStr, semana:semanaISO(fechaStr),
+      proveedor, familia, tipo, skus, unidades,
+      hora_cita:   fmtHora(horaCitaRaw),
+      hora_inicio: horaIni ? `${String(horaIni.h).padStart(2,'0')}:${String(horaIni.m).padStart(2,'0')}` : null,
+      hora_tt:     horaTT  ? `${String(horaTT.h).padStart(2,'0')}:${String(horaTT.m).padStart(2,'0')}`  : null,
+      tiempo_h: tiempoH, sla_ok_12: slaOk, is_cert: isCert,
+      is_inconsistente: esInc, causal_inconsistencia: causal,
     };
     records.push(record);
-    if(esInc) inconsistencias.push(record);
+    if (esInc) inconsistencias.push(record);
   }
-  const medidos=records.filter(r=>r.sla_ok_12!==null);
-  const ok=medidos.filter(r=>r.sla_ok_12).length;
-  const late=medidos.filter(r=>!r.sla_ok_12).length;
-  const times=records.filter(r=>r.tiempo_h).map(r=>r.tiempo_h);
-  return{
-    records,inconsistencias,
-    stats:{
-      total:records.length,medidos:medidos.length,ok,late,
-      sinDato:records.length-medidos.length,
-      trt:medidos.length>0?Math.round(ok/medidos.length*1000)/10:null,
-      avgH:times.length?Math.round(times.reduce((a,b)=>a+b,0)/times.length*100)/100:null,
-      maxH:times.length?Math.max(...times):null,
-      cert:records.filter(r=>r.is_cert).length,
-      pt:records.filter(r=>r.tipo==='PT').length,
-      mp:records.filter(r=>r.tipo==='MP').length,
+
+  const medidos = records.filter(r => r.sla_ok_12 !== null);
+  const ok      = medidos.filter(r =>  r.sla_ok_12).length;
+  const late    = medidos.filter(r => !r.sla_ok_12).length;
+  const times   = records.filter(r => r.tiempo_h).map(r => r.tiempo_h);
+
+  return {
+    records, inconsistencias, mesPredominante, mesConflicto,
+    stats: {
+      total:   records.length,
+      medidos: medidos.length,
+      ok, late,
+      sinDato: records.length - medidos.length,
+      trt:     medidos.length>0 ? Math.round(ok/medidos.length*1000)/10 : null,
+      avgH:    times.length ? Math.round(times.reduce((a,b)=>a+b,0)/times.length*100)/100 : null,
+      maxH:    times.length ? Math.max(...times) : null,
+      cert:    records.filter(r => r.is_cert).length,
+      pt:      records.filter(r => r.tipo==='PT').length,
+      mp:      records.filter(r => r.tipo==='MP').length,
     },
   };
 }
