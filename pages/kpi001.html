@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../styles/base.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    /* ── Topbar & tabs ── */
+    /* ── Tabs ── */
     .tabs-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 1.25rem;gap:.1rem;overflow-x:auto;scrollbar-width:none}
     .tabs-nav::-webkit-scrollbar{display:none}
     .tab-btn{padding:.8rem .9rem;font-size:.8rem;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;min-height:44px}
@@ -22,17 +22,16 @@
     .kpi-hdr-sub{font-size:.76rem;color:var(--muted);margin-top:.15rem}
     .kpi-actions{display:flex;gap:.4rem;align-items:center;flex-shrink:0;flex-wrap:wrap}
 
-    /* ── Mes selector ── */
+    /* ── Mes selector (AJUSTE 1: solo un selector) ── */
     .mes-bar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:1rem}
     .mes-bar label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
     .mes-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:.35rem .65rem;cursor:pointer;outline:none}
     .mes-sel:focus{border-color:var(--accent)}
 
-    /* ── HERO: semáforo + grid métricas ── */
+    /* ── HERO ── */
     .hero{display:grid;grid-template-columns:220px 1fr;gap:1rem;margin-bottom:1rem}
     @media(max-width:799px){.hero{grid-template-columns:1fr}}
     @media(min-width:1920px){.hero{grid-template-columns:280px 1fr}}
-
     .semaforo{background:var(--surface);border:2px solid var(--border);border-radius:var(--r);padding:1.25rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.5rem;text-align:center}
     .sem-lbl{font-size:.65rem;font-weight:700;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
     .sem-num{font-size:clamp(3rem,8vw,4rem);font-weight:900;line-height:1}
@@ -45,8 +44,6 @@
     .sem-barra-wrap{width:100%;height:7px;background:var(--surface3);border-radius:9999px;overflow:hidden}
     .sem-barra{height:7px;border-radius:9999px;transition:width .5s ease}
     .sem-delta{font-size:.72rem;color:var(--muted)}
-
-    /* Grid 2x3 de métricas */
     .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
     @media(min-width:1200px){.metrics-grid{grid-template-columns:1fr 1fr 1fr}}
     .mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem 1rem;display:flex;flex-direction:column;gap:.15rem}
@@ -84,7 +81,24 @@
     .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
     .chart-wrap{position:relative}
 
-    /* ── Detalle analítico 2 columnas ── */
+    /* ── AJUSTE 2: Botones maximizar gráfica proveedores ── */
+    .chart-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem}
+    .chart-toolbar .sec-title{margin-bottom:0}
+    .chart-btns{display:flex;gap:.4rem}
+    .chart-btn{padding:.3rem .75rem;border-radius:var(--r-sm);font-size:.75rem;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--surface2);color:var(--text);transition:all .15s;white-space:nowrap}
+    .chart-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* Modal para gráfica maximizada */
+    .chart-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;padding:1rem}
+    .chart-modal.open{display:flex}
+    .chart-modal-inner{background:var(--surface);border:1px solid var(--border2);border-radius:var(--r-lg);padding:1.5rem;width:min(96vw,1200px);max-height:90vh;display:flex;flex-direction:column;gap:1rem}
+    .chart-modal-header{display:flex;align-items:center;justify-content:space-between}
+    .chart-modal-title{font-family:'Syne',sans-serif;font-size:1rem;font-weight:700}
+    .chart-modal-close{background:none;border:1px solid var(--border2);border-radius:var(--r-sm);padding:.35rem .8rem;font-size:.8rem;cursor:pointer;color:var(--text);transition:all .15s}
+    .chart-modal-close:hover{border-color:var(--error);color:var(--error)}
+    .chart-modal-wrap{flex:1;min-height:0;position:relative;height:min(60vh,500px)}
+
+    /* ── Detalle ── */
     .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem}
     @media(max-width:599px){.detail-grid{grid-template-columns:1fr}}
     .detail-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
@@ -93,18 +107,22 @@
     .di:last-child{border-bottom:none}
     .dk{color:var(--muted)}.dv{font-weight:700;color:var(--text)}
 
-    /* ── Tabla detalle recepciones ── */
-    .tbl-ctrl{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin-bottom:.65rem}
+    /* ── Tabla detalle ── */
+    .tbl-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem;flex-wrap:wrap;gap:.5rem}
+    .tbl-hdr-title{font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;color:var(--text)}
+    .tbl-ctrl{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap}
     .flt-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.75rem;padding:.28rem .55rem;outline:none;cursor:pointer}
     .flt-sel:focus{border-color:var(--accent)}
-    .flt-count{font-size:.7rem;color:var(--muted);margin-left:auto}
+    .flt-count{font-size:.7rem;color:var(--muted);white-space:nowrap}
     .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
     .tbl-scroll{overflow-x:auto;max-height:460px;overflow-y:auto;-webkit-overflow-scrolling:touch}
 
-    /* Cuarentena */
+    /* ── AJUSTE 6: Cuarentena con campo análisis ── */
     .sec-cuarentena{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--warn);margin:1rem 0 .5rem;display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
 
-    /* Comparativo */
+    /* ── AJUSTE VISUAL: Tab Comparativo mejorado ── */
+    .comp-header{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;padding:.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
+    .comp-header label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
     .comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
     @media(max-width:699px){.comp-grid{grid-template-columns:1fr}}
     .comp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
@@ -118,10 +136,12 @@
     .delta-up{color:var(--ok);font-size:.71rem}
     .delta-dn{color:var(--error);font-size:.71rem}
 
-    /* Colors */
-    .c-ok{color:var(--ok)}.c-err{color:var(--error)}.c-warn{color:var(--warn)}.c-acc{color:var(--accent)}
+    /* ── Volumen y promedio charts comparativo ── */
+    .comp-charts{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem}
+    @media(max-width:699px){.comp-charts{grid-template-columns:1fr}}
 
-    /* Tags */
+    /* Colors / Tags */
+    .c-ok{color:var(--ok)}.c-err{color:var(--error)}.c-warn{color:var(--warn)}.c-acc{color:var(--accent)}
     .tag{display:inline-block;padding:.1rem .5rem;border-radius:10px;font-weight:700;font-size:.7rem}
     .tag-ok  {background:rgba(0,255,136,.12);color:var(--ok)}
     .tag-late{background:rgba(255,77,109,.12);color:var(--error)}
@@ -129,8 +149,6 @@
     .tag-pt  {background:rgba(0,212,255,.12);color:var(--accent)}
     .tag-mp  {background:rgba(123,47,255,.12);color:var(--accent2)}
     .tag-cert{background:rgba(255,176,32,.12);color:var(--warn)}
-
-    /* Row indicators */
     .row-ok   td:first-child{border-left:3px solid var(--ok)}
     .row-late td:first-child{border-left:3px solid var(--error)}
     .row-inc  td:first-child{border-left:3px solid var(--warn)}
@@ -138,12 +156,26 @@
 </head>
 <body>
 <div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando datos…</p></div></div>
+
+<!-- AJUSTE 2: Modal gráfica maximizada -->
+<div class="chart-modal" id="chartModal" onclick="cerrarModal(event)">
+  <div class="chart-modal-inner">
+    <div class="chart-modal-header">
+      <span class="chart-modal-title">OC por Proveedor — A Tiempo vs Fuera · T.Prom Ef.(h)</span>
+      <button class="chart-modal-close" onclick="minimizarGrafica()">✕ Minimizar</button>
+    </div>
+    <div class="chart-modal-wrap"><canvas id="cProvModal"></canvas></div>
+  </div>
+</div>
+
 <div class="page">
   <header class="topbar">
+    <!-- AJUSTE 5: Botón volver al menú -->
     <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
     <span class="topbar-sep">/</span>
     <span class="topbar-title">KPI-REC-001</span>
     <div class="topbar-spacer"></div>
+    <a href="menu.html" class="btn btn-sm" style="font-size:.75rem">← Menú</a>
     <div class="theme-bar">
       <button class="theme-btn" onclick="setTheme('')">🌙</button>
       <button class="theme-btn" onclick="setTheme('light')">☀️</button>
@@ -151,14 +183,14 @@
     <div class="topbar-user" id="topbarUser"></div>
   </header>
 
+  <!-- AJUSTE 3: orden correcto de tabs: Resumen, Detalle, Comparativo -->
   <nav class="tabs-nav">
-    <button class="tab-btn on" onclick="tab('resumen',this)">📊 Resumen</button>
-    <button class="tab-btn"    onclick="tab('comparativo',this)">⚖️ Comparativo</button>
-    <button class="tab-btn"    onclick="tab('detalle',this)">📋 Detalle Recepciones</button>
+    <button class="tab-btn on" onclick="tab('resumen',this)">📊 Resumen por Mes</button>
+    <button class="tab-btn"   onclick="tab('detalle',this)">📋 Detalle Recepciones</button>
+    <button class="tab-btn"   onclick="tab('comparativo',this)">⚖️ Comparativo</button>
   </nav>
 
   <main class="content">
-    <!-- KPI header -->
     <div class="kpi-hdr">
       <div>
         <h1>📦 KPI-REC-001 <span class="badge badge-ok">En vivo</span></h1>
@@ -170,41 +202,34 @@
       </div>
     </div>
 
-    <!-- Selector de meses -->
+    <!-- AJUSTE 1: solo un selector de mes -->
     <div class="mes-bar">
-      <label>Mes A</label>
-      <select class="mes-sel" id="selA" onchange="onMesChange()"></select>
-      <span style="color:var(--dim);font-size:.8rem">vs</span>
-      <label>Mes B</label>
-      <select class="mes-sel" id="selB" onchange="onMesChange()"></select>
+      <label>Mes</label>
+      <select class="mes-sel" id="selMes" onchange="onMesChange()"></select>
       <div style="margin-left:auto;font-size:.7rem;color:var(--dim)" id="statusDatos">—</div>
     </div>
 
-    <!-- ══ RESUMEN ══════════════════════════════════════════════════════ -->
+    <!-- ══ RESUMEN ══ -->
     <div class="tab-panel on" id="tab-resumen">
-
-      <!-- HERO: semáforo + métricas -->
-      <div class="hero" id="heroWrap">
-        <div class="semaforo" id="semaforoBox">
+      <div class="hero">
+        <div class="semaforo">
           <div class="sem-lbl" id="semLbl">TRT — Mes</div>
           <div style="display:flex;align-items:flex-end;gap:3px">
             <span class="sem-num" id="semNum">—</span><span class="sem-unit">%</span>
           </div>
           <div class="sem-meta" id="semMeta">— a tiempo / — OC · SLA 12h ef.</div>
           <div class="sem-barra-wrap"><div class="sem-barra" id="semBarra" style="width:0%"></div></div>
-          <span class="sem-pill verde" id="semPill">— —</span>
+          <span class="sem-pill verde" id="semPill">—</span>
           <div class="sem-delta">Δ vs. meta 95%: <b id="semDelta">—</b></div>
         </div>
         <div class="metrics-grid" id="metricsGrid"></div>
       </div>
 
-      <!-- Certificación -->
       <div class="cert-strip">
         <div class="cert-title"><em></em>ℹ️ Certificación WMS — Dato informativo (no afecta el TRT)</div>
         <div class="cert-grid" id="certGrid"></div>
       </div>
 
-      <!-- Tabla semanal -->
       <div class="sec-card">
         <div class="sec-title">
           <div class="bar" id="semBarColor" style="background:var(--accent)"></div>
@@ -214,12 +239,10 @@
           <table class="wt"><thead><tr>
             <th>Semana</th><th>OC</th><th>A Tiempo</th><th>Fuera SLA</th><th>TRT%</th><th>Δ pp</th><th>Estado</th>
           </tr></thead>
-          <tbody id="weeklyBody"></tbody>
-          </table>
+          <tbody id="weeklyBody"></tbody></table>
         </div>
       </div>
 
-      <!-- Charts: Evolución diaria + Mix PT/MP -->
       <div class="charts-2col">
         <div class="chart-card">
           <div class="sec-title"><div class="bar" style="background:var(--accent)"></div>Evolución Diaria TRT%</div>
@@ -231,13 +254,21 @@
         </div>
       </div>
 
-      <!-- Chart: Proveedor -->
+      <!-- AJUSTE 2: gráfica proveedores con botones Maximizar/Minimizar -->
       <div class="sec-card">
-        <div class="sec-title"><div class="bar" style="background:var(--accent)"></div>OC por Proveedor — A Tiempo vs Fuera · T.Prom Ef.(h)</div>
+        <div class="chart-toolbar">
+          <div class="sec-title" style="margin-bottom:0">
+            <div class="bar" style="background:var(--accent)"></div>
+            OC por Proveedor — A Tiempo vs Fuera · T.Prom Ef.(h)
+          </div>
+          <div class="chart-btns">
+            <button class="chart-btn" onclick="maximizarGrafica()">Maximizar</button>
+            <button class="chart-btn" id="btnMinimizar" onclick="minimizarGrafica()" style="display:none">Minimizar</button>
+          </div>
+        </div>
         <div class="chart-wrap"><canvas id="cProv" height="90"></canvas></div>
       </div>
 
-      <!-- Análisis por tipo + Estado del KPI -->
       <div class="detail-grid">
         <div class="detail-card">
           <h4>📦 Análisis por Tipo</h4>
@@ -248,25 +279,20 @@
           <div id="detalleEstado"></div>
         </div>
       </div>
-
-    </div><!-- /tab-resumen -->
-
-    <!-- ══ COMPARATIVO ══════════════════════════════════════════════════ -->
-    <div class="tab-panel" id="tab-comparativo">
-      <div class="comp-grid" id="compWrap">
-        <div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses para comparar</p></div>
-      </div>
     </div>
 
-    <!-- ══ DETALLE ══════════════════════════════════════════════════════ -->
+    <!-- ══ DETALLE (AJUSTE 4: selector de mes propio, filtros claros) ══ -->
     <div class="tab-panel" id="tab-detalle">
-      <div class="tbl-ctrl">
-        <select class="flt-sel" id="fMes" onchange="renderDetalle()"><option value="">Todos los meses</option></select>
-        <select class="flt-sel" id="fTipo" onchange="filtrar()"><option value="">Tipo</option><option value="PT">PT</option><option value="MP">MP</option></select>
-        <select class="flt-sel" id="fSLA" onchange="filtrar()"><option value="">SLA</option><option value="ok">✅ A tiempo</option><option value="late">❌ Fuera</option></select>
-        <select class="flt-sel" id="fProv" onchange="filtrar()"><option value="">Proveedor</option></select>
-        <button class="btn btn-sm" onclick="limpiarFiltros()">✕</button>
-        <span class="flt-count" id="fCount"></span>
+      <div class="tbl-hdr">
+        <span class="tbl-hdr-title" id="detalleTituloMes">Detalle Recepciones</span>
+        <div class="tbl-ctrl">
+          <select class="flt-sel" id="fMes" onchange="renderDetalle()"><option value="">Todos los meses</option></select>
+          <select class="flt-sel" id="fTipo" onchange="filtrar()"><option value="">Tipo</option><option value="PT">PT</option><option value="MP">MP</option></select>
+          <select class="flt-sel" id="fSLA" onchange="filtrar()"><option value="">SLA</option><option value="ok">✅ A tiempo</option><option value="late">❌ Fuera</option></select>
+          <select class="flt-sel" id="fProv" onchange="filtrar()"><option value="">Proveedor</option></select>
+          <button class="btn btn-sm" onclick="limpiarFiltros()">✕</button>
+          <span class="flt-count" id="fCount"></span>
+        </div>
       </div>
       <div class="tbl-wrap"><div class="tbl-scroll">
         <table>
@@ -280,16 +306,33 @@
         </table>
       </div></div>
 
+      <!-- AJUSTE 6: cuarentena con columna Análisis -->
       <div class="sec-cuarentena" id="secCuarentena" style="display:none">
         ⚠️ Cuarentena — Requieren Revisión
         <span class="badge badge-warn" id="cntCuarentena"></span>
       </div>
       <div class="tbl-wrap" id="tblCuaWrap" style="display:none"><div class="tbl-scroll">
         <table>
-          <thead><tr><th>Documento</th><th>Fecha</th><th>Proveedor</th><th>Tipo</th><th>Causal</th></tr></thead>
+          <thead><tr>
+            <th>Documento</th><th>Fecha</th><th>Proveedor</th><th>Tipo</th>
+            <th>Causal</th><th>Análisis — Qué revisar</th>
+          </tr></thead>
           <tbody id="tblCuaBody"></tbody>
         </table>
       </div></div>
+    </div>
+
+    <!-- ══ COMPARATIVO (AJUSTE: selector propio + todas las secciones del modelo) ══ -->
+    <div class="tab-panel" id="tab-comparativo">
+      <div class="comp-header">
+        <label>Mes A</label>
+        <select class="mes-sel" id="selA" onchange="renderComparativo()"></select>
+        <span style="color:var(--dim);font-size:.9rem">vs</span>
+        <label>Mes B</label>
+        <select class="mes-sel" id="selB" onchange="renderComparativo()"></select>
+        <span id="compStatus" style="margin-left:auto;font-size:.72rem;color:var(--muted)"></span>
+      </div>
+      <div id="compWrap"></div>
     </div>
 
   </main>
@@ -299,7 +342,7 @@
 <script src="../utils/auth.js"></script>
 <script>
 applyTheme();
-let allData={}, charts={};
+let allData={}, charts={}, provDataCache=null;
 
 // ── Tabs ──────────────────────────────────────────────────────────────────
 function tab(id,btn){
@@ -328,64 +371,68 @@ async function cargarDatos(){
 
 function poblarSelectores(meses){
   const lbl=id=>CONFIG.meses.find(m=>m.id===id)?.label||id;
+
+  // AJUSTE 1: selector único para resumen
+  const selMes=document.getElementById('selMes');
+  selMes.innerHTML=meses.map((m,i)=>`<option value="${m}" ${i===meses.length-1?'selected':''}>${lbl(m)}</option>`).join('');
+
+  // Selectores del comparativo
   ['selA','selB'].forEach((sid,i)=>{
     const s=document.getElementById(sid);
     s.innerHTML=meses.map((m,j)=>`<option value="${m}" ${j===(i===0?meses.length-2:meses.length-1)?'selected':''}>${lbl(m)}</option>`).join('');
   });
+
+  // Filtro mes en detalle
   const fMes=document.getElementById('fMes');
   fMes.innerHTML=`<option value="">Todos los meses</option>`+meses.map(m=>`<option value="${m}">${lbl(m)}</option>`).join('');
+
   onMesChange();
 }
 
 function onMesChange(){ renderResumen(); }
 
-// ── Calculos KPI ──────────────────────────────────────────────────────────
+// ── KPI Cálculos ──────────────────────────────────────────────────────────
 function calcKpi(records){
   if(!records||!records.length) return null;
-  const consistentes=records.filter(r=>!r.is_inconsistente);
-  const total  =consistentes.length;
-  const medidos=consistentes.filter(r=>r.sla_ok_12!==null);
-  const ok     =medidos.filter(r=>r.sla_ok_12).length;
-  const late   =medidos.filter(r=>!r.sla_ok_12).length;
-  const times  =consistentes.filter(r=>r.tiempo_h>0).map(r=>r.tiempo_h);
-  const sorted =[...times].sort((a,b)=>a-b);
-  const pt     =consistentes.filter(r=>r.tipo==='PT');
-  const mp     =consistentes.filter(r=>r.tipo==='MP');
+  const cons=records.filter(r=>!r.is_inconsistente);
+  const total=cons.length;
+  const medidos=cons.filter(r=>r.sla_ok_12!==null);
+  const ok=medidos.filter(r=>r.sla_ok_12).length;
+  const late=medidos.filter(r=>!r.sla_ok_12).length;
+  const times=cons.filter(r=>r.tiempo_h>0).map(r=>r.tiempo_h);
+  const sorted=[...times].sort((a,b)=>a-b);
+  const pt=cons.filter(r=>r.tipo==='PT');
+  const mp=cons.filter(r=>r.tipo==='MP');
   return{
-    total, medidos:medidos.length, ok, late,
-    sinDato:records.length-consistentes.length,
+    total,medidos:medidos.length,ok,late,
     excluidas:records.filter(r=>r.is_inconsistente).length,
-    trt: medidos.length>0?Math.round(ok/medidos.length*1000)/10:null,
+    trt:medidos.length>0?Math.round(ok/medidos.length*1000)/10:null,
     avgH:times.length?Math.round(times.reduce((a,b)=>a+b,0)/times.length*100)/100:null,
     maxH:times.length?Math.max(...times):null,
     medH:sorted.length?sorted[Math.floor(sorted.length/2)]:null,
     cert:records.filter(r=>r.is_cert).length,
-    pt:pt.length, mp:mp.length,
+    pt:pt.length,mp:mp.length,
     ptOk:pt.filter(r=>r.sla_ok_12).length,
     mpOk:mp.filter(r=>r.sla_ok_12).length,
     provs:[...new Set(records.map(r=>r.proveedor))].length,
   };
 }
 
-// ── RENDER RESUMEN ────────────────────────────────────────────────────────
+// ── Resumen ───────────────────────────────────────────────────────────────
 function renderResumen(){
-  const mesId =document.getElementById('selA').value;
-  const rec   =allData[mesId]||[];
-  const kpi   =calcKpi(rec);
-  const label =CONFIG.meses.find(m=>m.id===mesId)?.label||mesId;
-
+  const mesId=document.getElementById('selMes').value;
+  const rec=allData[mesId]||[];
+  const kpi=calcKpi(rec);
+  const label=CONFIG.meses.find(m=>m.id===mesId)?.label||mesId;
   if(!kpi){
     document.getElementById('metricsGrid').innerHTML=`<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📭</div><p>Sin datos para este mes</p></div>`;
     return;
   }
-
-  // ── Semáforo ──
   const trt=kpi.trt??0;
   const pillarCls=trt>=95?'verde':trt>=80?'amarillo':'rojo';
   const pillarTxt=trt>=95?'🟢 BIEN':trt>=80?'🟡 ATENCIÓN':'🔴 CRÍTICO';
-  const barColor =trt>=95?'var(--ok)':trt>=80?'var(--warn)':'var(--error)';
-  const delta    =trt-95;
-
+  const barColor=trt>=95?'var(--ok)':trt>=80?'var(--warn)':'var(--error)';
+  const delta=trt-95;
   document.getElementById('semLbl').textContent=`TRT — ${label}`;
   document.getElementById('semNum').textContent=kpi.trt??'—';
   document.getElementById('semNum').style.color=trt>=95?'var(--ok)':trt>=80?'var(--warn)':'var(--error)';
@@ -398,25 +445,23 @@ function renderResumen(){
   dEl.textContent=(delta>=0?'+':'')+delta.toFixed(1)+' pp';
   dEl.style.color=delta>=0?'var(--ok)':'var(--error)';
   document.getElementById('semTitleMes').textContent=label;
-  document.getElementById('semBarColor').style.background=trt>=95?'var(--ok)':trt>=80?'var(--warn)':'var(--error)';
+  document.getElementById('semBarColor').style.background=barColor;
 
-  // ── Métricas ──
   document.getElementById('metricsGrid').innerHTML=[
-    ['Total OC con TT Recibo', kpi.total, `De ${kpi.total} docs del mes`, 'c-acc'],
-    ['OC a Tiempo', kpi.ok, 'Dentro del SLA operativo', 'c-ok'],
-    ['Fuera de SLA', kpi.late, kpi.late===0?'Sin incumplimientos':`${Math.round(kpi.late/kpi.medidos*100)}% del total`, kpi.late===0?'c-ok':'c-err'],
-    ['Tiempo Promedio Ef.', (kpi.avgH??'—')+'h', `Mediana: ${kpi.medH??'—'}h · Máx: ${kpi.maxH??'—'}h`, 'c-acc'],
-    ['PT – Producto Terminado', `${kpi.ptOk}/${kpi.pt}`, `TRT PT: ${kpi.pt>0?Math.round(kpi.ptOk/kpi.pt*1000)/10:0}%`, 'c-acc'],
-    ['MP – Materia Prima', `${kpi.mpOk}/${kpi.mp}`, `TRT MP: ${kpi.mp>0?Math.round(kpi.mpOk/kpi.mp*1000)/10:0}%`, 'c-acc'],
+    ['Total OC con TT Recibo',kpi.total,`De ${kpi.total} docs del mes`,'c-acc'],
+    ['OC a Tiempo',kpi.ok,'Dentro del SLA operativo','c-ok'],
+    ['Fuera de SLA',kpi.late,kpi.late===0?'Sin incumplimientos':`${Math.round(kpi.late/kpi.medidos*100)}% del total`,kpi.late===0?'c-ok':'c-err'],
+    ['Tiempo Promedio Ef.',(kpi.avgH??'—')+'h',`Mediana: ${kpi.medH??'—'}h · Máx: ${kpi.maxH??'—'}h`,'c-acc'],
+    ['PT – Producto Terminado',`${kpi.ptOk}/${kpi.pt}`,`TRT PT: ${kpi.pt>0?Math.round(kpi.ptOk/kpi.pt*1000)/10:0}%`,'c-acc'],
+    ['MP – Materia Prima',`${kpi.mpOk}/${kpi.mp}`,`TRT MP: ${kpi.mp>0?Math.round(kpi.mpOk/kpi.mp*1000)/10:0}%`,'c-acc'],
   ].map(([l,v,s,c])=>`<div class="mc"><div class="ml">${l}</div><div class="mv ${c}">${v}</div><div class="ms">${s}</div></div>`).join('');
 
-  // ── Certificación ──
   document.getElementById('certGrid').innerHTML=`
     <div class="ci tot"><div class="ci-n c-acc">${kpi.total}</div><div><div class="ci-l">Total OC del período</div><div class="ci-s">Base de medición</div></div></div>
     <div class="ci ok"><div class="ci-n c-ok">${kpi.cert}</div><div><div class="ci-l">Con certificación WMS</div><div class="ci-s">${kpi.total>0?Math.round(kpi.cert/kpi.total*100).toFixed(1):0}% del total</div></div></div>
     <div class="ci no"><div class="ci-n c-warn">${kpi.total-kpi.cert}</div><div><div class="ci-l">Sin certificación</div><div class="ci-s">${kpi.total>0?(100-Math.round(kpi.cert/kpi.total*100)).toFixed(1):0}% pendiente</div></div></div>`;
 
-  // ── Tabla semanal ──
+  // Tabla semanal
   const wks={};
   rec.filter(r=>!r.is_inconsistente).forEach(r=>{
     if(!r.semana)return;
@@ -429,20 +474,18 @@ function renderResumen(){
   const totalTRT=totalOC>0?Math.round(totalOk/totalOC*1000)/10:0;
   document.getElementById('weeklyBody').innerHTML=
     wK.map(k=>{
-      const t=wks[k].trt=wks[k].tot>0?Math.round(wks[k].ok/wks[k].tot*1000)/10:0;
-      const d=(t-95).toFixed(1); const cls=t>=95?'c-ok':t>=80?'c-warn':'c-err';
-      const pill=t>=95?'🟢 BIEN':t>=80?'🟡 ATENCIÓN':'🔴 CRÍTICO';
+      const t=wks[k].tot>0?Math.round(wks[k].ok/wks[k].tot*1000)/10:0;
+      const d=(t-95).toFixed(1);const cls=t>=95?'c-ok':t>=80?'c-warn':'c-err';
       return `<tr>
         <td>${k}</td><td>${wks[k].tot}</td>
         <td class="c-ok">${wks[k].ok}</td>
         <td class="${wks[k].tot-wks[k].ok>0?'c-err':'c-ok'}">${wks[k].tot-wks[k].ok}</td>
         <td class="${cls}"><b>${t}%</b></td>
         <td class="${parseFloat(d)>=0?'c-ok':'c-err'}">${parseFloat(d)>=0?'+':''}${d} pp</td>
-        <td>${pill}</td>
+        <td>${t>=95?'🟢 BIEN':t>=80?'🟡 ATENCIÓN':'🔴 CRÍTICO'}</td>
       </tr>`;
     }).join('')+
-    `<tr class="tr-tot">
-      <td>TOTAL</td><td>${totalOC}</td>
+    `<tr class="tr-tot"><td>TOTAL</td><td>${totalOC}</td>
       <td class="c-ok">${totalOk}</td>
       <td class="${totalOC-totalOk>0?'c-err':'c-ok'}">${totalOC-totalOk}</td>
       <td class="${totalTRT>=95?'c-ok':totalTRT>=80?'c-warn':'c-err'}"><b>${totalTRT}%</b></td>
@@ -450,10 +493,9 @@ function renderResumen(){
       <td>${totalTRT>=95?'🟢 BIEN':totalTRT>=80?'🟡 ATENCIÓN':'🔴 CRÍTICO'}</td>
     </tr>`;
 
-  // ── Análisis por tipo + Estado KPI ──
   const holgura=kpi.maxH!=null?(12-kpi.maxH).toFixed(2):null;
   document.getElementById('detalleTipo').innerHTML=[
-    ['PT – Producto Terminado', `<span class="dv c-acc">${kpi.pt} OC</span>`],
+    ['PT – Producto Terminado',`<span class="dv c-acc">${kpi.pt} OC</span>`],
     ['PT a Tiempo',`<span class="dv c-ok">${kpi.ptOk} · ${kpi.pt>0?Math.round(kpi.ptOk/kpi.pt*1000)/10:0}%</span>`],
     ['MP – Materia Prima',`<span class="dv c-acc">${kpi.mp} OC</span>`],
     ['MP a Tiempo',`<span class="dv c-ok">${kpi.mpOk} · ${kpi.mp>0?Math.round(kpi.mpOk/kpi.mp*1000)/10:0}%</span>`],
@@ -476,12 +518,62 @@ function renderResumen(){
 // ── Charts ────────────────────────────────────────────────────────────────
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
-function renderCharts(rec){
-  const consistentes=rec.filter(r=>!r.is_inconsistente);
+// Config compartida para gráfica de proveedores
+function buildProvData(rec){
+  const cons=rec.filter(r=>!r.is_inconsistente);
+  const pm={};
+  cons.forEach(r=>{
+    if(!pm[r.proveedor])pm[r.proveedor]={ok:0,tot:0,times:[]};
+    if(r.sla_ok_12!==null){pm[r.proveedor].tot++;if(r.sla_ok_12)pm[r.proveedor].ok++;}
+    if(r.tiempo_h)pm[r.proveedor].times.push(r.tiempo_h);
+  });
+  const pK=Object.keys(pm).sort((a,b)=>pm[b].tot-pm[a].tot);
+  return {
+    // AJUSTE 2: nombres de empresa más visibles (color más claro)
+    labels: pK.map(k=>k.length>16?k.slice(0,15)+'…':k),
+    pOk:   pK.map(k=>pm[k].ok),
+    pLate: pK.map(k=>pm[k].tot-pm[k].ok),
+    pAvg:  pK.map(k=>pm[k].times.length?Math.round(pm[k].times.reduce((a,b)=>a+b,0)/pm[k].times.length*100)/100:null),
+  };
+}
 
-  // Evolución diaria TRT%
+function provChartConfig(data, height){
+  return {
+    type:'bar',
+    data:{
+      labels: data.labels,
+      datasets:[
+        {label:'A Tiempo', data:data.pOk,  backgroundColor:'rgba(0,255,136,.75)', borderRadius:3, stack:'s'},
+        {label:'Fuera SLA',data:data.pLate,backgroundColor:'rgba(255,77,109,.75)', borderRadius:3, stack:'s'},
+        {label:'T.prom(h)',data:data.pAvg,  type:'line',borderColor:'#FFB020',
+         backgroundColor:'rgba(255,176,32,.1)',yAxisID:'y2',pointRadius:4,
+         pointBackgroundColor:'#FFB020',tension:.3,fill:false},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{
+        // AJUSTE 2: labels más visibles
+        font:{size:11}, color:'rgba(255,255,255,0.85)', boxWidth:12
+      }}},
+      scales:{
+        // AJUSTE 2: tick labels de empresa más visibles
+        x:{grid:{display:false}, ticks:{font:{size:10}, color:'rgba(255,255,255,0.75)'}},
+        y:{stacked:true, grid:{color:'rgba(255,255,255,.04)'}, ticks:{font:{size:10}},
+           title:{display:true,text:'#OC',font:{size:9}}},
+        y2:{position:'right', grid:{display:false}, ticks:{callback:v=>v+'h',font:{size:10}},
+            title:{display:true,text:'Horas',font:{size:9}}},
+      }
+    }
+  };
+}
+
+function renderCharts(rec){
+  const cons=rec.filter(r=>!r.is_inconsistente);
+
+  // Evolución diaria
   const dias={};
-  consistentes.forEach(r=>{
+  cons.forEach(r=>{
     if(!r.fecha)return;
     if(!dias[r.fecha])dias[r.fecha]={ok:0,tot:0};
     if(r.sla_ok_12!==null){dias[r.fecha].tot++;if(r.sla_ok_12)dias[r.fecha].ok++;}
@@ -492,20 +584,18 @@ function renderCharts(rec){
   charts.cDaily=new Chart(document.getElementById('cDaily'),{type:'line',
     data:{labels:dK.map(d=>d.slice(5)),datasets:[
       {label:'TRT%',data:dV,borderColor:'#00D4FF',backgroundColor:'rgba(0,212,255,.08)',fill:true,tension:.4,pointRadius:4,
-       pointBackgroundColor:dV.map(v=>v==null?'transparent':v>=95?'#00FF88':v>=80?'#FFB020':'#FF4D6D'),
-       spanGaps:false},
+       pointBackgroundColor:dV.map(v=>v==null?'transparent':v>=95?'#00FF88':v>=80?'#FFB020':'#FF4D6D'),spanGaps:false},
       {label:'Meta 95%',data:dK.map(()=>95),borderColor:'rgba(255,176,32,.5)',borderDash:[4,3],pointRadius:0,fill:false}
     ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{y:{min:0,max:110,grid:{color:'rgba(255,255,255,.04)'},ticks:{callback:v=>v+'%',font:{size:10}}},
               x:{grid:{display:false},ticks:{font:{size:9},maxTicksLimit:10}}}}});
 
-  // Mix PT vs MP donut
-  const ptOk=consistentes.filter(r=>r.tipo==='PT'&&r.sla_ok_12).length;
-  const ptL =consistentes.filter(r=>r.tipo==='PT'&&r.sla_ok_12===false).length;
-  const mpOk=consistentes.filter(r=>r.tipo==='MP'&&r.sla_ok_12).length;
-  const mpL =consistentes.filter(r=>r.tipo==='MP'&&r.sla_ok_12===false).length;
+  // Mix donut
+  const ptOk=cons.filter(r=>r.tipo==='PT'&&r.sla_ok_12).length;
+  const ptL =cons.filter(r=>r.tipo==='PT'&&r.sla_ok_12===false).length;
+  const mpOk=cons.filter(r=>r.tipo==='MP'&&r.sla_ok_12).length;
+  const mpL =cons.filter(r=>r.tipo==='MP'&&r.sla_ok_12===false).length;
   destroyChart('cMix');
   charts.cMix=new Chart(document.getElementById('cMix'),{type:'doughnut',
     data:{labels:['PT OK','PT Fuera','MP OK','MP Fuera'],
@@ -515,79 +605,102 @@ function renderCharts(rec){
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:'right',labels:{font:{size:11},boxWidth:12}}}}});
 
-  // Proveedor: barras + línea T.prom
-  const pm={};
-  consistentes.forEach(r=>{
-    if(!pm[r.proveedor])pm[r.proveedor]={ok:0,tot:0,times:[]};
-    if(r.sla_ok_12!==null){pm[r.proveedor].tot++;if(r.sla_ok_12)pm[r.proveedor].ok++;}
-    if(r.tiempo_h)pm[r.proveedor].times.push(r.tiempo_h);
-  });
-  const pK=Object.keys(pm).sort((a,b)=>pm[b].tot-pm[a].tot);
-  const pOk =pK.map(k=>pm[k].ok);
-  const pLate=pK.map(k=>pm[k].tot-pm[k].ok);
-  const pAvg =pK.map(k=>pm[k].times.length?Math.round(pm[k].times.reduce((a,b)=>a+b,0)/pm[k].times.length*100)/100:null);
+  // Proveedores (AJUSTE 2: tamaño reducido 20% respecto al original grande)
+  provDataCache=buildProvData(rec);
   destroyChart('cProv');
-  charts.cProv=new Chart(document.getElementById('cProv'),{type:'bar',
-    data:{labels:pK.map(k=>k.length>14?k.slice(0,13)+'…':k),
-      datasets:[
-        {label:'A Tiempo',data:pOk,backgroundColor:'rgba(0,255,136,.7)',borderRadius:3,stack:'s'},
-        {label:'Fuera SLA',data:pLate,backgroundColor:'rgba(255,77,109,.7)',borderRadius:3,stack:'s'},
-        {label:'T.prom(h)',data:pAvg,type:'line',borderColor:'#FFB020',backgroundColor:'rgba(255,176,32,.1)',
-         yAxisID:'y2',pointRadius:4,pointBackgroundColor:'#FFB020',tension:.3,fill:false},
-      ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12}}},
-      scales:{
-        x:{grid:{display:false},ticks:{font:{size:9}}},
-        y:{stacked:true,grid:{color:'rgba(255,255,255,.04)'},ticks:{font:{size:10}},title:{display:true,text:'#OC',font:{size:9}}},
-        y2:{position:'right',grid:{display:false},ticks:{callback:v=>v+'h',font:{size:10}},title:{display:true,text:'Horas',font:{size:9}}},
-      }}});
+  charts.cProv=new Chart(document.getElementById('cProv'), provChartConfig(provDataCache));
 }
 
-// ── Comparativo ───────────────────────────────────────────────────────────
+// ── AJUSTE 2: Maximizar / Minimizar gráfica ───────────────────────────────
+function maximizarGrafica(){
+  if(!provDataCache) return;
+  document.getElementById('chartModal').classList.add('open');
+  document.body.style.overflow='hidden';
+  destroyChart('cProvModal');
+  charts.cProvModal=new Chart(document.getElementById('cProvModal'), provChartConfig(provDataCache));
+}
+
+function minimizarGrafica(){
+  document.getElementById('chartModal').classList.remove('open');
+  document.body.style.overflow='';
+  destroyChart('cProvModal');
+}
+
+function cerrarModal(e){
+  if(e.target===document.getElementById('chartModal')) minimizarGrafica();
+}
+
+// ── COMPARATIVO completo ──────────────────────────────────────────────────
 function renderComparativo(){
-  const idA=document.getElementById('selA').value,idB=document.getElementById('selB').value;
-  const kA=calcKpi(allData[idA]||[]),kB=calcKpi(allData[idB]||[]);
+  const idA=document.getElementById('selA').value;
+  const idB=document.getElementById('selB').value;
+  const kA=calcKpi(allData[idA]||[]);
+  const kB=calcKpi(allData[idB]||[]);
   const lblA=CONFIG.meses.find(m=>m.id===idA)?.label||idA;
   const lblB=CONFIG.meses.find(m=>m.id===idB)?.label||idB;
   const wrap=document.getElementById('compWrap');
-  if(!kA||!kB){wrap.innerHTML=`<div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses con datos</p></div>`;return;}
+
+  if(!kA||!kB){
+    wrap.innerHTML=`<div class="empty" style="margin-top:2rem"><div class="empty-icon">⚖️</div><p>Selecciona dos meses con datos para comparar</p></div>`;
+    document.getElementById('compStatus').textContent='';
+    return;
+  }
+
+  document.getElementById('compStatus').textContent=`${lblA} vs ${lblB}`;
+
   const d=(a,b,fmt=v=>v.toFixed(1),inv=false)=>{
-    const diff=b-a;const up=inv?diff<0:diff>0;
+    const diff=b-a; const up=inv?diff<0:diff>0;
     const cls=up?'delta-up':diff<0?'delta-dn':'';
     return `<span class="${cls}">${diff>0?'+':''}${fmt(diff)}</span>`;
   };
+
   const rows=[
-    ['TRT 12h',`${kA.trt??'—'}%`,`${kB.trt??'—'}%`,kA.trt!=null&&kB.trt!=null?d(kA.trt,kB.trt,v=>v.toFixed(1)+'%'):''],
-    ['Total OC',kA.total,kB.total,d(kA.total,kB.total,v=>Math.round(v)+'')],
-    ['A tiempo',kA.ok,kB.ok,d(kA.ok,kB.ok,v=>Math.round(v)+'')],
-    ['Fuera SLA',kA.late,kB.late,d(kA.late,kB.late,v=>Math.round(v)+'',true)],
-    ['T. Prom (h)',`${kA.avgH??'—'}h`,`${kB.avgH??'—'}h`,kA.avgH!=null&&kB.avgH!=null?d(kA.avgH,kB.avgH,v=>v.toFixed(2)+'h',true):''],
-    ['T. Máx (h)',`${kA.maxH??'—'}h`,`${kB.maxH??'—'}h`,''],
-    ['TRT PT',kA.pt>0?Math.round(kA.ptOk/kA.pt*1000)/10+'%':'—',kB.pt>0?Math.round(kB.ptOk/kB.pt*1000)/10+'%':'—',''],
-    ['TRT MP',kA.mp>0?Math.round(kA.mpOk/kA.mp*1000)/10+'%':'—',kB.mp>0?Math.round(kB.mpOk/kB.mp*1000)/10+'%':'—',''],
-    ['Certificados',kA.cert,kB.cert,''],
-    ['Proveedores',kA.provs,kB.provs,''],
-    ['OC excluidas',kA.excluidas,kB.excluidas,''],
+    ['TRT 12h',         `${kA.trt??'—'}%`,      `${kB.trt??'—'}%`,      kA.trt!=null&&kB.trt!=null?d(kA.trt,kB.trt,v=>v.toFixed(1)+'%'):''],
+    ['Total OC',        kA.total,                kB.total,                d(kA.total,kB.total,v=>Math.round(v)+'')],
+    ['A tiempo',        kA.ok,                   kB.ok,                   d(kA.ok,kB.ok,v=>Math.round(v)+'')],
+    ['Fuera SLA',       kA.late,                 kB.late,                 d(kA.late,kB.late,v=>Math.round(v)+'',true)],
+    ['T. Promedio (h)', `${kA.avgH??'—'}h`,      `${kB.avgH??'—'}h`,     kA.avgH!=null&&kB.avgH!=null?d(kA.avgH,kB.avgH,v=>v.toFixed(2)+'h',true):''],
+    ['T. Mediana (h)',  `${kA.medH??'—'}h`,      `${kB.medH??'—'}h`,     ''],
+    ['T. Máximo (h)',   `${kA.maxH??'—'}h`,      `${kB.maxH??'—'}h`,     ''],
+    ['TRT PT',          kA.pt>0?Math.round(kA.ptOk/kA.pt*1000)/10+'%':'—', kB.pt>0?Math.round(kB.ptOk/kB.pt*1000)/10+'%':'—',''],
+    ['TRT MP',          kA.mp>0?Math.round(kA.mpOk/kA.mp*1000)/10+'%':'—', kB.mp>0?Math.round(kB.mpOk/kB.mp*1000)/10+'%':'—',''],
+    ['Certificados',    kA.cert,                 kB.cert,                 ''],
+    ['Proveedores',     kA.provs,                kB.provs,                ''],
+    ['OC excluidas',    kA.excluidas,            kB.excluidas,            ''],
   ];
+
   wrap.innerHTML=`
-    <div class="comp-card">
-      <h3>${lblA} vs ${lblB}</h3>
-      <div class="comp-row" style="font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.07em">
-        <span class="comp-metric">Indicador</span>
-        <div class="comp-vals"><span class="v-a">${lblA.split(' ')[0]}</span><span class="v-b">${lblB.split(' ')[0]}</span></div>
-        <span style="width:55px;text-align:right;font-size:.66rem;color:var(--muted)">Var.</span>
+    <div class="comp-grid">
+      <div class="comp-card">
+        <h3>Tabla Comparativa — ${lblA} vs ${lblB}</h3>
+        <div class="comp-row" style="font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.07em">
+          <span class="comp-metric">Indicador</span>
+          <div class="comp-vals"><span class="v-a">${lblA.split(' ')[0]}</span><span class="v-b">${lblB.split(' ')[0]}</span></div>
+          <span style="width:55px;text-align:right;font-size:.66rem;color:var(--muted)">Var.</span>
+        </div>
+        ${rows.map(([m,a,b,dv])=>`<div class="comp-row">
+          <span class="comp-metric">${m}</span>
+          <div class="comp-vals"><span class="v-a">${a}</span><span class="v-b">${b}</span></div>
+          <span style="width:55px;text-align:right">${dv}</span>
+        </div>`).join('')}
       </div>
-      ${rows.map(([m,a,b,dv])=>`<div class="comp-row">
-        <span class="comp-metric">${m}</span>
-        <div class="comp-vals"><span class="v-a">${a}</span><span class="v-b">${b}</span></div>
-        <span style="width:55px;text-align:right">${dv}</span>
-      </div>`).join('')}
+      <div class="comp-card">
+        <h3>TRT% por Tipo</h3>
+        <div class="chart-wrap" style="height:220px"><canvas id="cComp"></canvas></div>
+      </div>
     </div>
-    <div class="comp-card">
-      <h3>Visual Comparativo</h3>
-      <div class="chart-wrap" style="height:270px"><canvas id="cComp"></canvas></div>
+    <div class="comp-charts">
+      <div class="comp-card">
+        <h3>Volumen OC — ${lblA} vs ${lblB}</h3>
+        <div class="chart-wrap" style="height:200px"><canvas id="cCompVol"></canvas></div>
+      </div>
+      <div class="comp-card">
+        <h3>Tiempo Promedio Efectivo (h)</h3>
+        <div class="chart-wrap" style="height:200px"><canvas id="cCompAvg"></canvas></div>
+      </div>
     </div>`;
+
+  // TRT por tipo
   new Chart(document.getElementById('cComp'),{type:'bar',
     data:{labels:['TRT 12h','TRT PT','TRT MP'],datasets:[
       {label:lblA.split(' ')[0],data:[kA.trt,kA.pt>0?Math.round(kA.ptOk/kA.pt*1000)/10:0,kA.mp>0?Math.round(kA.mpOk/kA.mp*1000)/10:0],backgroundColor:'rgba(0,212,255,.7)',borderRadius:5},
@@ -595,14 +708,57 @@ function renderComparativo(){
       {label:'Meta',data:[95,95,95],type:'line',borderColor:'rgba(255,176,32,.7)',borderDash:[5,3],pointRadius:0,fill:false}
     ]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},
+      plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},
       scales:{y:{min:0,max:110,ticks:{callback:v=>v+'%'}}}}});
+
+  // Volumen OC
+  new Chart(document.getElementById('cCompVol'),{type:'bar',
+    data:{labels:['Total OC','A Tiempo','Fuera SLA'],datasets:[
+      {label:lblA.split(' ')[0],data:[kA.total,kA.ok,kA.late],backgroundColor:'rgba(0,212,255,.7)',borderRadius:5},
+      {label:lblB.split(' ')[0],data:[kB.total,kB.ok,kB.late],backgroundColor:'rgba(123,47,255,.7)',borderRadius:5},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},
+      scales:{y:{ticks:{stepSize:10}}}}});
+
+  // Promedio tiempos
+  new Chart(document.getElementById('cCompAvg'),{type:'bar',
+    data:{labels:['T. Promedio','T. Mediana','T. Máximo'],datasets:[
+      {label:lblA.split(' ')[0],data:[kA.avgH,kA.medH,kA.maxH],backgroundColor:'rgba(0,212,255,.7)',borderRadius:5},
+      {label:lblB.split(' ')[0],data:[kB.avgH,kB.medH,kB.maxH],backgroundColor:'rgba(123,47,255,.7)',borderRadius:5},
+      {label:'SLA 12h',data:[12,12,12],type:'line',borderColor:'rgba(255,176,32,.7)',borderDash:[5,3],pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},
+      scales:{y:{ticks:{callback:v=>v+'h'}}}}});
 }
 
-// ── Detalle / Tabla ───────────────────────────────────────────────────────
+// ── Detalle ───────────────────────────────────────────────────────────────
+// AJUSTE 6: tabla de análisis para cada causal de cuarentena
+const ANALISIS_CAUSAL = {
+  'Fecha Ingresa vacía':               'Verificar en el Excel la columna "Fecha Ingresa" para este documento. Puede estar en blanco o con un formato incorrecto.',
+  'HORA CITA y HORA INICIO vacías':    'El documento no tiene hora de cita ni hora de inicio de descargue registrada. Revisar en el archivo fuente si el proveedor llegó sin cita.',
+  'HORA TT vacía':                     'No se registró la hora de finalización del recibo (TT Recibo) en el WMS. Confirmar con el operario si el recibo fue completado.',
+  'Tiempo calculado = 0':              'La hora de cita y la hora TT son iguales o muy cercanas. Revisar si el registro fue cerrado inmediatamente sin proceso real de descargue.',
+  'default':                           'Revisar el registro directamente en el archivo Excel fuente y validar con el coordinador de recibo.',
+};
+
+function getAnalisis(causal){
+  if(!causal) return ANALISIS_CAUSAL['default'];
+  const key=Object.keys(ANALISIS_CAUSAL).find(k=>causal.includes(k));
+  return key ? ANALISIS_CAUSAL[key] : ANALISIS_CAUSAL['default'];
+}
+
 function renderDetalle(){
   const mes=document.getElementById('fMes').value;
   let rec=mes?allData[mes]||[]:Object.values(allData).flat();
+  const label=mes?(CONFIG.meses.find(m=>m.id===mes)?.label||mes):'Todos los meses';
+
+  // AJUSTE 4: título dinámico con mes y conteo
+  const cons=rec.filter(r=>!r.is_inconsistente);
+  document.getElementById('detalleTituloMes').textContent=
+    `Detalle Recepciones — ${label} · ${cons.length} OC`;
+
   const provs=[...new Set(rec.map(r=>r.proveedor))].sort();
   const fProv=document.getElementById('fProv');
   const cur=fProv.value;
@@ -611,9 +767,9 @@ function renderDetalle(){
 }
 
 function filtrar(base){
-  const mes =document.getElementById('fMes').value;
+  const mes=document.getElementById('fMes').value;
   const tipo=document.getElementById('fTipo').value;
-  const sla =document.getElementById('fSLA').value;
+  const sla=document.getElementById('fSLA').value;
   const prov=document.getElementById('fProv').value;
   let rec=base||(mes?allData[mes]||[]:Object.values(allData).flat());
   let cons=rec.filter(r=>!r.is_inconsistente);
@@ -622,6 +778,7 @@ function filtrar(base){
   if(sla==='late') cons=cons.filter(r=>r.sla_ok_12===false);
   if(prov) cons=cons.filter(r=>r.proveedor===prov);
   document.getElementById('fCount').textContent=`${cons.length} registros`;
+
   const tbody=document.getElementById('tblBody');
   tbody.innerHTML=cons.length?cons.map(r=>{
     const ok=r.sla_ok_12;
@@ -643,20 +800,28 @@ function filtrar(base){
       <td><span class="tag ${ok===true?'tag-ok':ok===false?'tag-late':'tag-nd'}">${ok===true?'A TIEMPO':ok===false?'FUERA SLA':'SIN DATO'}</span></td>
     </tr>`;
   }).join(''):`<tr><td colspan="14"><div class="empty"><div class="empty-icon">🔍</div><p>Sin registros</p></div></td></tr>`;
-  // Cuarentena
+
+  // AJUSTE 6: cuarentena con columna Análisis
   const incs=rec.filter(r=>r.is_inconsistente);
   document.getElementById('secCuarentena').style.display=incs.length?'flex':'none';
   document.getElementById('tblCuaWrap').style.display=incs.length?'block':'none';
   if(incs.length){
     document.getElementById('cntCuarentena').textContent=incs.length;
     document.getElementById('tblCuaBody').innerHTML=incs.map(r=>`<tr class="row-inc">
-      <td><b>${r.documento}</b></td><td>${r.fecha||'—'}</td><td>${r.proveedor}</td>
-      <td>${r.tipo||'—'}</td><td style="color:var(--warn);font-size:.76rem">${r.causal_inconsistencia||'Sin causal'}</td>
+      <td><b>${r.documento}</b></td>
+      <td>${r.fecha||'—'}</td>
+      <td>${r.proveedor}</td>
+      <td>${r.tipo||'—'}</td>
+      <td style="color:var(--warn);font-size:.76rem">${r.causal_inconsistencia||'Sin causal'}</td>
+      <td style="font-size:.76rem;color:var(--muted)">${getAnalisis(r.causal_inconsistencia)}</td>
     </tr>`).join('');
   }
 }
 
-function limpiarFiltros(){['fTipo','fSLA','fProv'].forEach(id=>document.getElementById(id).value='');renderDetalle();}
+function limpiarFiltros(){
+  ['fTipo','fSLA','fProv'].forEach(id=>document.getElementById(id).value='');
+  renderDetalle();
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────
 window.addEventListener('load',async()=>{
