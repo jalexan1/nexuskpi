@@ -557,7 +557,6 @@ async function reprocesarMes(mesId){
       else if(!r.hora_tt){ causal='HORA TT RECIBO vacía'; esInc=true; }
       else{
         try{
-          // Ancla: HORA CITA primero, fallback HORA INICIO
           const horaRef=r.hora_cita||r.hora_inicio;
           const [rh,rm]=horaRef.split(':').map(Number);
           const [th,tm]=r.hora_tt.split(':').map(Number);

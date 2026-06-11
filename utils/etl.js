@@ -165,8 +165,8 @@ function procesarExcel(arrayBuffer, mesIdSeleccionado) {
     }
 
     let tiempoH = null, slaOk = null, causal = null, esInc = false;
-    // Ancla: HORA CITA primero, fallback HORA INICIO si no hay cita
-    // Solo va a cuarentena si no hay ninguna de las dos
+    // Ancla: HORA CITA. Fallback: HORA INICIO solo si no existe HORA CITA.
+    // Cuarentena solo si no hay ninguna de las dos.
     const horaRef = horaCita || horaIni;
 
     if (!fechaStr) {
@@ -178,7 +178,7 @@ function procesarExcel(arrayBuffer, mesIdSeleccionado) {
     } else {
       try {
         const [y,mo,d] = fechaStr.split('-').map(Number);
-        // dtIni desde HORA CITA si existe, sino HORA INICIO DESCARGUE
+        // Ancla siempre desde HORA CITA. Si no existe, HORA INICIO DESCARGUE.
         const dtIni = new Date(y, mo-1, d, horaRef.h, horaRef.m, 0);
         let   dtFin = new Date(y, mo-1, d, horaTT.h,  horaTT.m,  0);
         if (dtFin < dtIni) dtFin.setDate(dtFin.getDate() + 1);
