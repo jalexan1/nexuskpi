@@ -330,6 +330,8 @@ function tab(id, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
   document.getElementById('tab-' + id).classList.add('on');
   btn.classList.add('on');
+  // Ocultar barra MES global en Comparativo (tiene su propio selector doble)
+  document.querySelector('.mes-bar').style.display = id === 'comparativo' ? 'none' : 'flex';
   if (id === 'comparativo') renderComparativo();
   if (id === 'detalle')     renderDetalleDiario();
   if (id === 'skus')        renderSkus();
