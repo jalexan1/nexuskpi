@@ -165,21 +165,22 @@ function procesarExcel(arrayBuffer, mesIdSeleccionado) {
     }
 
     let tiempoH = null, slaOk = null, causal = null, esInc = false;
+    // Ancla: HORA CITA primero, fallback HORA INICIO si no hay cita
+    // Solo va a cuarentena si no hay ninguna de las dos
+    const horaRef = horaCita || horaIni;
 
     if (!fechaStr) {
       causal = 'Fecha vacía en Fecha Recibo y Fecha Ingresa'; esInc = true;
-    } else if (!horaCita) {
-      // ANCLA SIEMPRE ES HORA CITA — si no existe, cuarentena
-      // HORA INICIO DESCARGUE NO se usa como inicio del tiempo efectivo
-      causal = 'HORA CITA vacía — sin ancla de inicio'; esInc = true;
+    } else if (!horaRef) {
+      causal = 'HORA CITA y HORA INICIO vacías'; esInc = true;
     } else if (!horaTT) {
       causal = 'HORA TT RECIBO vacía'; esInc = true;
     } else {
       try {
         const [y,mo,d] = fechaStr.split('-').map(Number);
-        // dtIni siempre desde HORA CITA
-        const dtIni = new Date(y, mo-1, d, horaCita.h, horaCita.m, 0);
-        let   dtFin = new Date(y, mo-1, d, horaTT.h,   horaTT.m,   0);
+        // dtIni desde HORA CITA si existe, sino HORA INICIO DESCARGUE
+        const dtIni = new Date(y, mo-1, d, horaRef.h, horaRef.m, 0);
+        let   dtFin = new Date(y, mo-1, d, horaTT.h,  horaTT.m,  0);
         if (dtFin < dtIni) dtFin.setDate(dtFin.getDate() + 1);
 
         tiempoH = tiempoEfectivoHoras(dtIni, dtFin);
