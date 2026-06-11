@@ -25,15 +25,38 @@ function parseHoraTT(val,mesId){
 }
 function parseHoraSimple(val){
   if(!val&&val!==0) return null;
+  // Date object (SheetJS con cellDates:true)
   if(val instanceof Date) return {h:val.getHours(),m:val.getMinutes()};
-  if(typeof val==='number'&&val>0&&val<1){const mins=Math.round(val*1440);return{h:Math.floor(mins/60)%24,m:mins%60};}
-  if(typeof val==='string'){const p=val.trim().split(':');if(p.length>=2&&!isNaN(p[0])&&!isNaN(p[1]))return{h:parseInt(p[0]),m:parseInt(p[1])};}
+  // Número decimal Excel (fracción del día) — 0.6458 = 15:30
+  if(typeof val==='number'&&val>0&&val<1){
+    const mins=Math.round(val*1440);
+    return {h:Math.floor(mins/60)%24, m:mins%60};
+  }
+  // String HH:MM (hora militar directa)
+  if(typeof val==='string'){
+    const s=val.trim();
+    // Formato HH:MM o H:MM
+    const p=s.split(':');
+    if(p.length>=2&&!isNaN(p[0])&&!isNaN(p[1])){
+      let h=parseInt(p[0]), m=parseInt(p[1]);
+      // Detectar AM/PM si viene en el string (ej: "3:30 PM", "3:30:00 PM")
+      const upper=s.toUpperCase();
+      if(upper.includes('PM')&&h<12) h+=12;
+      if(upper.includes('AM')&&h===12) h=0;
+      return {h,m};
+    }
+  }
   return null;
 }
 function fmtHora(val){const t=parseHoraSimple(val);return t?`${String(t.h).padStart(2,'0')}:${String(t.m).padStart(2,'0')}`:null;}
 function parseExcelDate(val){
   if(!val) return null;
   if(val instanceof Date&&!isNaN(val)) return val;
+  // Número serial Excel (raw:true) — días desde 1900-01-01
+  if(typeof val==='number'&&val>1){
+    const d=new Date(Math.round((val-25569)*86400*1000));
+    return isNaN(d)?null:d;
+  }
   if(typeof val==='string'){const d=new Date(val);return isNaN(d)?null:d;}
   return null;
 }
@@ -83,7 +106,7 @@ function procesarExcel(arrayBuffer, mesIdSeleccionado) {
   const wb  = XLSX.read(new Uint8Array(arrayBuffer), {type:'array', cellDates:true});
   const sn  = wb.SheetNames.find(n => n.toUpperCase().includes('RECIB')) || wb.SheetNames[0];
   if (!sn) throw new Error('No se encontró la hoja RECIBOS en el archivo.');
-  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:null, raw:false, cellDates:true});
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:null, raw:true, cellDates:true});
   if (rows.length < 2) throw new Error('La hoja RECIBOS está vacía.');
 
   const headers = rows[0].map(h => String(h||'').trim().toUpperCase());
