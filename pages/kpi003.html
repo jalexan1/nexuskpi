@@ -17,6 +17,11 @@
     .tab-btn.on{color:var(--accent);border-bottom-color:var(--accent)}
     .tab-panel{display:none}.tab-panel.on{display:block}
 
+    /* ── Nav buttons ── */
+    .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
+    .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
+    @media(max-width:479px){.nav-btn span{display:none}}
+
     /* ── KPI header ── */
     .kpi-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem;flex-wrap:wrap}
     .kpi-hdr h1{font-size:clamp(1rem,3vw,1.25rem);font-weight:800;display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
@@ -146,7 +151,11 @@
     <span class="topbar-sep">/</span>
     <span class="topbar-title">KPI-DES-003</span>
     <div class="topbar-spacer"></div>
-    <a href="menu.html" class="btn btn-sm" style="font-size:.75rem">← Menú</a>
+    <div class="nav-btns">
+      <a href="kpi003.html" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Dashboard KPI-DES-003">📊 Dashboard</a>
+      <a href="menu.html"   class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Volver al menú principal">🏠 Menú</a>
+      <a href="admin.html"  class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Panel de administración">⚙️ Admin</a>
+    </div>
     <div class="theme-bar">
       <button class="theme-btn" onclick="setTheme('')">🌙</button>
       <button class="theme-btn" onclick="setTheme('light')">☀️</button>
