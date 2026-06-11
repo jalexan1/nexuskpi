@@ -193,7 +193,7 @@ function procesarConteoInvxIDLocal(datos, periodoId) {
       if (es_exacto) skus_exactos++;
       else           skus_diferencia++;
       detalles.push({ periodo_id: periodoId, id_conteo: idConteo, ean: sku.ean,
-        referencia: ref, descripcion: sku.desc, ubicacion: sku.ubicacion,
+        referencia: sku.ref, descripcion: sku.desc, ubicacion: sku.ubicacion,
         familia, tipo, qty_wms: sku.wms, qty_fisica: sku.fisica, es_exacto });
     });
 
