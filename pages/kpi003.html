@@ -186,13 +186,10 @@
       </div>
     </div>
 
-    <!-- Selector de meses -->
+    <!-- Selector de mes único -->
     <div class="mes-bar">
-      <label>Mes A</label>
+      <span style="font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap">Período</span>
       <select class="mes-sel" id="selA" onchange="onMesChange()"></select>
-      <span style="color:var(--dim);font-size:.8rem">vs</span>
-      <label>Mes B</label>
-      <select class="mes-sel" id="selB" onchange="onMesChange()"></select>
       <div style="margin-left:auto;font-size:.7rem;color:var(--dim)" id="statusDatos">—</div>
     </div>
 
@@ -272,6 +269,14 @@
 
     <!-- ══ COMPARATIVO ══════════════════════════════════════════════════════ -->
     <div class="tab-panel" id="tab-comparativo">
+      <div class="mes-bar" style="margin-bottom:1rem">
+        <label>Mes A</label>
+        <select class="mes-sel" id="selA_comp" onchange="renderComparativo()"></select>
+        <span style="color:var(--dim);font-size:.8rem">vs</span>
+        <label>Mes B</label>
+        <select class="mes-sel" id="selB" onchange="renderComparativo()"></select>
+        <span id="compStatus" style="margin-left:auto;font-size:.72rem;color:var(--muted)"></span>
+      </div>
       <div class="comp-grid" id="compWrap">
         <div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses para comparar</p></div>
       </div>
@@ -376,12 +381,22 @@ async function cargarDatos() {
 
 function poblarSelectores(periodos) {
   const lbl = id => CONFIG.meses.find(m => m.id === id)?.label || id;
-  ['selA', 'selB'].forEach((sid, i) => {
+
+  // Selector único del resumen (selA)
+  const selA = document.getElementById('selA');
+  selA.innerHTML = periodos.map((m, j) =>
+    `<option value="${m}" ${j === periodos.length - 1 ? 'selected' : ''}>${lbl(m)}</option>`
+  ).join('');
+
+  // Selectores del comparativo (selA_comp y selB)
+  ['selA_comp', 'selB'].forEach((sid, i) => {
     const s = document.getElementById(sid);
+    if (!s) return;
     s.innerHTML = periodos.map((m, j) =>
       `<option value="${m}" ${j === (i === 0 ? periodos.length - 2 : periodos.length - 1) ? 'selected' : ''}>${lbl(m)}</option>`
     ).join('');
   });
+
   onMesChange();
 }
 
@@ -618,7 +633,7 @@ function renderSkus() {
 
 // ── Comparativo ─────────────────────────────────────────────────────────────
 function renderComparativo() {
-  const idA = document.getElementById('selA').value;
+  const idA = document.getElementById('selA_comp')?.value || document.getElementById('selA').value;
   const idB = document.getElementById('selB').value;
   const dA  = dataResumen[idA];
   const dB  = dataResumen[idB];
