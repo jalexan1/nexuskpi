@@ -1,46 +1,58 @@
 /**
  * etl_ali004.js — NexusKPI · KPI-ALI-004 Productividad de Alistamiento
  * Firma: procesarAlistamiento(file, periodoId, onProgress)
- * Sin export · Sin credenciales · Usa sb.rest()
  *
- * FUENTE: Hoja PICKING WMS (no ALISTAMIENTO)
- * - fecha     → FechaRegistro  (string "dd/mm/yyyy")
- * - operario  → EMPLEADO
- * - unidades  → Σ(cantidad) por pedido+empleado+día
- * - cajas     → COUNT DISTINCT(idCaja) donde idCaja != -1
- * - horas     → max(HoraRegistro) - min(HoraRegistro) por empleado+día
+ * FUENTE CORRECTA: Hoja ALISTAMIENTO (NO PICKING WMS)
+ * Homologación:
+ *   fecha      → DIA
+ *   operario   → OPERARIO
+ *   unidades   → Facturado (suma)
+ *   cajas      → Cantidad cajas (suma)
+ *   h_inicio   → INICIO PICKING (HH:MM:SS)
+ *   h_fin      → FIN PICKING (HH:MM:SS)
+ *   proceso    → todos incluidos (B2B, B2C, CLICK, RETAIL, MARKETPLACE, TRASLADO)
  *
- * CUARENTENA: operarios con duración = 0 (1 solo registro en el día)
- * se incluyen con sus unidades pero con horas = null y flag en_cuarentena=true.
- * El PA solo se calcula sobre operarios con horas > 0.
+ * CÁLCULO DE HORAS (método corregido):
+ *   horas_op        = MAX(FIN PICKING) - MIN(INICIO PICKING)  por operario+día
+ *   horas_totales   = Σ horas_op  ← suma individual, NO ventana global del turno
+ *   PA              = und_totales_día / horas_totales
+ *
+ * CUARENTENA: operarios con horas < 0.1 o sin INICIO/FIN válido → excluidos del PA
  */
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
-function _parseFechaWMS(val) {
-  // "dd/mm/yyyy" → "yyyy-mm-dd"
+function _parseFechaAli(val) {
   if (!val) return null;
-  const s = String(val).trim();
-  const p = s.split('/');
-  if (p.length === 3) return `${p[2].slice(0,4)}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
-  // Si SheetJS devuelve un Date
   if (val instanceof Date) {
     const y = val.getFullYear();
     const m = String(val.getMonth()+1).padStart(2,'0');
     const d = String(val.getDate()).padStart(2,'0');
     return `${y}-${m}-${d}`;
   }
+  const s = String(val).trim();
+  const p = s.split('/');
+  if (p.length === 3 && p[2].length >= 4)
+    return `${p[2].slice(0,4)}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
   return null;
 }
 
-function _parseHoraWMS(val) {
-  // "HH:MM:SS" → horas decimales
-  if (!val) return null;
+function _parseHoraAli(val) {
+  if (val === null || val === undefined || val === '') return null;
+  if (typeof val === 'number') {
+    const h = val * 24; // SheetJS puede dar fracción de día
+    if (h >= 0 && h <= 24) return h;
+    return null;
+  }
+  if (val instanceof Date) {
+    return val.getHours() + val.getMinutes()/60 + val.getSeconds()/3600;
+  }
   const s = String(val).trim();
   const p = s.split(':').map(Number);
   if (p.length < 2 || p.some(isNaN)) return null;
-  const h = p[0], m = p[1]||0, sec = p[2]||0;
-  if (h < 0||h > 23||m < 0||m > 59||sec < 0||sec > 59) return null;
+  const h=p[0], m=p[1]||0, sec=p[2]||0;
+  if (h<0||h>23||m<0||m>59||sec<0||sec>59) return null;
   return h + m/60 + sec/3600;
 }
 
@@ -75,49 +87,66 @@ async function procesarAlistamiento(file, periodoId, onProgress) {
   const wb = await new Promise((res, rej) => {
     const reader = new FileReader();
     reader.onload = e => {
-      try { res(XLSX.read(e.target.result, { type:'array', cellDates:true, dateNF:'yyyy-mm-dd' })); }
-      catch(err) { rej(new Error('Error leyendo el Excel: ' + err.message)); }
+      try {
+        res(XLSX.read(e.target.result, {
+          type: 'array',
+          cellDates: true,
+          dateNF: 'yyyy-mm-dd'
+        }));
+      } catch(err) { rej(new Error('Error leyendo el Excel: ' + err.message)); }
     };
     reader.onerror = () => rej(new Error('Error al leer el archivo.'));
     reader.readAsArrayBuffer(file);
   });
 
-  if (!wb.Sheets['PICKING WMS']) {
-    throw new Error('El archivo no tiene hoja "PICKING WMS". Verifica que sea SEGUIMIENTO_CLICK_MES.xlsx.');
-  }
-
-  const ws   = wb.Sheets['PICKING WMS'];
-  const rows = XLSX.utils.sheet_to_json(ws, { header:1, defval:null, cellDates:true });
-
-  if (rows.length < 2) {
-    throw new Error('La hoja PICKING WMS está vacía o solo tiene encabezados.');
-  }
-
-  // ── Mapear columnas por nombre ──────────────────────────────────────────
-  const headers = rows[0].map(h => h == null ? '' : String(h).trim());
-  const col     = name => headers.indexOf(name);
-
-  const iPicking   = col('PICKING');
-  const iCantidad  = col('cantidad');
-  const iFechaReg  = col('FechaRegistro');
-  const iHoraReg   = col('HoraRegistro');
-  const iEmpleado  = col('EMPLEADO');
-  const iIdCaja    = col('idCaja');
-
-  if (iFechaReg < 0 || iHoraReg < 0 || iEmpleado < 0 || iCantidad < 0) {
+  // ── FUENTE: hoja ALISTAMIENTO ─────────────────────────────────────────
+  if (!wb.Sheets['ALISTAMIENTO']) {
     throw new Error(
-      'No se encontraron columnas críticas en PICKING WMS ' +
-      '(FechaRegistro, HoraRegistro, EMPLEADO, cantidad). ' +
-      'Verifica que sea el archivo correcto.'
+      'El archivo no tiene hoja "ALISTAMIENTO". ' +
+      'Verifica que sea SEGUIMIENTO_CLICK_MES.xlsx. ' +
+      '(Nota: la fuente correcta es ALISTAMIENTO, no PICKING WMS.)'
     );
   }
 
-  log(`✅ Columnas mapeadas · ${rows.length - 1} filas en PICKING WMS`);
+  const ws   = wb.Sheets['ALISTAMIENTO'];
+  const rows = XLSX.utils.sheet_to_json(ws, {
+    header: 1, defval: null, cellDates: true
+  });
 
-  // ── Verificar que el periodo solicitado existe en el archivo ────────────
+  if (rows.length < 2) {
+    throw new Error('La hoja ALISTAMIENTO está vacía o solo tiene encabezados.');
+  }
+
+  // ── Mapear columnas ───────────────────────────────────────────────────
+  const headers = rows[0].map(h => h == null ? '' : String(h).trim());
+  const col     = name => headers.indexOf(name);
+
+  const iDia      = col('DIA');
+  const iOperario = col('OPERARIO');
+  const iFactura  = col('Facturado');
+  const iCajas    = col('Cantidad cajas');
+  const iInicio   = col('INICIO PICKING');
+  const iFin      = col('FIN PICKING');
+
+  if (iDia < 0 || iOperario < 0 || iFactura < 0 || iCajas < 0) {
+    throw new Error(
+      'Columnas críticas no encontradas en ALISTAMIENTO: ' +
+      'se requieren DIA, OPERARIO, Facturado, Cantidad cajas.'
+    );
+  }
+  if (iInicio < 0 || iFin < 0) {
+    throw new Error(
+      'Columnas de tiempo no encontradas en ALISTAMIENTO: ' +
+      'se requieren "INICIO PICKING" y "FIN PICKING".'
+    );
+  }
+
+  log(`✅ Columnas mapeadas · ${rows.length - 1} filas en ALISTAMIENTO`);
+
+  // ── Verificar periodo ─────────────────────────────────────────────────
   const conteoMes = {};
   for (let i = 1; i < rows.length; i++) {
-    const f = _parseFechaWMS(rows[i][iFechaReg]);
+    const f = _parseFechaAli(rows[i][iDia]);
     if (f) {
       const ym = f.slice(0,7);
       conteoMes[ym] = (conteoMes[ym]||0) + 1;
@@ -134,52 +163,51 @@ async function procesarAlistamiento(file, periodoId, onProgress) {
       .join(', ');
     throw new Error(
       `El archivo no contiene datos de ${_labelPeriodo(periodoId)}. ` +
-      `Meses encontrados: ${disponibles}. ` +
-      `Selecciona el mes correcto o sube el archivo de ${_labelPeriodo(periodoId)}.`
+      `Meses encontrados: ${disponibles}.`
     );
   }
 
   if (mesDominante !== periodoId) {
     log(`⚠️ El archivo tiene más filas de ${_labelPeriodo(mesDominante)}. ` +
-        `Procesando ${_labelPeriodo(periodoId)} (${filasDelPeriodo} filas) según el selector.`);
+        `Procesando ${_labelPeriodo(periodoId)} (${filasDelPeriodo} filas).`);
   }
 
   log(`📅 Procesando: ${_labelPeriodo(periodoId)} · ${filasDelPeriodo} filas`);
   const periodo = periodoId;
 
-  // ── Paso 1: Agrupar por (fecha, empleado) ─────────────────────────────
-  // turnMap[fecha][empleado] = { horas:[], unidades:0, cajas: Set(idCaja) }
+  // ── Paso 1: Agrupar por (fecha, operario) ────────────────────────────
+  // Incluye TODOS los procesos — no filtrar por PROCESO
+  // turnMap[fecha][operario] = { unidades, cajas, inicios[], fines[] }
 
   const turnMap = {};
 
   for (let i = 1; i < rows.length; i++) {
     const r     = rows[i];
-    const fecha = _parseFechaWMS(r[iFechaReg]);
+    const fecha = _parseFechaAli(r[iDia]);
     if (!fecha || !fecha.startsWith(periodo)) continue;
 
-    const hora    = _parseHoraWMS(r[iHoraReg]);
-    const empleado= r[iEmpleado] ? String(r[iEmpleado]).trim() : null;
-    const cantidad= Number(r[iCantidad]) || 0;
-    const idCaja  = r[iIdCaja];
+    const operario = r[iOperario] ? String(r[iOperario]).trim() : null;
+    if (!operario) continue;
 
-    if (!empleado) continue;
+    const unidades = Number(r[iFactura]) || 0;
+    const cajas    = Number(r[iCajas])   || 0;
+    const inicio   = _parseHoraAli(r[iInicio]);
+    const fin      = _parseHoraAli(r[iFin]);
 
-    if (!turnMap[fecha])            turnMap[fecha]            = {};
-    if (!turnMap[fecha][empleado])  turnMap[fecha][empleado]  = {
-      horas: [], unidades: 0, cajas: new Set(), cuarentena: false
+    if (!turnMap[fecha])           turnMap[fecha]           = {};
+    if (!turnMap[fecha][operario]) turnMap[fecha][operario] = {
+      unidades: 0, cajas: 0, inicios: [], fines: []
     };
 
-    if (hora !== null) turnMap[fecha][empleado].horas.push(hora);
-    turnMap[fecha][empleado].unidades += cantidad;
-    // Cajas: contar idCaja únicos y válidos (distinto de -1 y no nulo)
-    if (idCaja !== null && idCaja !== undefined && idCaja !== -1) {
-      turnMap[fecha][empleado].cajas.add(idCaja);
-    }
+    turnMap[fecha][operario].unidades += unidades;
+    turnMap[fecha][operario].cajas    += cajas;
+    if (inicio !== null) turnMap[fecha][operario].inicios.push(inicio);
+    if (fin    !== null) turnMap[fecha][operario].fines.push(fin);
   }
 
-  // ── Paso 2: Calcular horas efectivas por turno ────────────────────────
-  // horas = max(HoraRegistro) - min(HoraRegistro) por empleado+día
-  // Cuarentena si solo 1 registro (duración = 0) o duración absurda > 14h
+  // ── Paso 2: Horas efectivas por operario+día ─────────────────────────
+  // horas_op = MAX(fines) - MIN(inicios)   ← rango del operario ese día
+  // SUMA de horas por operario (no ventana global del día)
 
   const diasOrdenados = Object.keys(turnMap).sort();
   const rowsDiario    = [];
@@ -190,31 +218,24 @@ async function procesarAlistamiento(file, periodoId, onProgress) {
     let totalUnidades = 0, totalCajas = 0, totalHoras = 0;
     let numOperarios  = 0, numCuarentena = 0;
 
-    for (const [emp, t] of Object.entries(empleados)) {
-      const unidades = t.unidades;
-      const cajas    = t.cajas.size;
-
-      // Calcular duración del turno
-      let duracion = 0;
+    for (const [op, t] of Object.entries(empleados)) {
+      let horasOp      = 0;
       let enCuarentena = false;
 
-      if (t.horas.length === 0) {
-        enCuarentena = true;  // sin registros de hora
-      } else if (t.horas.length === 1) {
-        enCuarentena = true;  // un solo scan → no se puede calcular duración
+      if (t.inicios.length === 0 || t.fines.length === 0) {
+        enCuarentena = true;
       } else {
-        duracion = Math.max(...t.horas) - Math.min(...t.horas);
-        if (duracion <= 0 || duracion > 14) {
-          enCuarentena = true;  // duración absurda
+        horasOp = Math.max(...t.fines) - Math.min(...t.inicios);
+        if (horasOp < 0.1 || horasOp > 14) {
+          enCuarentena = true;
         }
       }
 
-      totalUnidades += unidades;
-      totalCajas    += cajas;
-
       if (!enCuarentena) {
-        totalHoras   += duracion;
-        numOperarios += 1;
+        totalUnidades += t.unidades;
+        totalCajas    += t.cajas;
+        totalHoras    += horasOp;  // ← SUMA individual, no ventana global
+        numOperarios  += 1;
       } else {
         numCuarentena++;
         totalCuarentena++;
@@ -229,44 +250,45 @@ async function procesarAlistamiento(file, periodoId, onProgress) {
       periodo_id:      periodo,
       fecha,
       semana,
-      num_pedidos:     0,            // PICKING WMS no tiene pedidos directos
+      num_pedidos:     0,
       und_alistadas:   totalUnidades,
       cajas_alistadas: totalCajas,
       horas_efectivas: Math.round(totalHoras * 10000) / 10000,
       num_operarios:   numOperarios,
-
       pa_und:          paUnd,
       pa_cajas:        paCajas,
     });
   }
 
-  log(`📅 ${rowsDiario.length} días procesados · ${totalCuarentena} operarios en cuarentena (1 registro/duración 0)`);
+  log(`📅 ${rowsDiario.length} días procesados · ${totalCuarentena} operarios en cuarentena`);
 
   if (rowsDiario.length === 0) {
     throw new Error(
-      `No se encontraron registros válidos para ${_labelPeriodo(periodo)}. ` +
-      `Verifica que el archivo corresponda a ${_labelPeriodo(periodo)}.`
+      `No se encontraron registros válidos para ${_labelPeriodo(periodo)}.`
     );
   }
 
-  // ── Paso 3: Resumen semanal y global ──────────────────────────────────
+  // ── Paso 3: Resumen semanal y global ─────────────────────────────────
   const semMap = {};
   for (const d of rowsDiario) {
     const s = d.semana;
-    if (!semMap[s]) semMap[s] = { und:0, cajas:0, horas:0, ops:0, dias:0, mejorPA:-Infinity, peorPA:Infinity };
-    semMap[s].und     += d.und_alistadas;
-    semMap[s].cajas   += d.cajas_alistadas;
-    semMap[s].horas   += d.horas_efectivas;
-    semMap[s].ops     += d.num_operarios;
-    semMap[s].dias    += 1;
+    if (!semMap[s]) semMap[s] = {
+      und:0, cajas:0, horas:0, ops:0, dias:0,
+      mejorPA:-Infinity, peorPA:Infinity
+    };
+    semMap[s].und   += d.und_alistadas;
+    semMap[s].cajas += d.cajas_alistadas;
+    semMap[s].horas += d.horas_efectivas;
+    semMap[s].ops   += d.num_operarios;
+    semMap[s].dias  += 1;
     if (d.pa_und > semMap[s].mejorPA) semMap[s].mejorPA = d.pa_und;
     if (d.pa_und < semMap[s].peorPA)  semMap[s].peorPA  = d.pa_und;
   }
 
   const rowsResumen = [];
   for (const [semana, v] of Object.entries(semMap)) {
-    const paUnd   = v.horas > 0 ? Math.round((v.und   / v.horas)*100)/100 : 0;
-    const paCajas = v.horas > 0 ? Math.round((v.cajas / v.horas)*100)/100 : 0;
+    const paUnd   = v.horas > 0 ? Math.round((v.und  /v.horas)*100)/100 : 0;
+    const paCajas = v.horas > 0 ? Math.round((v.cajas/v.horas)*100)/100 : 0;
     const fi = rowsDiario.filter(d=>d.semana===semana).map(d=>d.fecha).sort()[0]||null;
     rowsResumen.push({
       periodo_id: periodo, semana, fecha_inicio: fi,
@@ -283,10 +305,11 @@ async function procesarAlistamiento(file, periodoId, onProgress) {
   const totCajas = rowsDiario.reduce((s,d)=>s+d.cajas_alistadas, 0);
   const totHoras = rowsDiario.reduce((s,d)=>s+d.horas_efectivas, 0);
   const totOps   = rowsDiario.reduce((s,d)=>s+d.num_operarios,   0);
-  const paG   = totHoras>0 ? Math.round((totUnd  /totHoras)*100)/100 : 0;
-  const paCjG = totHoras>0 ? Math.round((totCajas/totHoras)*100)/100 : 0;
+  const paG      = totHoras>0 ? Math.round((totUnd  /totHoras)*100)/100 : 0;
+  const paCjG    = totHoras>0 ? Math.round((totCajas/totHoras)*100)/100 : 0;
   const mejorDia = Math.max(...rowsDiario.map(d=>d.pa_und));
   const peorDia  = Math.min(...rowsDiario.map(d=>d.pa_und));
+  const mejorDiaFecha = rowsDiario.find(d=>d.pa_und===mejorDia)?.fecha || null;
 
   rowsResumen.unshift({
     periodo_id: periodo, semana: null, fecha_inicio: diasOrdenados[0]||null,
@@ -300,19 +323,16 @@ async function procesarAlistamiento(file, periodoId, onProgress) {
 
   log(`📊 Resumen: 1 global + ${rowsResumen.length-1} semanas`);
 
-  // ── Paso 4: Limpieza silenciosa ────────────────────────────────────────
+  // ── Paso 4: Limpieza ─────────────────────────────────────────────────
   log(`🧹 Borrando datos previos de ${_labelPeriodo(periodo)}…`);
   try {
     await sb.rest('DELETE',`kpi_ali_diario?periodo_id=eq.${periodo}`,  null,{'Prefer':'return=minimal'});
     await sb.rest('DELETE',`kpi_ali_resumen?periodo_id=eq.${periodo}`, null,{'Prefer':'return=minimal'});
   } catch(e) {
-    throw new Error(
-      `Error al limpiar datos anteriores de ${_labelPeriodo(periodo)}. ` +
-      `Vuelve a cargar el archivo de ${_labelPeriodo(periodo)}.`
-    );
+    throw new Error(`Error al limpiar datos anteriores de ${_labelPeriodo(periodo)}.`);
   }
 
-  // ── Paso 5: Upsert kpi_ali_diario ─────────────────────────────────────
+  // ── Paso 5: Upsert diario ────────────────────────────────────────────
   log(`⬆️ Subiendo ${rowsDiario.length} días…`);
   const LOTE = 100;
   for (let i = 0; i < rowsDiario.length; i += LOTE) {
@@ -320,35 +340,34 @@ async function procesarAlistamiento(file, periodoId, onProgress) {
       await sb.rest('POST','kpi_ali_diario', rowsDiario.slice(i,i+LOTE),
         {'Prefer':'resolution=merge-duplicates,return=minimal'});
     } catch(e) {
-      throw new Error(
-        `Error guardando datos diarios de ${_labelPeriodo(periodo)} (lote ${Math.floor(i/LOTE)+1}). ` +
-        `Vuelve a cargar el archivo de ${_labelPeriodo(periodo)}.`
-      );
+      throw new Error(`Error guardando datos diarios (lote ${Math.floor(i/LOTE)+1}).`);
     }
     log(`  ✓ Días ${i+1}–${Math.min(i+LOTE,rowsDiario.length)} guardados`);
   }
 
-  // ── Paso 6: Upsert kpi_ali_resumen ────────────────────────────────────
+  // ── Paso 6: Upsert resumen ───────────────────────────────────────────
   log(`⬆️ Subiendo ${rowsResumen.length} registros de resumen…`);
   try {
     await sb.rest('POST','kpi_ali_resumen', rowsResumen,
       {'Prefer':'resolution=merge-duplicates,return=minimal'});
   } catch(e) {
-    throw new Error(
-      `Error guardando el resumen de ${_labelPeriodo(periodo)}. ` +
-      `Vuelve a cargar el archivo de ${_labelPeriodo(periodo)}.`
-    );
+    throw new Error(`Error guardando el resumen de ${_labelPeriodo(periodo)}.`);
   }
 
-  log(`✅ ${_labelPeriodo(periodo)}: PA ${paG} u/p/h · ${totUnd.toLocaleString('es-CO')} und · ${totCajas.toLocaleString('es-CO')} cajas · ${rowsDiario.length} días · ${totalCuarentena} ops en cuarentena`);
+  log(`✅ ${_labelPeriodo(periodo)}: PA ${paG} u/p/h · ${totUnd.toLocaleString('es-CO')} und · ${totCajas.toLocaleString('es-CO')} cajas · ${rowsDiario.length} días`);
 
   return {
-    periodoId: periodo, label: _labelPeriodo(periodo),
-    dias: rowsDiario.length, undAlistadas: totUnd, cajasAlistadas: totCajas,
+    periodoId:      periodo,
+    label:          _labelPeriodo(periodo),
+    dias:           rowsDiario.length,
+    undAlistadas:   totUnd,
+    cajasAlistadas: totCajas,
     horasEfectivas: Math.round(totHoras*100)/100,
-    paUnd: paG, paCajas: paCjG,
-    mejorDia: Math.round(mejorDia*100)/100,
-    peorDia:  Math.round(peorDia *100)/100,
+    paUnd:          paG,
+    paCajas:        paCjG,
+    mejorDia:       Math.round(mejorDia*100)/100,
+    mejorDiaFecha,
+    peorDia:        Math.round(peorDia*100)/100,
     totalCuarentena,
   };
 }

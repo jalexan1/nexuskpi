@@ -139,7 +139,6 @@
     <div class="theme-bar">
       <button class="theme-btn" onclick="setTheme('')">🌙</button>
       <button class="theme-btn" onclick="setTheme('light')">☀️</button>
-      <button class="theme-btn" onclick="setTheme('sepia')" title="Sepia">📜</button>
     </div>
     <div class="topbar-user" id="topbarUser"></div>
   </header>
@@ -157,7 +156,7 @@
         <h1 class="page-title">Cadena Logística</h1>
         <p class="page-sub">Monitorea cada etapa del proceso · del recibo al despacho</p>
       </div>
-      <div id="warehouseLive" style="display:flex;gap:.5rem;flex:1;min-width:0;overflow-x:auto;align-items:stretch"></div>
+      <div class="hero-scene" id="warehouseScene" aria-hidden="true"></div>
     </div>
 
     <div class="kpi-grid" id="kpiGrid"></div>
@@ -181,37 +180,34 @@
 
       <div class="admin-sec-title">⚡ Accesos Rápidos</div>
       <div class="admin-quick">
-        <a href="cargue_rec001.html" class="aq-card" style="animation-delay:.05s">
-          <div class="aq-icon">📦</div>
-          <div class="aq-title">Cargar KPI-REC-001</div>
-          <div class="aq-desc">Recepción a Tiempo · SEGUIMIENTO CLICK MES</div>
+        <a href="admin.html" class="aq-card" style="animation-delay:.05s">
+          <div class="aq-icon">📤</div>
+          <div class="aq-title">Cargar Seguimiento</div>
+          <div class="aq-desc">KPI-REC-001 · SEGUIMIENTO_CLICK_MES.xlsx</div>
           <div class="aq-arrow">→</div>
         </a>
-        <a href="cargue_inv002.html" class="aq-card" style="animation-delay:.08s">
-          <div class="aq-icon">🗃️</div>
-          <div class="aq-title">Cargar KPI-INV-002</div>
-          <div class="aq-desc">Exactitud de Inventario · WMS Base Click</div>
-          <div class="aq-arrow">→</div>
-        </a>
-        <a href="cargue_des003.html" class="aq-card" style="animation-delay:.11s">
+        <a href="admin.html" class="aq-card" style="animation-delay:.08s">
           <div class="aq-icon">🏭</div>
-          <div class="aq-title">Cargar KPI-DES-003</div>
-          <div class="aq-desc">Nivel de Servicio CEDI · SEGUIMIENTO CLICK MES</div>
+          <div class="aq-title">Cargar NS / Alistamiento</div>
+          <div class="aq-desc">KPI-DES-003 · KPI-ALI-004 · Mismo archivo fuente</div>
           <div class="aq-arrow">→</div>
         </a>
-        <a href="cargue_ali004.html" class="aq-card" style="animation-delay:.14s">
-          <div class="aq-icon">🔧</div>
-          <div class="aq-title">Cargar KPI-ALI-004</div>
-          <div class="aq-desc">Productividad Alistamiento · SEGUIMIENTO CLICK MES</div>
+        <a href="admin.html" class="aq-card" style="animation-delay:.11s">
+          <div class="aq-icon">📦</div>
+          <div class="aq-title">Cargar Inventario</div>
+          <div class="aq-desc">KPI-INV-002 · WMS_BASE_CLICK_COSMETICS_MES.xlsx</div>
           <div class="aq-arrow">→</div>
         </a>
-        <a href="admin.html?tab=usuarios" class="aq-card" style="animation-delay:.17s">
+        <a href="admin.html" class="aq-card" style="animation-delay:.14s">
           <div class="aq-icon">👥</div>
           <div class="aq-title">Gestión de Usuarios</div>
           <div class="aq-desc">Crear, eliminar y gestionar roles de acceso</div>
           <div class="aq-arrow">→</div>
         </a>
       </div>
+
+      <div class="admin-sec-title">📡 Estado de KPIs en Producción</div>
+      <div class="kpi-status-grid" id="kpiStatusGrid"></div>
 
     </div><!-- /tab-admin -->
 
@@ -275,53 +271,6 @@
     ).join('');
   }
 
-  async function buildWarehouseLive() {
-    const el = document.getElementById('warehouseLive');
-    if (!el) return;
-    try {
-      // Tomar el último mes cargado
-      const resumen = await sb.rest('GET','kpi_recibo_resumen?order=mes_id.desc&limit=1');
-      const r = resumen && resumen[0];
-      if (!r) { el.style.display='none'; return; }
-      const label = CONFIG.meses.find(m=>m.id===r.mes_id)?.label || r.mes_id;
-      const trt   = r.trt_12h != null ? r.trt_12h : '—';
-      const semTRT= trt >= 95 ? '#00FF88' : trt >= 80 ? '#FFB020' : '#FF4D6D';
-      const totalUnd = (r.total_oc||0) * 1; // unidades reales cuando estén disponibles
-
-      el.innerHTML = `
-        <div style="display:flex;gap:.45rem;align-items:stretch;flex-wrap:nowrap;min-width:0">
-          <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:8px;padding:.55rem .8rem;min-width:110px;flex-shrink:0">
-            <div style="font-size:.55rem;font-weight:700;letter-spacing:.1em;color:rgba(0,212,255,.7);text-transform:uppercase;margin-bottom:.2rem">🏭 Recibo</div>
-            <div style="font-size:1.1rem;font-weight:800;color:#00D4FF;line-height:1">${r.total_oc||0}</div>
-            <div style="font-size:.6rem;color:rgba(255,255,255,.4)">OC · ${label}</div>
-          </div>
-          <div style="background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.12);border-radius:8px;padding:.55rem .8rem;min-width:110px;flex-shrink:0">
-            <div style="font-size:.55rem;font-weight:700;letter-spacing:.1em;color:rgba(0,255,136,.7);text-transform:uppercase;margin-bottom:.2rem">📦 Inventario</div>
-            <div style="font-size:1.1rem;font-weight:800;color:#00FF88;line-height:1">${r.total_oc||0}</div>
-            <div style="font-size:.6rem;color:rgba(255,255,255,.4)">SKUs en stock</div>
-          </div>
-          <div style="background:rgba(123,47,255,.05);border:1px solid rgba(123,47,255,.15);border-radius:8px;padding:.55rem .8rem;min-width:110px;flex-shrink:0">
-            <div style="font-size:.55rem;font-weight:700;letter-spacing:.1em;color:rgba(123,47,255,.8);text-transform:uppercase;margin-bottom:.2rem">🛒 Picking</div>
-            <div style="font-size:1.1rem;font-weight:800;color:#7B2FFF;line-height:1">—</div>
-            <div style="font-size:.6rem;color:rgba(255,255,255,.4)">Uds preparadas</div>
-          </div>
-          <div style="background:rgba(255,176,32,.05);border:1px solid rgba(255,176,32,.12);border-radius:8px;padding:.55rem .8rem;min-width:110px;flex-shrink:0">
-            <div style="font-size:.55rem;font-weight:700;letter-spacing:.1em;color:rgba(255,176,32,.8);text-transform:uppercase;margin-bottom:.2rem">🚚 Despacho</div>
-            <div style="font-size:1.1rem;font-weight:800;color:#FFB020;line-height:1">—</div>
-            <div style="font-size:.6rem;color:rgba(255,255,255,.4)">Uds despachadas</div>
-          </div>
-          <div style="background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);border-radius:8px;padding:.55rem .8rem;min-width:100px;flex-shrink:0;text-align:center">
-            <div style="font-size:.55rem;font-weight:700;letter-spacing:.1em;color:rgba(0,212,255,.7);text-transform:uppercase;margin-bottom:.2rem">TRT</div>
-            <div style="font-size:1.3rem;font-weight:900;color:${semTRT};line-height:1">${trt}%</div>
-            <div style="font-size:.58rem;color:rgba(255,255,255,.4)">Meta ≥95%</div>
-          </div>
-        </div>`;
-      el.style.display = 'flex';
-    } catch(e) {
-      el.style.display = 'none';
-    }
-  }
-
   window.addEventListener('load', async () => {
     const user = await checkAuth(); if (!user) return;
     renderUser();
@@ -334,7 +283,7 @@
     const ol = document.getElementById('overlay');
     setTimeout(() => ol.classList.add('out'), 150);
     setTimeout(() => ol.remove(), 550);
-    buildWarehouseLive();
+    if (typeof WarehouseScene !== 'undefined') WarehouseScene.init('warehouseScene');
   });
 </script>
 <script src="../components/warehouse-scene.js"></script>
