@@ -619,35 +619,35 @@ async function eliminarMes(mesId, label){
 
     // Verificar cuántos registros hay antes de borrar
     const antes = await sb.rest('GET',`kpi_recibo_recepciones?mes_id=eq.${mesId}&select=id`);
-    addLog(`${label}: ${(antes||[]).length} registros encontrados para borrar`,'inf');
+    addLog(`${label}: ${(antes||[]).length} registros a borrar`,'inf');
 
-    // Borrar recepciones en lotes de 100 para evitar timeout
-    if(antes && antes.length > 0){
+    // PASO 1: Borrar histórico (tabla hija) para no violar FK
+    // kpi_recibo_historico.recepcion_id → kpi_recibo_recepciones.id
+    const ids = (antes||[]).map(r=>r.id);
+    if(ids.length > 0){
       const BATCH = 100;
-      let borrados = 0;
-      for(let i = 0; i < Math.ceil(antes.length / BATCH); i++){
-        await sb.rest('DELETE',`kpi_recibo_recepciones?mes_id=eq.${mesId}&id=lte.${antes[Math.min((i+1)*BATCH-1, antes.length-1)].id}`,null,{'Prefer':'return=minimal'});
-        borrados = Math.min((i+1)*BATCH, antes.length);
-        addLog(`Borrando lote ${i+1}… (${borrados}/${antes.length})`,'inf');
+      for(let i = 0; i < ids.length; i += BATCH){
+        const lote = ids.slice(i, i+BATCH);
+        const filtroIds = lote.map(id=>`id=eq.${id}`).join('&or=');
+        await sb.rest('DELETE',`kpi_recibo_historico?recepcion_id=in.(${lote.join(',')})`,null,{'Prefer':'return=minimal'});
       }
-      // Verificar que quedó vacío y borrar cualquier resto
-      await sb.rest('DELETE',`kpi_recibo_recepciones?mes_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
-    } else {
-      await sb.rest('DELETE',`kpi_recibo_recepciones?mes_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
+      addLog(`Histórico de ${label} borrado`,'inf');
     }
 
-    // Borrar resumen del mes
+    // PASO 2: Borrar recepciones
+    await sb.rest('DELETE',`kpi_recibo_recepciones?mes_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
+    addLog(`Recepciones de ${label} borradas`,'inf');
+
+    // PASO 3: Borrar resumen
     await sb.rest('DELETE',`kpi_recibo_resumen?mes_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
 
     // Verificar que quedó limpio
     const despues = await sb.rest('GET',`kpi_recibo_recepciones?mes_id=eq.${mesId}&select=id`);
-    const resumenDespues = await sb.rest('GET',`kpi_recibo_resumen?mes_id=eq.${mesId}&select=id`);
-
-    if((despues||[]).length > 0 || (resumenDespues||[]).length > 0){
-      throw new Error(`No se pudieron borrar todos los registros. Quedan ${(despues||[]).length} en recepciones y ${(resumenDespues||[]).length} en resumen. Verifica las políticas RLS en Supabase.`);
+    if((despues||[]).length > 0){
+      throw new Error(`Quedaron ${despues.length} registros sin borrar. Verifica las políticas RLS en Supabase.`);
     }
 
-    addLog(`✓ ${label} eliminado completamente — recepciones: 0, resumen: 0`,'warn');
+    addLog(`✓ ${label} eliminado completamente de Supabase`,'warn');
     // Limpiar cuarentena si era del mes eliminado
     cuarentenaData=cuarentenaData.filter(r=>r.mes_id!==mesId);
     if(!cuarentenaData.length){
