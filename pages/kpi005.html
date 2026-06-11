@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — KPI-DES-005</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    /* ── Tabs ── */
+    .tabs-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 1.25rem;gap:.1rem;overflow-x:auto;scrollbar-width:none}
+    .tabs-nav::-webkit-scrollbar{display:none}
+    .tab-btn{padding:.8rem .9rem;font-size:.8rem;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;min-height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    .tab-btn:hover{color:var(--text)}
+    .tab-btn.on{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-panel{display:none}.tab-panel.on{display:block}
+
+    /* ── KPI header ── */
+    .kpi-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem;flex-wrap:wrap}
+    .kpi-hdr h1{font-size:clamp(1rem,3vw,1.25rem);font-weight:800;display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+    .kpi-hdr-sub{font-size:.76rem;color:var(--muted);margin-top:.15rem}
+    .kpi-actions{display:flex;gap:.4rem;align-items:center;flex-shrink:0;flex-wrap:wrap}
+
+    /* ── Banners ── */
+    .b-strip{border-radius:var(--r);padding:.75rem 1rem;margin-bottom:1rem;font-size:.82rem;line-height:1.5;display:flex;align-items:flex-start;gap:.65rem}
+    .b-ok  {background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);color:var(--ok)}
+    .b-warn{background:rgba(255,176,32,.07);border:1px solid rgba(255,176,32,.2);color:var(--warn)}
+    .b-crit{background:rgba(255,77,109,.07);border:1px solid rgba(255,77,109,.2);color:var(--error)}
+    .method-strip{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:.6rem 1rem;margin-bottom:1rem;font-size:.74rem;color:var(--muted)}
+
+    /* ── Selector meses ── */
+    .mes-bar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:1rem}
+    .mes-bar label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+    .mes-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:.35rem .65rem;cursor:pointer;outline:none}
+    .mes-sel:focus{border-color:var(--accent)}
+
+    /* ── HERO ── */
+    .hero{display:grid;grid-template-columns:220px 1fr;gap:1rem;margin-bottom:1rem}
+    @media(max-width:799px){.hero{grid-template-columns:1fr}}
+    @media(min-width:1920px){.hero{grid-template-columns:280px 1fr}}
+
+    .semaforo{background:var(--surface);border:2px solid var(--border);border-radius:var(--r);padding:1.25rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.5rem;text-align:center}
+    .sem-lbl{font-size:.65rem;font-weight:700;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+    .sem-num{font-size:clamp(2.8rem,7vw,3.8rem);font-weight:900;line-height:1}
+    .sem-unit{font-size:.95rem;color:var(--muted)}
+    .sem-meta{font-size:.72rem;color:var(--muted);line-height:1.7}
+    .sem-pill{font-weight:700;font-size:.78rem;padding:.3rem 1rem;border-radius:20px;border:2px solid}
+    .sem-pill.verde  {background:rgba(0,255,136,.12);color:var(--ok);border-color:var(--ok)}
+    .sem-pill.amarillo{background:rgba(255,176,32,.12);color:var(--warn);border-color:var(--warn)}
+    .sem-pill.rojo   {background:rgba(255,77,109,.12);color:var(--error);border-color:var(--error)}
+    .sem-barra-wrap{width:100%;height:7px;background:var(--surface3);border-radius:9999px;overflow:hidden}
+    .sem-barra{height:7px;border-radius:9999px;transition:width .5s ease}
+    .sem-delta{font-size:.72rem;color:var(--muted)}
+    .sem-circles{display:flex;gap:.75rem;justify-content:center;margin:.15rem 0}
+    .sem-circle{display:flex;flex-direction:column;align-items:center;gap:.1rem}
+    .sem-circle .cn{font-size:1.5rem;font-weight:900;line-height:1}
+    .sem-circle .cl{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+
+    .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+    @media(min-width:1200px){.metrics-grid{grid-template-columns:1fr 1fr 1fr}}
+    .mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem 1rem;display:flex;flex-direction:column;gap:.15rem}
+    .mc .ml{font-size:.63rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase}
+    .mc .mv{font-size:clamp(1.2rem,2.5vw,1.55rem);font-weight:800;line-height:1.1}
+    .mc .ms{font-size:.68rem;color:var(--muted)}
+
+    /* ── Charts ── */
+    .charts-2col{display:grid;grid-template-columns:3fr 2fr;gap:.75rem;margin-bottom:.75rem}
+    @media(max-width:799px){.charts-2col{grid-template-columns:1fr}}
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
+    .chart-wrap{position:relative}
+    .sec-title{font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.85rem;display:flex;align-items:center;gap:.5rem}
+    .sec-title .bar{width:4px;height:14px;border-radius:2px;flex-shrink:0}
+
+    /* ── Tabla semanal ── */
+    .sec-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:.75rem}
+    .wt{width:100%;border-collapse:collapse}
+    .wt thead tr{background:var(--surface3)}
+    .wt th{padding:.5rem .75rem;font-size:.68rem;font-weight:700;text-align:center;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+    .wt th:first-child{text-align:left}
+    .wt td{padding:.5rem .75rem;font-size:.78rem;text-align:center;border-bottom:1px solid var(--border)}
+    .wt td:first-child{text-align:left;font-weight:600}
+    .wt .tr-tot{background:var(--surface2);font-weight:700}
+    .wt .tr-tot td{border-bottom:none}
+
+    /* ── Detail ── */
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem}
+    @media(max-width:599px){.detail-grid{grid-template-columns:1fr}}
+    .detail-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
+    .detail-card h4{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.65rem}
+    .di{display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px dashed var(--border);font-size:.78rem}
+    .di:last-child{border-bottom:none}
+    .dk{color:var(--muted)}.dv{font-weight:700;color:var(--text)}
+
+    /* ── Toggle tabla diaria ── */
+    .tog-hdr{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:.7rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.4rem;transition:background .15s}
+    .tog-hdr:hover{background:var(--surface2)}
+    .tog-hdr h4{font-size:.8rem;font-weight:700;margin:0;display:flex;align-items:center;gap:.4rem}
+    .tog-arrow{transition:transform .2s;color:var(--muted)}
+    .tog-sec{overflow:hidden;transition:max-height .3s ease;max-height:0}
+    .tog-sec.open{max-height:600px}
+
+    /* ── Comparativo ── */
+    .comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+    @media(max-width:699px){.comp-grid{grid-template-columns:1fr}}
+    .comp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
+    .comp-card h3{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.75rem}
+    .comp-row{display:flex;justify-content:space-between;align-items:center;padding:.38rem 0;border-bottom:1px dashed var(--border);font-size:.78rem}
+    .comp-row:last-child{border-bottom:none}
+    .comp-metric{color:var(--muted);flex:1}
+    .comp-vals{display:flex;gap:.75rem;flex-shrink:0}
+    .v-a{color:var(--accent);font-weight:700;font-family:'Syne',sans-serif}
+    .v-b{color:var(--accent2);font-weight:700;font-family:'Syne',sans-serif}
+    .delta-up{color:var(--ok);font-size:.71rem}
+    .delta-dn{color:var(--error);font-size:.71rem}
+
+    /* ── Misc ── */
+    .c-ok{color:var(--ok)}.c-err{color:var(--error)}.c-warn{color:var(--warn)}.c-acc{color:var(--accent)}
+    .tag{display:inline-block;padding:.1rem .5rem;border-radius:10px;font-weight:700;font-size:.7rem}
+    .tag-ok  {background:rgba(0,255,136,.12);color:var(--ok)}
+    .tag-warn{background:rgba(255,176,32,.12);color:var(--warn)}
+    .tag-crit{background:rgba(255,77,109,.12);color:var(--error)}
+
+    /* Responsive obligatorio */
+    body{min-height:100dvh}
+    @media(max-width:768px){.pipeline-svg{display:none}}
+    @media(min-width:1920px){html{font-size:18px}}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando datos…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-title">KPI-DES-005</span>
+    <div class="topbar-spacer"></div>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+      <button class="theme-btn" onclick="setTheme('sepia')" title="Sepia">📜</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <nav class="tabs-nav">
+    <button class="tab-btn on" onclick="tab('resumen',this)">📊 Resumen</button>
+    <button class="tab-btn"   onclick="tab('comparativo',this)">⚖️ Comparativo</button>
+  </nav>
+
+  <main class="content">
+
+    <!-- KPI header -->
+    <div class="kpi-hdr">
+      <div>
+        <h1>🚚 KPI-DES-005 <span class="badge badge-ok">En vivo</span> <span class="badge badge-info">DATA REAL</span></h1>
+        <div class="kpi-hdr-sub">On-Time Delivery (OTD %) · A tiempo: ON-TIME L&amp;S ≥ 0 · Meta ≥ 90% · Pedidos únicos por Comprobante</div>
+      </div>
+      <div class="kpi-actions">
+        <button class="btn" onclick="cargarDatos()" id="btnRefresh">🔄 Actualizar</button>
+        <span id="tsUpdate" style="font-size:.68rem;color:var(--dim)"></span>
+      </div>
+    </div>
+
+    <!-- Selector de meses -->
+    <div class="mes-bar">
+      <label>Mes A</label>
+      <select class="mes-sel" id="selA" onchange="onMesChange()"></select>
+      <span style="color:var(--dim);font-size:.8rem">vs</span>
+      <label>Mes B</label>
+      <select class="mes-sel" id="selB" onchange="onMesChange()"></select>
+      <div style="margin-left:auto;font-size:.7rem;color:var(--dim)" id="statusDatos">—</div>
+    </div>
+
+    <!-- ══ RESUMEN ══════════════════════════════════════════════════════ -->
+    <div class="tab-panel on" id="tab-resumen">
+
+      <!-- Banner estado -->
+      <div id="bannerEstado" class="b-strip b-ok" style="display:none"></div>
+
+      <!-- Banner metodología -->
+      <div class="method-strip">
+        📐 <b>OTD % = Pedidos A Tiempo / Total Despachados × 100</b> &nbsp;·&nbsp;
+        A tiempo: ON-TIME L&amp;S ≥ 0 &nbsp;·&nbsp; Tarde: ON-TIME L&amp;S &lt; 0 &nbsp;·&nbsp;
+        STATUS válidos: DESPACHADO + ENTREGADO &nbsp;·&nbsp; Fuente: Hoja ALISTAMIENTO
+      </div>
+
+      <!-- HERO -->
+      <div class="hero" id="heroWrap">
+        <div class="semaforo" id="semaforoBox">
+          <div class="sem-lbl" id="semLbl">OTD — Mes</div>
+          <div style="display:flex;align-items:flex-end;gap:3px">
+            <span class="sem-num" id="semNum">—</span><span class="sem-unit">%</span>
+          </div>
+          <div class="sem-meta" id="semMeta">Meta: ≥ 90%</div>
+          <div class="sem-barra-wrap"><div class="sem-barra" id="semBarra" style="width:0%"></div></div>
+          <span class="sem-pill verde" id="semPill">— —</span>
+          <div class="sem-delta">Δ vs. meta 90%: <b id="semDelta">—</b></div>
+          <div class="sem-circles" id="semCircles"></div>
+        </div>
+        <div class="metrics-grid" id="metricsGrid"></div>
+      </div>
+
+      <!-- Tabla semanal -->
+      <div class="sec-card">
+        <div class="sec-title">
+          <div class="bar" id="semBarColor" style="background:var(--accent)"></div>
+          📊 Registro Semanal · <span id="semTitleMes">—</span> · Meta ≥ 90%
+        </div>
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+          <table class="wt"><thead><tr>
+            <th>Semana</th><th>Total</th><th>A Tiempo</th><th>Tarde</th>
+            <th>OTD %</th><th>Δ pp</th><th>Lead Time</th>
+            <th>Mejor Día</th><th>Peor Día</th><th>Estado</th>
+          </tr></thead>
+          <tbody id="weeklyBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Charts: OTD diario + Donut -->
+      <div class="charts-2col">
+        <div class="chart-card">
+          <div class="sec-title"><div class="bar" style="background:var(--accent)"></div>OTD % — Evolución Diaria vs. Meta 90%</div>
+          <div class="chart-wrap"><canvas id="cDaily" height="110"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="sec-title"><div class="bar" style="background:var(--accent2)"></div>Estado Días del Mes</div>
+          <div class="chart-wrap"><canvas id="cDonut" height="200"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Charts: Pedidos + Lead time -->
+      <div class="charts-2col">
+        <div class="chart-card">
+          <div class="sec-title"><div class="bar" style="background:var(--ok)"></div>Pedidos A Tiempo vs Tarde — Diario</div>
+          <div class="chart-wrap"><canvas id="cBarras" height="110"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="sec-title"><div class="bar" style="background:var(--warn)"></div>Lead Time Promedio (días SOLICITUD→DESPACHO)</div>
+          <div class="chart-wrap"><canvas id="cLead" height="110"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Detail cards -->
+      <div class="detail-grid">
+        <div class="detail-card">
+          <h4>🎯 Estado del KPI</h4>
+          <div id="detalleEstado"></div>
+        </div>
+        <div class="detail-card">
+          <h4>📈 Semáforo de Días</h4>
+          <div id="detalleSemaforo"></div>
+        </div>
+      </div>
+
+      <!-- Tabla diaria colapsable -->
+      <div class="tog-hdr" onclick="toggleTabla()" id="togHdr">
+        <h4>📋 Tabla Diaria Detallada</h4>
+        <span class="tog-arrow" id="togArrow">▼</span>
+      </div>
+      <div class="tog-sec" id="togSec">
+        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--surface);border:1px solid var(--border);border-radius:0 0 var(--r) var(--r)">
+          <table class="wt"><thead><tr>
+            <th>Fecha</th><th>Semana</th><th>Total</th><th>A Tiempo</th>
+            <th>Tarde</th><th>OTD %</th><th>Δ vs meta</th><th>Lead Time</th><th>Estado</th>
+          </tr></thead>
+          <tbody id="dailyBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /tab-resumen -->
+
+    <!-- ══ COMPARATIVO ══════════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-comparativo">
+      <div class="comp-grid" id="compWrap">
+        <div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses para comparar</p></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+applyTheme();
+
+let allResumen = {}, allDiario = {}, charts = {};
+const META = 90;
+
+// ── Tabs ─────────────────────────────────────────────────────────────────
+function tab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
+  document.getElementById('tab-' + id).classList.add('on');
+  btn.classList.add('on');
+  if (id === 'comparativo') renderComparativo();
+}
+
+function toggleTabla() {
+  const sec   = document.getElementById('togSec');
+  const arrow = document.getElementById('togArrow');
+  sec.classList.toggle('open');
+  arrow.textContent = sec.classList.contains('open') ? '▲' : '▼';
+}
+
+// ── Cargar datos ──────────────────────────────────────────────────────────
+async function cargarDatos() {
+  const btn = document.getElementById('btnRefresh');
+  btn.disabled = true; btn.textContent = '⏳';
+  document.getElementById('statusDatos').textContent = 'Cargando…';
+  try {
+    const [resumen, diario] = await Promise.all([
+      sb.rest('GET', 'kpi_otd_resumen?order=periodo_id.asc,semana.asc'),
+      sb.rest('GET', 'kpi_otd_diario?order=periodo_id.asc,fecha.asc'),
+    ]);
+
+    allResumen = {};
+    (resumen || []).forEach(r => {
+      if (!allResumen[r.periodo_id]) allResumen[r.periodo_id] = [];
+      allResumen[r.periodo_id].push(r);
+    });
+
+    allDiario = {};
+    (diario || []).forEach(r => {
+      if (!allDiario[r.periodo_id]) allDiario[r.periodo_id] = [];
+      allDiario[r.periodo_id].push(r);
+    });
+
+    const periodos = Object.keys(allResumen).sort();
+    poblarSelectores(periodos);
+    document.getElementById('tsUpdate').textContent = new Date().toLocaleTimeString('es-CO');
+    document.getElementById('statusDatos').textContent =
+      `${(resumen || []).length} registros · ${periodos.length} períodos`;
+  } catch(e) {
+    document.getElementById('statusDatos').textContent = '⚠️ ' + e.message.slice(0,60);
+  }
+  btn.disabled = false; btn.textContent = '🔄 Actualizar';
+}
+
+function poblarSelectores(periodos) {
+  const lbl = id => CONFIG.meses.find(m => m.id === id)?.label || id;
+  ['selA','selB'].forEach((sid, i) => {
+    const s = document.getElementById(sid);
+    s.innerHTML = periodos.map((p, j) =>
+      `<option value="${p}" ${j === (i===0 ? periodos.length-2 : periodos.length-1) ? 'selected' : ''}>${lbl(p)}</option>`
+    ).join('');
+    if (periodos.length === 1) s.value = periodos[0];
+  });
+  onMesChange();
+}
+
+function onMesChange() { renderResumen(); }
+
+// ── Render Resumen ─────────────────────────────────────────────────────────
+function renderResumen() {
+  const mesId   = document.getElementById('selA').value;
+  const resRows = allResumen[mesId] || [];
+  const diaRows = allDiario[mesId]  || [];
+  const label   = CONFIG.meses.find(m => m.id === mesId)?.label || mesId;
+
+  if (!resRows.length) {
+    document.getElementById('metricsGrid').innerHTML =
+      `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📭</div>
+       <p>Sin datos para este mes.<br>Carga el archivo desde <a href="cargue_des005.html" style="color:var(--accent)">Administración → KPI-DES-005</a>.</p></div>`;
+    document.getElementById('bannerEstado').style.display = 'none';
+    return;
+  }
+
+  const global  = resRows.find(r => !r.semana) || resRows[0];
+  const semanas = resRows.filter(r => r.semana);
+  const otd     = Number(global.otd_pct) || 0;
+
+  // ── Semáforo ──
+  const cls = otd >= 90 ? 'verde' : otd >= 70 ? 'amarillo' : 'rojo';
+  const txt = otd >= 90 ? '🟢 BIEN' : otd >= 70 ? '🟡 ALERTA' : '🔴 CRÍTICO';
+  const col = otd >= 90 ? 'var(--ok)' : otd >= 70 ? 'var(--warn)' : 'var(--error)';
+  const delta = otd - META;
+
+  document.getElementById('semLbl').textContent = `OTD — ${label}`;
+  const numEl = document.getElementById('semNum');
+  numEl.textContent = otd.toFixed(1);
+  numEl.style.color = col;
+  document.getElementById('semMeta').textContent =
+    `${global.pedidos_atime} a tiempo / ${global.total_pedidos} pedidos · Meta ≥ 90%`;
+  document.getElementById('semBarra').style.cssText = `width:${Math.min(otd,100)}%;background:${col}`;
+  const pill = document.getElementById('semPill');
+  pill.className = `sem-pill ${cls}`; pill.textContent = txt;
+  const dEl = document.getElementById('semDelta');
+  dEl.textContent = (delta>=0?'+':'')+delta.toFixed(1)+' pp';
+  dEl.style.color = delta>=0 ? 'var(--ok)' : 'var(--error)';
+  document.getElementById('semTitleMes').textContent = label;
+  document.getElementById('semBarColor').style.background = col;
+
+  const nBien  = diaRows.filter(d => Number(d.otd_pct) >= 90).length;
+  const nAlerta= diaRows.filter(d => Number(d.otd_pct) >= 70 && Number(d.otd_pct) < 90).length;
+  const nCrit  = diaRows.filter(d => Number(d.otd_pct) < 70).length;
+  document.getElementById('semCircles').innerHTML = `
+    <div class="sem-circle"><span class="cn c-ok">${nBien}</span><span class="cl c-ok">Bien</span></div>
+    <div class="sem-circle"><span class="cn c-warn">${nAlerta}</span><span class="cl c-warn">Alerta</span></div>
+    <div class="sem-circle"><span class="cn c-err">${nCrit}</span><span class="cl c-err">Crítico</span></div>`;
+
+  // Banner
+  const banner = document.getElementById('bannerEstado');
+  banner.style.display = 'flex';
+  banner.className = `b-strip ${otd>=90?'b-ok':otd>=70?'b-warn':'b-crit'}`;
+  banner.innerHTML = `<b>${txt}</b> &nbsp;·&nbsp; OTD de ${label}: <b>${otd.toFixed(1)}%</b>
+    &nbsp;·&nbsp; ${delta>=0?'Supera':'Por debajo de'} la meta en <b>${Math.abs(delta).toFixed(1)} pp</b>
+    &nbsp;·&nbsp; ${nBien} de ${diaRows.length} días con OTD ≥ 90%`;
+
+  // Métricas 3×2
+  const sorted   = [...diaRows].sort((a,b)=>Number(b.otd_pct)-Number(a.otd_pct));
+  const mejorDia = sorted[0];
+  const peorDia  = sorted[sorted.length-1];
+  const lt = global.lead_time_prom != null ? Number(global.lead_time_prom).toFixed(1)+' días' : '—';
+  document.getElementById('metricsGrid').innerHTML = [
+    ['OTD % del Período',         `${otd.toFixed(1)}%`,
+      `${global.pedidos_atime} a tiempo / ${global.total_pedidos} despachados`, 'c-acc'],
+    ['Lead Time Promedio',         lt,
+      'Días entre Solicitud → Despacho', 'c-ok'],
+    ['Total Pedidos Despachados',  (global.total_pedidos||0).toLocaleString('es-CO'),
+      `${diaRows.length} días activos del período`, 'c-acc'],
+    ['Días en Meta (≥90%)',        `${nBien} / ${diaRows.length}`,
+      `${diaRows.length ? Math.round(nBien/diaRows.length*100) : 0}% de los días`,
+      nBien/Math.max(diaRows.length,1)>=0.5?'c-ok':'c-warn'],
+    ['Mejor Día OTD',              mejorDia ? Number(mejorDia.otd_pct).toFixed(1)+'%' : '—',
+      mejorDia?.fecha||'', 'c-ok'],
+    ['Pedidos Tarde (período)',    (global.pedidos_tarde||0).toLocaleString('es-CO'),
+      global.total_pedidos>0
+        ? `${((global.pedidos_tarde||0)/global.total_pedidos*100).toFixed(1)}% del total` : '',
+      'c-err'],
+  ].map(([l,v,s,c]) =>
+    `<div class="mc"><div class="ml">${l}</div><div class="mv ${c}">${v}</div><div class="ms">${s}</div></div>`
+  ).join('');
+
+  // Tabla semanal
+  const tot = {
+    total: semanas.reduce((s,r)=>s+(r.total_pedidos||0),0),
+    aTime: semanas.reduce((s,r)=>s+(r.pedidos_atime||0),0),
+    tarde: semanas.reduce((s,r)=>s+(r.pedidos_tarde||0),0),
+  };
+  const totOTD = tot.total>0 ? (tot.aTime/tot.total*100).toFixed(1) : '—';
+  document.getElementById('weeklyBody').innerHTML =
+    semanas.sort((a,b)=>a.semana<b.semana?-1:1).map(r => {
+      const v   = Number(r.otd_pct||0);
+      const pp  = v - META;
+      const c   = v>=90?'c-ok':v>=70?'c-warn':'c-err';
+      const ltr = r.lead_time_prom!=null ? Number(r.lead_time_prom).toFixed(1)+'d' : '—';
+      return `<tr>
+        <td>${r.semana}</td><td>${(r.total_pedidos||0)}</td>
+        <td class="c-ok">${(r.pedidos_atime||0)}</td>
+        <td class="c-err">${(r.pedidos_tarde||0)}</td>
+        <td class="${c}"><b>${v.toFixed(1)}%</b></td>
+        <td class="${pp>=0?'c-ok':'c-err'}">${pp>=0?'+':''}${pp.toFixed(1)} pp</td>
+        <td>${ltr}</td>
+        <td class="c-ok">${r.mejor_dia_otd!=null?Number(r.mejor_dia_otd).toFixed(1)+'%':'—'}</td>
+        <td class="c-err">${r.peor_dia_otd!=null?Number(r.peor_dia_otd).toFixed(1)+'%':'—'}</td>
+        <td>${v>=90?'🟢 BIEN':v>=70?'🟡 ALERTA':'🔴 CRÍTICO'}</td>
+      </tr>`;
+    }).join('') +
+    `<tr class="tr-tot">
+      <td>TOTAL PERÍODO</td><td>${tot.total.toLocaleString('es-CO')}</td>
+      <td class="c-ok">${tot.aTime}</td><td class="c-err">${tot.tarde}</td>
+      <td class="${Number(totOTD)>=90?'c-ok':Number(totOTD)>=70?'c-warn':'c-err'}"><b>${totOTD}%</b></td>
+      <td class="${Number(totOTD)-META>=0?'c-ok':'c-err'}">${Number(totOTD)-META>=0?'+':''}${(Number(totOTD)-META).toFixed(1)} pp</td>
+      <td>${lt}</td>
+      <td class="c-ok">${global.mejor_dia_otd!=null?Number(global.mejor_dia_otd).toFixed(1)+'%':'—'}</td>
+      <td class="c-err">${global.peor_dia_otd!=null?Number(global.peor_dia_otd).toFixed(1)+'%':'—'}</td>
+      <td>${Number(totOTD)>=90?'🟢 BIEN':Number(totOTD)>=70?'🟡 ALERTA':'🔴 CRÍTICO'}</td>
+    </tr>`;
+
+  // Tabla diaria
+  document.getElementById('dailyBody').innerHTML = [...diaRows]
+    .sort((a,b)=>a.fecha<b.fecha?-1:1)
+    .map(d => {
+      const v  = Number(d.otd_pct||0);
+      const pp = v - META;
+      const c  = v>=90?'c-ok':v>=70?'c-warn':'c-err';
+      const pill = v>=90?'<span class="tag tag-ok">🟢 BIEN</span>'
+                 : v>=70?'<span class="tag tag-warn">🟡 ALERTA</span>'
+                 :        '<span class="tag tag-crit">🔴 CRÍTICO</span>';
+      return `<tr>
+        <td><b>${d.fecha}</b></td><td>${d.semana||'—'}</td>
+        <td>${d.total_pedidos||0}</td><td class="c-ok">${d.pedidos_atime||0}</td>
+        <td class="c-err">${d.pedidos_tarde||0}</td>
+        <td class="${c}"><b>${v.toFixed(1)}%</b></td>
+        <td class="${pp>=0?'c-ok':'c-err'}">${pp>=0?'+':''}${pp.toFixed(1)}</td>
+        <td>${d.lead_time_prom!=null?Number(d.lead_time_prom).toFixed(1)+'d':'—'}</td>
+        <td>${pill}</td>
+      </tr>`;
+    }).join('');
+
+  // Detail cards
+  document.getElementById('detalleEstado').innerHTML = [
+    ['Fórmula',          '<span class="dv c-acc">A Tiempo ÷ Total Despachados × 100</span>'],
+    ['OTD Período',      `<span class="dv ${cls==='verde'?'c-ok':cls==='amarillo'?'c-warn':'c-err'}">${otd.toFixed(1)}% — ${txt}</span>`],
+    ['Meta',             `<span class="dv">≥ ${META}%</span>`],
+    ['Δ vs meta',        `<span class="dv ${delta>=0?'c-ok':'c-err'}">${delta>=0?'+':''}${delta.toFixed(1)} pp</span>`],
+    ['Lead time prom.',  `<span class="dv">${lt}</span>`],
+    ['Semáforo',         '<span class="dv">🔴&lt;70 · 🟡70–89 · 🟢≥90%</span>'],
+  ].map(([k,v])=>`<div class="di"><span class="dk">${k}</span>${v}</div>`).join('');
+
+  document.getElementById('detalleSemaforo').innerHTML = [
+    ['Días BIEN (≥90%)',     `<span class="dv c-ok">${nBien} días (${diaRows.length?Math.round(nBien/diaRows.length*100):0}%)</span>`],
+    ['Días ALERTA (70–89%)',`<span class="dv c-warn">${nAlerta} días (${diaRows.length?Math.round(nAlerta/diaRows.length*100):0}%)</span>`],
+    ['Días CRÍTICO (<70%)', `<span class="dv c-err">${nCrit} días (${diaRows.length?Math.round(nCrit/diaRows.length*100):0}%)</span>`],
+    ['Mejor día OTD',       `<span class="dv c-ok">${mejorDia?.fecha||'—'}: ${mejorDia?Number(mejorDia.otd_pct).toFixed(1)+'%':'—'}</span>`],
+    ['Peor día OTD',        `<span class="dv c-err">${peorDia?.fecha||'—'}: ${peorDia?Number(peorDia.otd_pct).toFixed(1)+'%':'—'}</span>`],
+    ['Días medidos',        `<span class="dv">${diaRows.length} días</span>`],
+  ].map(([k,v])=>`<div class="di"><span class="dk">${k}</span>${v}</div>`).join('');
+
+  renderCharts(diaRows);
+}
+
+// ── Charts ─────────────────────────────────────────────────────────────────
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+function renderCharts(diaRows) {
+  const sorted  = [...diaRows].sort((a,b)=>a.fecha<b.fecha?-1:1);
+  const fechas  = sorted.map(d=>d.fecha.slice(5));
+  const otdVals = sorted.map(d=>Number(d.otd_pct||0));
+  const aTime   = sorted.map(d=>d.pedidos_atime||0);
+  const tarde   = sorted.map(d=>d.pedidos_tarde||0);
+  const lts     = sorted.map(d=>d.lead_time_prom!=null?Number(d.lead_time_prom):null);
+
+  // Línea OTD diario
+  destroyChart('cDaily');
+  charts.cDaily = new Chart(document.getElementById('cDaily'),{type:'line',
+    data:{labels:fechas,datasets:[
+      {label:'OTD%',data:otdVals,borderColor:'#00D4FF',backgroundColor:'rgba(0,212,255,.07)',
+       fill:true,tension:.35,pointRadius:5,
+       pointBackgroundColor:otdVals.map(v=>v>=90?'#00FF88':v>=70?'#FFB020':'#FF4D6D'),
+       spanGaps:false},
+      {label:`Meta ${META}%`,data:fechas.map(()=>META),
+       borderColor:'rgba(255,176,32,.55)',borderDash:[4,3],pointRadius:0,fill:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{min:0,max:110,ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
+        x:{grid:{display:false},ticks:{font:{size:9},maxTicksLimit:12}},
+      }}});
+
+  // Donut estado días
+  const nB=otdVals.filter(v=>v>=90).length, nA=otdVals.filter(v=>v>=70&&v<90).length, nC=otdVals.filter(v=>v<70).length;
+  destroyChart('cDonut');
+  charts.cDonut = new Chart(document.getElementById('cDonut'),{type:'doughnut',
+    data:{labels:[`🟢 BIEN (${nB})`,`🟡 ALERTA (${nA})`,`🔴 CRÍTICO (${nC})`],
+      datasets:[{data:[nB,nA,nC],
+        backgroundColor:['rgba(0,255,136,.8)','rgba(255,176,32,.8)','rgba(255,77,109,.8)'],
+        borderWidth:2,borderColor:'var(--surface)'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}}}});
+
+  // Barras apiladas a tiempo vs tarde
+  destroyChart('cBarras');
+  charts.cBarras = new Chart(document.getElementById('cBarras'),{type:'bar',
+    data:{labels:fechas,datasets:[
+      {label:'A Tiempo',data:aTime,backgroundColor:'rgba(0,255,136,.7)',borderRadius:3,stack:'s'},
+      {label:'Tarde',   data:tarde,backgroundColor:'rgba(255,77,109,.65)',borderRadius:3,stack:'s'},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:9},maxTicksLimit:12}},
+        y:{stacked:true,ticks:{font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
+      }}});
+
+  // Lead time línea
+  destroyChart('cLead');
+  charts.cLead = new Chart(document.getElementById('cLead'),{type:'line',
+    data:{labels:fechas,datasets:[{
+      label:'Lead Time (días)',data:lts,
+      borderColor:'#FFB020',backgroundColor:'rgba(255,176,32,.08)',fill:true,
+      tension:.35,pointRadius:4,pointBackgroundColor:'#FFB020',spanGaps:true,
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        y:{min:0,ticks:{callback:v=>v+'d',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
+        x:{grid:{display:false},ticks:{font:{size:9},maxTicksLimit:12}},
+      }}});
+}
+
+// ── Comparativo ──────────────────────────────────────────────────────────
+function renderComparativo() {
+  const idA  = document.getElementById('selA').value;
+  const idB  = document.getElementById('selB').value;
+  const gA   = (allResumen[idA]||[]).find(r=>!r.semana);
+  const gB   = (allResumen[idB]||[]).find(r=>!r.semana);
+  const lblA = CONFIG.meses.find(m=>m.id===idA)?.label||idA;
+  const lblB = CONFIG.meses.find(m=>m.id===idB)?.label||idB;
+  const wrap = document.getElementById('compWrap');
+
+  if (!gA||!gB) {
+    wrap.innerHTML=`<div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses con datos cargados</p></div>`;
+    return;
+  }
+
+  const dA = allDiario[idA]||[], dB = allDiario[idB]||[];
+  const nBienA=dA.filter(d=>Number(d.otd_pct)>=META).length;
+  const nBienB=dB.filter(d=>Number(d.otd_pct)>=META).length;
+
+  const dif=(a,b,fmt=v=>v.toFixed(1),inv=false)=>{
+    const diff=b-a;const up=inv?diff<0:diff>0;
+    return `<span class="${up?'delta-up':diff<0?'delta-dn':''}">${diff>0?'+':''}${fmt(diff)}</span>`;
+  };
+
+  const rows=[
+    ['OTD %',              `${Number(gA.otd_pct||0).toFixed(1)}%`,  `${Number(gB.otd_pct||0).toFixed(1)}%`,  dif(Number(gA.otd_pct||0),Number(gB.otd_pct||0),v=>v.toFixed(1)+'%')],
+    ['Total Pedidos',      gA.total_pedidos||0,                     gB.total_pedidos||0,                     dif(gA.total_pedidos||0,gB.total_pedidos||0,v=>Math.round(v)+'')],
+    ['Pedidos A Tiempo',   gA.pedidos_atime||0,                     gB.pedidos_atime||0,                     dif(gA.pedidos_atime||0,gB.pedidos_atime||0,v=>Math.round(v)+'')],
+    ['Pedidos Tarde',      gA.pedidos_tarde||0,                     gB.pedidos_tarde||0,                     dif(gA.pedidos_tarde||0,gB.pedidos_tarde||0,v=>Math.round(v)+'',true)],
+    ['Lead Time Prom.',    gA.lead_time_prom!=null?Number(gA.lead_time_prom).toFixed(1)+'d':'—', gB.lead_time_prom!=null?Number(gB.lead_time_prom).toFixed(1)+'d':'—',''],
+    ['Mejor Día OTD',      gA.mejor_dia_otd!=null?Number(gA.mejor_dia_otd).toFixed(1)+'%':'—', gB.mejor_dia_otd!=null?Number(gB.mejor_dia_otd).toFixed(1)+'%':'—',''],
+    ['Peor Día OTD',       gA.peor_dia_otd!=null?Number(gA.peor_dia_otd).toFixed(1)+'%':'—',  gB.peor_dia_otd!=null?Number(gB.peor_dia_otd).toFixed(1)+'%':'—',''],
+    ['Días en Meta (≥90%)',`${nBienA}/${dA.length}`,                `${nBienB}/${dB.length}`,                ''],
+  ];
+
+  wrap.innerHTML=`
+    <div class="comp-card">
+      <h3>${lblA} vs ${lblB}</h3>
+      <div class="comp-row" style="font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.07em">
+        <span class="comp-metric">Indicador</span>
+        <div class="comp-vals"><span class="v-a">${lblA.split(' ')[0]}</span><span class="v-b">${lblB.split(' ')[0]}</span></div>
+        <span style="width:55px;text-align:right;font-size:.66rem;color:var(--muted)">Var.</span>
+      </div>
+      ${rows.map(([m,a,b,dv])=>`<div class="comp-row">
+        <span class="comp-metric">${m}</span>
+        <div class="comp-vals"><span class="v-a">${a}</span><span class="v-b">${b}</span></div>
+        <span style="width:55px;text-align:right">${dv}</span>
+      </div>`).join('')}
+    </div>
+    <div class="comp-card">
+      <h3>Visual Comparativo</h3>
+      <div class="chart-wrap" style="height:280px"><canvas id="cComp"></canvas></div>
+    </div>`;
+
+  new Chart(document.getElementById('cComp'),{type:'bar',
+    data:{labels:['OTD %','Mejor Día','Meta 90%'],datasets:[
+      {label:lblA.split(' ')[0],data:[Number(gA.otd_pct||0),Number(gA.mejor_dia_otd||0),META],backgroundColor:'rgba(0,212,255,.7)',borderRadius:5},
+      {label:lblB.split(' ')[0],data:[Number(gB.otd_pct||0),Number(gB.mejor_dia_otd||0),META],backgroundColor:'rgba(123,47,255,.7)',borderRadius:5},
+      {label:'Meta',data:[META,META,META],type:'line',borderColor:'rgba(255,176,32,.7)',borderDash:[5,3],pointRadius:0,fill:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},
+      scales:{y:{min:0,max:110,ticks:{callback:v=>v+'%',font:{size:10}}}}}});
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  const user = await checkAuth(); if (!user) return;
+  renderUser();
+  await cargarDatos();
+  const ol = document.getElementById('overlay');
+  setTimeout(()=>ol.classList.add('out'),100);
+  setTimeout(()=>ol.remove(),500);
+});
+</script>
+</body>
+</html>

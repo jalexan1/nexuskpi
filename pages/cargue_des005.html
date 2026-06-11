@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Cargar KPI-DES-005</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <style>
+    .page{display:flex;flex-direction:column;min-height:100dvh}
+    .content{flex:1;padding:1.5rem;max-width:920px;margin:0 auto;width:100%}
+    .pg-hdr{margin-bottom:1.5rem}
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:.3rem}
+    .pg-hdr h1{font-size:clamp(1.2rem,3vw,1.5rem);font-weight:800}
+    .pg-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem}
+    .cargue-card,.repro-card,.log-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.5rem;margin-bottom:1.25rem}
+    .cargue-card h2,.repro-card h2,.log-card h2{font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+    .repro-card{border-color:rgba(0,212,255,.18)}
+    .card-sub{font-size:.78rem;color:var(--muted);margin-top:-.5rem;margin-bottom:.85rem;line-height:1.5}
+    .meta-row{display:flex;gap:.65rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
+    .meta-row label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+    .meta-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:.4rem .75rem;outline:none;cursor:pointer;min-width:140px}
+    .meta-sel:focus{border-color:var(--accent)}
+    .drop-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:1.75rem 1.5rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:1rem}
+    .drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:rgba(0,212,255,.04)}
+    .drop-zone input{display:none}
+    .drop-icon{font-size:1.8rem;margin-bottom:.4rem}
+    .drop-txt{font-size:.85rem;color:var(--muted);margin-bottom:.2rem}
+    .drop-nombre{font-size:.82rem;color:var(--text);font-weight:600;margin-bottom:.25rem}
+    .drop-limite{display:inline-block;background:rgba(255,176,32,.12);color:var(--warn);border:1px solid rgba(255,176,32,.3);border-radius:6px;font-size:.72rem;font-weight:600;padding:.12rem .55rem}
+    .drop-picked{font-size:.8rem;color:var(--accent);font-weight:600;margin-top:.5rem;word-break:break-all}
+    .btn-cargue{width:100%;padding:.85rem;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:var(--r-sm);color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:transform .15s,opacity .2s;min-height:48px;touch-action:manipulation}
+    .btn-cargue:hover{transform:translateY(-1px);opacity:.92}
+    .btn-cargue:disabled{opacity:.5;cursor:not-allowed;transform:none}
+    .prog-box{display:none;background:var(--surface2);border-radius:var(--r-sm);padding:.75rem 1rem;margin-top:.75rem;font-size:.8rem}
+    .prog-box.show{display:block}
+    .prog-bar-wrap{height:6px;background:var(--surface3);border-radius:3px;margin-top:.4rem;overflow:hidden}
+    .prog-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .3s}
+    .result-box{display:none;border-radius:var(--r-sm);padding:.8rem 1rem;font-size:.82rem;margin-top:.75rem;line-height:1.65}
+    .result-box.show{display:block}
+    .result-box.ok  {background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);color:var(--ok)}
+    .result-box.warn{background:rgba(255,176,32,.08);border:1px solid rgba(255,176,32,.25);color:var(--warn)}
+    .result-box.err {background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25);color:var(--error)}
+    .repro-list{display:flex;flex-direction:column;gap:.45rem;margin-bottom:.85rem}
+    .repro-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:.6rem .85rem;gap:.75rem;flex-wrap:wrap}
+    .repro-item-info{display:flex;flex-direction:column;gap:.1rem}
+    .repro-label{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700}
+    .repro-stats{font-size:.7rem;color:var(--muted)}
+    .repro-stats b{color:var(--text)}
+    .log-area{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:.7rem;font-family:'Courier New',monospace;font-size:.7rem;color:var(--muted);max-height:220px;overflow-y:auto;word-break:break-word}
+    .lg-ok{color:var(--ok)}.lg-err{color:var(--error)}.lg-inf{color:var(--accent)}.lg-warn{color:var(--warn)}
+    .log-btns{display:flex;gap:.45rem;margin-top:.6rem;flex-wrap:wrap}
+
+    /* Responsive reglas obligatorias */
+    body{min-height:100dvh}
+    @media(max-width:768px){.pipeline-svg{display:none}}
+    @media(min-width:1920px){html{font-size:18px}}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--warn)">⚙️ Admin</span>
+    <span class="topbar-sep">/</span><span class="topbar-title">🚚 KPI-DES-005</span>
+    <div class="topbar-spacer"></div>
+    <a href="admin.html" class="btn btn-sm" style="touch-action:manipulation">← Admin</a>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')" style="touch-action:manipulation">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')" style="touch-action:manipulation">☀️</button>
+      <button class="theme-btn" onclick="setTheme('sepia')" style="touch-action:manipulation">📜</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="pg-hdr">
+      <div class="eyebrow">🚚 Carga de Datos</div>
+      <h1>KPI-DES-005 — On-Time Delivery (OTD %)</h1>
+      <p>Carga el archivo mensual de seguimiento. El ETL lee la hoja <b>ALISTAMIENTO</b>, agrupa por <b>Comprobante</b> (pedido único) y calcula si cada pedido fue entregado a tiempo según el campo <b>ON-TIME L&S</b>.</p>
+    </div>
+
+    <!-- ── Card de cargue ── -->
+    <div class="cargue-card">
+      <h2>⬆️ Cargar KPI-DES-005</h2>
+      <p class="card-sub">
+        Fuente: hoja <b>ALISTAMIENTO</b> del archivo <b>SEGUIMIENTO_CLICK_MES.xlsx</b>.<br>
+        Campos: <b>DIA · Comprobante · STATUS · FECHA DESPACHO · SOLICITUD · ON-TIME L&amp;S</b>.<br>
+        A tiempo: ON-TIME L&amp;S ≥ 0 · Tarde: ON-TIME L&amp;S &lt; 0 · STATUS válido: DESPACHADO o ENTREGADO.
+      </p>
+      <div class="meta-row">
+        <label>Período</label>
+        <select class="meta-sel" id="uploadPeriodo"></select>
+      </div>
+      <div class="drop-zone" id="dropKpi"
+           onclick="document.getElementById('fileKpi').click()"
+           ondragover="onDragOver(event,'dropKpi')"
+           ondragleave="onDragLeave('dropKpi')"
+           ondrop="onDrop(event,'fileKpi','dropKpi')">
+        <input type="file" id="fileKpi" accept=".xlsx,.xls" onchange="onFilePicked(this)"/>
+        <div class="drop-icon">🚚</div>
+        <p class="drop-txt">Toca para seleccionar o arrastra el archivo</p>
+        <p class="drop-nombre">SEGUIMIENTO_CLICK_MES.xlsx</p>
+        <span class="drop-limite">⚠️ Hoja requerida: ALISTAMIENTO · Col ON-TIME L&amp;S</span>
+        <p class="drop-picked" id="lblKpi"></p>
+      </div>
+      <button class="btn-cargue" id="btnCargar" onclick="subirKpi()">⬆️ Cargar KPI-DES-005</button>
+      <div class="prog-box" id="progKpi">
+        <span id="progKpiTxt">Procesando…</span>
+        <div class="prog-bar-wrap"><div class="prog-bar" id="barKpi" style="width:0%"></div></div>
+      </div>
+      <div class="result-box" id="resKpi"></div>
+    </div>
+
+    <!-- ── Períodos cargados ── -->
+    <div class="repro-card">
+      <h2>🔄 Períodos Cargados</h2>
+      <p class="card-sub">Períodos con datos OTD en Supabase. Puedes eliminar un período para volver a cargarlo.</p>
+      <div class="repro-list" id="reproList">
+        <div style="text-align:center;color:var(--muted);font-size:.8rem;padding:.5rem">Cargando períodos…</div>
+      </div>
+      <div class="result-box" id="resRepro"></div>
+    </div>
+
+    <!-- ── Log ── -->
+    <div class="log-card">
+      <h2>📋 Log de Cargues</h2>
+      <div class="log-area" id="etlLog"></div>
+      <div class="log-btns">
+        <button class="btn" onclick="document.getElementById('etlLog').innerHTML=''" style="touch-action:manipulation">🗑️ Limpiar</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script src="../utils/etl_des005.js"></script>
+<script>
+applyTheme();
+
+// ── Drag & Drop ────────────────────────────────────────────────────────
+function onDragOver(e,id){e.preventDefault();document.getElementById(id).classList.add('over');}
+function onDragLeave(id){document.getElementById(id).classList.remove('over');}
+function onDrop(e,inputId,zoneId){
+  e.preventDefault();onDragLeave(zoneId);
+  const f=e.dataTransfer.files[0];if(!f)return;
+  const dt=new DataTransfer();dt.items.add(f);
+  document.getElementById(inputId).files=dt.files;
+  document.getElementById(inputId).dispatchEvent(new Event('change'));
+}
+function onFilePicked(input){
+  const f=input.files[0];if(!f)return;
+  document.getElementById('lblKpi').textContent=`📎 ${f.name}  (${(f.size/1024/1024).toFixed(1)} MB)`;
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────
+function showProg(pct,msg){
+  document.getElementById('progKpi').classList.add('show');
+  document.getElementById('barKpi').style.width=pct+'%';
+  document.getElementById('progKpiTxt').textContent=msg;
+}
+function hideProg(){setTimeout(()=>document.getElementById('progKpi').classList.remove('show'),1200);}
+function showRes(id,type,msg){const el=document.getElementById(id);el.className=`result-box show ${type}`;el.innerHTML=msg;}
+function addLog(msg,tipo='inf'){
+  const log=document.getElementById('etlLog');
+  const d=document.createElement('div');d.className='lg-'+tipo;
+  d.textContent=`[${new Date().toLocaleTimeString('es-CO')}] ${msg}`;
+  log.appendChild(d);log.scrollTop=log.scrollHeight;
+}
+
+// ── Cargue ─────────────────────────────────────────────────────────────
+async function subirKpi(){
+  const file=document.getElementById('fileKpi').files[0];
+  const periodoId=document.getElementById('uploadPeriodo').value;
+  if(!file){showRes('resKpi','warn','⚠️ Selecciona un archivo primero.');return;}
+  const btn=document.getElementById('btnCargar');
+  btn.disabled=true;
+  addLog(`Iniciando cargue: ${file.name}…`,'inf');
+  showProg(5,'Leyendo archivo…');
+  try{
+    let pct=5;
+    const onProgress=msg=>{
+      pct=Math.min(pct+8,90);showProg(pct,msg);
+      addLog(msg,msg.startsWith('✅')||msg.startsWith('✓')?'ok':msg.startsWith('⚠')?'warn':'inf');
+    };
+    const r=await procesarOTD(file,periodoId,onProgress);
+    showProg(100,'Completado');hideProg();
+    const sem=r.otdPct>=90?'🟢':r.otdPct>=70?'🟡':'🔴';
+    showRes('resKpi','ok',
+      `✅ <b>Cargue completado — ${r.label}</b><br>`+
+      `${sem} OTD: <b>${r.otdPct.toFixed(1)}%</b> · Meta ≥ 90%<br>`+
+      `📦 Pedidos despachados: <b>${r.totalPedidos.toLocaleString('es-CO')}</b>`+
+      ` · ✅ A tiempo: <b>${r.pedidosATime}</b> · ❌ Tarde: <b>${r.pedidosTarde}</b><br>`+
+      `📅 Días: <b>${r.dias}</b>`+
+      (r.leadTimeProm!=null?` · ⏱️ Lead time prom.: <b>${r.leadTimeProm.toFixed(1)} días</b>`:'')
+    );
+    addLog(`✓ ${r.label}: OTD ${r.otdPct.toFixed(1)}% · ${r.pedidosATime}/${r.totalPedidos} a tiempo`,'ok');
+    cargarPeriodos();
+  }catch(e){
+    hideProg();
+    showRes('resKpi','err',`❌ <b>Error al cargar</b><br>${e.message}`);
+    addLog('✗ '+e.message,'err');
+  }
+  btn.disabled=false;
+}
+
+// ── Períodos cargados ──────────────────────────────────────────────────
+async function cargarPeriodos(){
+  const lista=document.getElementById('reproList');
+  try{
+    const res=await sb.rest('GET','kpi_otd_resumen?semana=is.null&order=periodo_id.asc');
+    if(!res||!res.length){
+      lista.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">No hay períodos cargados aún.</div>`;
+      return;
+    }
+    const lbl=id=>CONFIG.meses.find(m=>m.id===id)?.label||id;
+    lista.innerHTML=res.map(r=>`
+      <div class="repro-item">
+        <div class="repro-item-info">
+          <span class="repro-label">${lbl(r.periodo_id)}</span>
+          <span class="repro-stats">
+            OTD <b>${parseFloat(r.otd_pct||0).toFixed(1)}%</b> ·
+            <b>${(r.pedidos_atime||0)}</b>/<b>${(r.total_pedidos||0)}</b> pedidos a tiempo
+            ${r.lead_time_prom!=null?` · LT prom. <b>${parseFloat(r.lead_time_prom).toFixed(1)}d</b>`:''}
+          </span>
+        </div>
+        <button class="btn btn-sm btn-danger" style="touch-action:manipulation"
+          onclick="eliminarPeriodo('${r.periodo_id}','${lbl(r.periodo_id)}')">🗑️ Eliminar</button>
+      </div>`).join('');
+  }catch(e){
+    lista.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">Sin conexión a Supabase.</div>`;
+  }
+}
+
+async function eliminarPeriodo(periodoId,label){
+  if(!confirm(`⚠️ ¿Eliminar TODOS los datos OTD de "${label}"?\n\nEsta acción es irreversible.`))return;
+  try{
+    addLog(`Eliminando ${label}…`,'warn');
+    for(const t of['kpi_otd_resumen','kpi_otd_diario']){
+      await sb.rest('DELETE',`${t}?periodo_id=eq.${periodoId}`,null,{'Prefer':'return=minimal'});
+    }
+    addLog(`✓ ${label} eliminado`,'warn');
+    showRes('resRepro','warn',`🗑️ <b>${label} eliminado.</b> Puedes volver a cargarlo.`);
+    cargarPeriodos();
+  }catch(e){addLog('✗ '+e.message,'err');alert('Error: '+e.message);}
+}
+
+// ── Init ───────────────────────────────────────────────────────────────
+window.addEventListener('load',async()=>{
+  const user=await checkAuth('admin');if(!user)return;
+  renderUser();
+  const sel=document.getElementById('uploadPeriodo');
+  sel.innerHTML=CONFIG.meses.map((m,i)=>
+    `<option value="${m.id}" ${i===CONFIG.meses.length-1?'selected':''}>${m.label}</option>`
+  ).join('');
+  await cargarPeriodos();
+  const ol=document.getElementById('overlay');
+  setTimeout(()=>ol.classList.add('out'),200);
+  setTimeout(()=>ol.remove(),600);
+});
+</script>
+</body>
+</html>
