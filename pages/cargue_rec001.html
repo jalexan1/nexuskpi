@@ -553,12 +553,12 @@ async function reprocesarMes(mesId){
     const recalculados=rows.map(r=>{
       let tiempoH=null,slaOk=null,causal=null,esInc=false;
       if(!r.fecha){ causal='Fecha vacía'; esInc=true; }
-      else if(!r.hora_inicio&&!r.hora_cita){ causal='HORA CITA y HORA INICIO vacías'; esInc=true; }
+      else if(!r.hora_cita){ causal='HORA CITA vacía — sin ancla de inicio'; esInc=true; }
       else if(!r.hora_tt){ causal='HORA TT RECIBO vacía'; esInc=true; }
       else{
         try{
-          const horaRef=r.hora_cita||r.hora_inicio;
-          const [rh,rm]=horaRef.split(':').map(Number);
+          // Ancla siempre HORA CITA
+          const [rh,rm]=r.hora_cita.split(':').map(Number);
           const [th,tm]=r.hora_tt.split(':').map(Number);
           const [y,mo,d]=r.fecha.split('-').map(Number);
           const dtIni=new Date(y,mo-1,d,rh,rm,0);
