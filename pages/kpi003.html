@@ -269,6 +269,13 @@
 
     <!-- ══ COMPARATIVO ══════════════════════════════════════════════════════ -->
     <div class="tab-panel" id="tab-comparativo">
+      <div class="mes-bar">
+        <label>Mes A</label>
+        <select class="mes-sel" id="selA_comp" onchange="renderComparativo()"></select>
+        <span style="color:var(--dim);font-size:.8rem">vs</span>
+        <label>Mes B</label>
+        <select class="mes-sel" id="selB" onchange="renderComparativo()"></select>
+      </div>
       <div class="comp-grid" id="compWrap">
         <div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses para comparar</p></div>
       </div>
@@ -380,13 +387,15 @@ function poblarSelectores(periodos) {
     `<option value="${m}" ${j === periodos.length - 1 ? 'selected' : ''}>${lbl(m)}</option>`
   ).join('');
 
-  // Selector Mes B del comparativo
-  const selB = document.getElementById('selB');
-  if (selB) {
-    selB.innerHTML = periodos.map((m, j) =>
-      `<option value="${m}" ${j === periodos.length - 1 ? 'selected' : ''}>${lbl(m)}</option>`
-    ).join('');
-  }
+  // Selectores del comparativo
+  const selA_comp = document.getElementById('selA_comp');
+  const selB      = document.getElementById('selB');
+  if (selA_comp) selA_comp.innerHTML = periodos.map((m, j) =>
+    `<option value="${m}" ${j === periodos.length - 2 ? 'selected' : ''}>${lbl(m)}</option>`
+  ).join('');
+  if (selB) selB.innerHTML = periodos.map((m, j) =>
+    `<option value="${m}" ${j === periodos.length - 1 ? 'selected' : ''}>${lbl(m)}</option>`
+  ).join('');
 
   onMesChange();
 }
@@ -624,7 +633,7 @@ function renderSkus() {
 
 // ── Comparativo ─────────────────────────────────────────────────────────────
 function renderComparativo() {
-  const idA = document.getElementById('selA').value;
+  const idA = document.getElementById('selA_comp')?.value || document.getElementById('selA').value;
   const idB = document.getElementById('selB').value;
   const dA  = dataResumen[idA];
   const dB  = dataResumen[idB];
