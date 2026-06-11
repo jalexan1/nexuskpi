@@ -616,11 +616,38 @@ async function eliminarMes(mesId, label){
   if(!confirm(`⚠️ ¿Eliminar TODOS los datos de "${label}"?\n\nEsta acción es irreversible. Se borrarán todos los registros del mes de Supabase.\n\nPresiona Cancelar si tienes dudas.`)) return;
   try{
     addLog(`Eliminando ${label}…`,'warn');
-    // Borrar recepciones del mes
-    await sb.rest('DELETE',`kpi_recibo_recepciones?mes_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
+
+    // Verificar cuántos registros hay antes de borrar
+    const antes = await sb.rest('GET',`kpi_recibo_recepciones?mes_id=eq.${mesId}&select=id`);
+    addLog(`${label}: ${(antes||[]).length} registros encontrados para borrar`,'inf');
+
+    // Borrar recepciones en lotes de 100 para evitar timeout
+    if(antes && antes.length > 0){
+      const BATCH = 100;
+      let borrados = 0;
+      for(let i = 0; i < Math.ceil(antes.length / BATCH); i++){
+        await sb.rest('DELETE',`kpi_recibo_recepciones?mes_id=eq.${mesId}&id=lte.${antes[Math.min((i+1)*BATCH-1, antes.length-1)].id}`,null,{'Prefer':'return=minimal'});
+        borrados = Math.min((i+1)*BATCH, antes.length);
+        addLog(`Borrando lote ${i+1}… (${borrados}/${antes.length})`,'inf');
+      }
+      // Verificar que quedó vacío y borrar cualquier resto
+      await sb.rest('DELETE',`kpi_recibo_recepciones?mes_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
+    } else {
+      await sb.rest('DELETE',`kpi_recibo_recepciones?mes_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
+    }
+
     // Borrar resumen del mes
     await sb.rest('DELETE',`kpi_recibo_resumen?mes_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
-    addLog(`✓ ${label} eliminado completamente de Supabase`,'warn');
+
+    // Verificar que quedó limpio
+    const despues = await sb.rest('GET',`kpi_recibo_recepciones?mes_id=eq.${mesId}&select=id`);
+    const resumenDespues = await sb.rest('GET',`kpi_recibo_resumen?mes_id=eq.${mesId}&select=id`);
+
+    if((despues||[]).length > 0 || (resumenDespues||[]).length > 0){
+      throw new Error(`No se pudieron borrar todos los registros. Quedan ${(despues||[]).length} en recepciones y ${(resumenDespues||[]).length} en resumen. Verifica las políticas RLS en Supabase.`);
+    }
+
+    addLog(`✓ ${label} eliminado completamente — recepciones: 0, resumen: 0`,'warn');
     // Limpiar cuarentena si era del mes eliminado
     cuarentenaData=cuarentenaData.filter(r=>r.mes_id!==mesId);
     if(!cuarentenaData.length){
