@@ -144,8 +144,16 @@ function procesarConteoInvxIDLocal(datos, periodoId) {
     const desc     = String(r.Descripcion || '').trim();
     const ubic     = String(r.Ubicacion || '').trim();
     const operario = String(r.PersonaPrograma || '').trim();
-    const wms      = parseFloat(r.kantidadTeo_conteo1);
-    const fisica   = parseFloat(r.CantidadContab_Conteo1);
+
+    // ── Lógica de conteo: preferir Conteo 2 si existe con datos válidos ──────
+    // Conteo 2 es la corrección del Conteo 1 cuando hubo diferencia
+    // Columnas Conteo 2: fin_qtyTeorico_Conteo2 (WMS) y fin_qtyContabilizado_Conteo2 (físico)
+    const wms2    = parseFloat(r['fin_qtyTeorico_Conteo2']);
+    const fisica2 = parseFloat(r['fin_qtyContabilizado_Conteo2']);
+    const tieneConteo2 = !isNaN(wms2) && !isNaN(fisica2) && (wms2 > 0 || fisica2 > 0);
+
+    const wms    = tieneConteo2 ? wms2    : parseFloat(r.kantidadTeo_conteo1);
+    const fisica = tieneConteo2 ? fisica2 : parseFloat(r.CantidadContab_Conteo1);
 
     const causales = [];
     if (!ref)          causales.push('Referencia vacia');
