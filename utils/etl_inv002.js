@@ -6,7 +6,8 @@
  * USA sb.rest() del proyecto (definido en auth.js) — sin credenciales externas.
  * CORRE 100% en el browser. Sin dependencias de servidor.
  * Lee la hoja ConteoInvxID del WMS_BASE_CLICK_COSMETICS_MES.xlsx con SheetJS.
- * Filtra bodega = "021". Agrupa por Referencia (SKU unico). Calcula EI%.
+ * Filtra bodega = "021". Agrupa por Referencia + Ubicacion (una fila = una ubicacion). Calcula EI%.
+ * Autodetecta el periodo dominante desde la columna Fecha del Excel.
  *
  * USO DESDE admin.html:
  *   const resultado = await procesarInventario(file, periodoId, onProgress);
@@ -106,7 +107,26 @@ function getISOWeekInv(date) {
 // ─────────────────────────────────────────────
 // PROCESAR ConteoInvxID
 // ─────────────────────────────────────────────
+function autoDetectarPeriodoInv(datos) {
+  const conteoMes = {};
+  datos.forEach(r => {
+    const fecha = parsearFechaInv(r.Fecha);
+    if (fecha) {
+      const mes = fecha.slice(0, 7); // YYYY-MM
+      conteoMes[mes] = (conteoMes[mes] || 0) + 1;
+    }
+  });
+  const entries = Object.entries(conteoMes).sort((a, b) => b[1] - a[1]);
+  return entries.length > 0 ? entries[0][0] : null;
+}
+
 function procesarConteoInvxIDLocal(datos, periodoId) {
+  // Autodetectar el periodo predominante desde las fechas reales del archivo
+  const periodoDetectado = autoDetectarPeriodoInv(datos);
+  if (periodoDetectado && periodoDetectado !== periodoId) {
+    periodoId = periodoDetectado; // usar siempre la fecha predominante
+  }
+
   const filtrados = datos.filter(r => String(r.bodega || '').trim() === BODEGA_CLICK);
 
   if (filtrados.length === 0) {
@@ -146,10 +166,12 @@ function procesarConteoInvxIDLocal(datos, periodoId) {
       if (fecha < mapConteos[idConteo].fecha) mapConteos[idConteo].fecha = fecha;
     }
 
-    if (!mapConteos[idConteo].skus.has(ref)) {
-      mapConteos[idConteo].skus.set(ref, { ean, ref, desc, ubicacion: ubic, wms: 0, fisica: 0 });
+    // Clave: ref + ubicacion (cada fila del Excel = una referencia en una ubicación)
+    const clave = ref + '|' + ubic;
+    if (!mapConteos[idConteo].skus.has(clave)) {
+      mapConteos[idConteo].skus.set(clave, { ean, ref, desc, ubicacion: ubic, wms: 0, fisica: 0 });
     }
-    const entry = mapConteos[idConteo].skus.get(ref);
+    const entry = mapConteos[idConteo].skus.get(clave);
     entry.wms    += isNaN(wms)   ? 0 : wms;
     entry.fisica += isNaN(fisica) ? 0 : fisica;
   });
@@ -164,8 +186,8 @@ function procesarConteoInvxIDLocal(datos, periodoId) {
     const semana     = `Sem ${getISOWeekInv(fecha_date)}-${fecha_date.getFullYear()}`;
     let total_skus = 0, skus_exactos = 0, skus_diferencia = 0;
 
-    skus.forEach((sku, ref) => {
-      const { tipo, familia } = derivarFamilia(ref);
+    skus.forEach((sku, clave) => {
+      const { tipo, familia } = derivarFamilia(sku.ref);
       const es_exacto = sku.wms === sku.fisica;
       total_skus++;
       if (es_exacto) skus_exactos++;
@@ -189,7 +211,7 @@ function procesarConteoInvxIDLocal(datos, periodoId) {
     ? parseFloat(((totalExactos / totalSKUs) * 100).toFixed(2)) : 0;
 
   return { conteosMeta, detalles, inconsistentes,
-    stats: { periodoId, totalSKUs, totalExactos, totalDifs, eiPctGlobal,
+    stats: { periodoId, periodoDetectado, totalSKUs, totalExactos, totalDifs, eiPctGlobal,
              semaforo: semaforoInv(eiPctGlobal), totalInconsistentes: inconsistentes.length } };
 }
 
@@ -247,6 +269,8 @@ async function procesarInventario(file, periodoId, onProgress) {
   onProgress(`Procesando hoja "${HOJA_CONTEO}"…`);
   const datosConteo = leerHojaInv(workbook, HOJA_CONTEO);
   const { conteosMeta, detalles, inconsistentes, stats } = procesarConteoInvxIDLocal(datosConteo, periodoId);
+  // Usar el periodo autodetectado (fecha dominante del archivo)
+  periodoId = stats.periodoId;
 
   onProgress(`ETL: ${stats.totalSKUs} SKUs · ${stats.totalExactos} exactos · EI = ${stats.eiPctGlobal}%`);
 
@@ -267,6 +291,8 @@ async function procesarInventario(file, periodoId, onProgress) {
     totalExactos:       stats.totalExactos,
     totalDifs:          stats.totalDifs,
     semaforo:           stats.semaforo,
+    periodoId:          stats.periodoId,
+    periodoDetectado:   stats.periodoDetectado,
     inconsistentesCount: inconsistentes.length,
     inconsistentes,
     conteosMeta,

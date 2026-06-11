@@ -270,15 +270,29 @@ async function subirInventario(){
     showProg('progInv','barInv','progInvTxt',100,'Completado');
     hideProg('progInv');
 
+    // Ajuste 3: período autodetectado vs selector
+    const periodoFinal = resultado.periodoId || mesId;
+    const periodoDetect = resultado.periodoDetectado;
+    const labelFinal  = CONFIG.meses.find(m=>m.id===periodoFinal)?.label || periodoFinal;
+    const labelSel    = CONFIG.meses.find(m=>m.id===mesId)?.label || mesId;
+    const mesConflicto = periodoDetect && periodoDetect !== mesId;
+
+    if (mesConflicto) {
+      addLog(`⚠️ Mes corregido automáticamente: ${labelSel} → ${labelFinal} (fecha predominante del archivo)`,'warn');
+    }
+
     const sem = resultado.semaforo;
+    const msgConflicto = mesConflicto
+      ? `<br>ℹ️ Registrado como <b>${labelFinal}</b> (mes autodetectado del archivo · selector tenía ${labelSel})`
+      : '';
     showRes('resInv','ok',
-      `✅ <b>Cargue completado</b><br>`+
-      `📦 SKUs procesados: <b>${resultado.totalSKUs}</b><br>`+
-      `✅ SKUs exactos: <b>${resultado.totalExactos}</b> · ❌ Con diferencia: <b>${resultado.totalDifs}</b><br>`+
+      `✅ <b>Cargue completado</b>${msgConflicto}<br>`+
+      `📦 Referencias procesadas: <b>${resultado.totalSKUs}</b> (ref × ubicación)<br>`+
+      `✅ Exactas: <b>${resultado.totalExactos}</b> · ❌ Con diferencia: <b>${resultado.totalDifs}</b><br>`+
       `${sem.emoji} EI%: <b>${resultado.eiPctGlobal}%</b> — Estado: <b>${sem.estado}</b><br>`+
       `⚠️ En cuarentena: <b>${resultado.inconsistentesCount}</b>`
     );
-    addLog(`✓ Período ${mesId}: EI ${resultado.eiPctGlobal}% · ${resultado.totalSKUs} SKUs · ${resultado.inconsistentesCount} cuarentena`,'ok');
+    addLog(`✓ Período ${labelFinal}: EI ${resultado.eiPctGlobal}% · ${resultado.totalSKUs} refs · ${resultado.inconsistentesCount} cuarentena`,'ok');
 
     mostrarCuarentena(resultado.inconsistentes);
     cargarPeriodos();
