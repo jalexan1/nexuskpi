@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Cargar KPI-DES-003</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <style>
+    .page{display:flex;flex-direction:column;min-height:100dvh}
+    .content{flex:1;padding:1.5rem;max-width:920px;margin:0 auto;width:100%}
+    .pg-hdr{margin-bottom:1.5rem}
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:.3rem}
+    .pg-hdr h1{font-size:clamp(1.2rem,3vw,1.5rem);font-weight:800}
+    .pg-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem}
+
+    /* ── Cards ── */
+    .cargue-card,.repro-card,.log-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.5rem;margin-bottom:1.25rem}
+    .cargue-card h2,.repro-card h2,.log-card h2{font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+    .repro-card{border-color:rgba(0,212,255,.18)}
+    .card-sub{font-size:.78rem;color:var(--muted);margin-top:-.5rem;margin-bottom:.85rem;line-height:1.5}
+
+    /* ── Meta row ── */
+    .meta-row{display:flex;gap:.65rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
+    .meta-row label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+    .meta-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:.4rem .75rem;outline:none;cursor:pointer;min-width:140px}
+    .meta-sel:focus{border-color:var(--accent)}
+
+    /* ── Drop zone ── */
+    .drop-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:1.75rem 1.5rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:1rem}
+    .drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:rgba(0,212,255,.04)}
+    .drop-zone input{display:none}
+    .drop-icon{font-size:1.8rem;margin-bottom:.4rem}
+    .drop-txt{font-size:.85rem;color:var(--muted);margin-bottom:.2rem}
+    .drop-nombre{font-size:.82rem;color:var(--text);font-weight:600;margin-bottom:.25rem}
+    .drop-limite{display:inline-block;background:rgba(255,176,32,.12);color:var(--warn);border:1px solid rgba(255,176,32,.3);border-radius:6px;font-size:.72rem;font-weight:600;padding:.12rem .55rem}
+    .drop-picked{font-size:.8rem;color:var(--accent);font-weight:600;margin-top:.5rem;word-break:break-all}
+
+    /* ── Botón cargue ── */
+    .btn-cargue{width:100%;padding:.85rem;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:var(--r-sm);color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:transform .15s,opacity .2s;min-height:48px;touch-action:manipulation}
+    .btn-cargue:hover{transform:translateY(-1px);opacity:.92}
+    .btn-cargue:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+    /* ── Progress ── */
+    .prog-box{display:none;background:var(--surface2);border-radius:var(--r-sm);padding:.75rem 1rem;margin-top:.75rem;font-size:.8rem}
+    .prog-box.show{display:block}
+    .prog-bar-wrap{height:6px;background:var(--surface3);border-radius:3px;margin-top:.4rem;overflow:hidden}
+    .prog-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .3s}
+
+    /* ── Result ── */
+    .result-box{display:none;border-radius:var(--r-sm);padding:.8rem 1rem;font-size:.82rem;margin-top:.75rem;line-height:1.65}
+    .result-box.show{display:block}
+    .result-box.ok  {background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);color:var(--ok)}
+    .result-box.warn{background:rgba(255,176,32,.08);border:1px solid rgba(255,176,32,.25);color:var(--warn)}
+    .result-box.err {background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25);color:var(--error)}
+
+    /* ── Reprocesar ── */
+    .repro-list{display:flex;flex-direction:column;gap:.45rem;margin-bottom:.85rem}
+    .repro-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:.6rem .85rem;gap:.75rem;flex-wrap:wrap}
+    .repro-item-info{display:flex;flex-direction:column;gap:.1rem}
+    .repro-label{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700}
+    .repro-stats{font-size:.7rem;color:var(--muted)}
+    .repro-stats b{color:var(--text)}
+
+    /* ── Log ── */
+    .log-area{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:.7rem;font-family:'Courier New',monospace;font-size:.7rem;color:var(--muted);max-height:220px;overflow-y:auto;word-break:break-word}
+    .lg-ok{color:var(--ok)}.lg-err{color:var(--error)}.lg-inf{color:var(--accent)}.lg-warn{color:var(--warn)}
+    .log-btns{display:flex;gap:.45rem;margin-top:.6rem;flex-wrap:wrap}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="admin.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--warn)">⚙️ Admin</span>
+    <span class="topbar-sep">/</span><span class="topbar-title">🏭 KPI-DES-003</span>
+    <div class="topbar-spacer"></div>
+    <a href="admin.html" class="btn btn-sm" style="touch-action:manipulation">← Volver</a>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')" style="touch-action:manipulation">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')" style="touch-action:manipulation">☀️</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="pg-hdr">
+      <div class="eyebrow">🏭 Carga de Datos</div>
+      <h1>KPI-DES-003 — Nivel de Servicio CEDI</h1>
+      <p>Carga el archivo mensual de despachos. El período se detecta automáticamente desde las fechas del Excel.</p>
+    </div>
+
+    <!-- ── Cargue ── -->
+    <div class="cargue-card">
+      <h2>⬆️ Cargar KPI-DES-003</h2>
+      <p class="card-sub">
+        El ETL detecta el período dominante desde la columna <b>DIA</b> del Excel.
+        Si el archivo pertenece a un período diferente al seleccionado, se muestra un aviso de confirmación.
+      </p>
+      <div class="meta-row">
+        <label>Período de referencia</label>
+        <select class="meta-sel" id="uploadPeriodo"></select>
+        <span style="font-size:.7rem;color:var(--muted)">(se autodetecta desde el archivo)</span>
+      </div>
+      <div class="drop-zone" id="dropKpi"
+           onclick="document.getElementById('fileKpi').click()"
+           ondragover="onDragOver(event,'dropKpi')"
+           ondragleave="onDragLeave('dropKpi')"
+           ondrop="onDrop(event,'fileKpi','dropKpi')">
+        <input type="file" id="fileKpi" accept=".xlsx,.xls" onchange="onFilePicked(this)"/>
+        <div class="drop-icon">🏭</div>
+        <p class="drop-txt">Toca para seleccionar o arrastra el archivo</p>
+        <p class="drop-nombre">NS CEDI MES AÑO.xlsx</p>
+        <span class="drop-limite">⚠️ Hojas requeridas: ALISTAMIENTO · PICKING WMS</span>
+        <p class="drop-picked" id="lblKpi"></p>
+      </div>
+      <button class="btn-cargue" id="btnCargar" onclick="subirKpi()">⬆️ Cargar KPI-DES-003</button>
+      <div class="prog-box" id="progKpi">
+        <span id="progKpiTxt">Procesando…</span>
+        <div class="prog-bar-wrap"><div class="prog-bar" id="barKpi" style="width:0%"></div></div>
+      </div>
+      <div class="result-box" id="resKpi"></div>
+    </div>
+
+    <!-- ── Reprocesar ── -->
+    <div class="repro-card">
+      <h2>🔄 Períodos Cargados</h2>
+      <p class="card-sub">Períodos con datos en Supabase. Puedes eliminar un período para volver a cargarlo.</p>
+      <div class="repro-list" id="reproList">
+        <div style="text-align:center;color:var(--muted);font-size:.8rem;padding:.5rem">Cargando períodos…</div>
+      </div>
+      <div class="prog-box" id="progRepro">
+        <span id="progReproTxt">Procesando…</span>
+        <div class="prog-bar-wrap"><div class="prog-bar" id="barRepro" style="width:0%"></div></div>
+      </div>
+      <div class="result-box" id="resRepro"></div>
+    </div>
+
+    <!-- ── Log ── -->
+    <div class="log-card">
+      <h2>📋 Log de Cargues</h2>
+      <div class="log-area" id="etlLog"></div>
+      <div class="log-btns">
+        <button class="btn" onclick="loadEtlLog()" style="touch-action:manipulation">🔄 Refrescar</button>
+        <button class="btn" onclick="document.getElementById('etlLog').innerHTML=''" style="touch-action:manipulation">🗑️ Limpiar vista</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script src="../utils/etl_des003.js"></script>
+<script>
+applyTheme();
+
+// ── Drag & Drop ──────────────────────────────────────────────────────────
+function onDragOver(e, id) { e.preventDefault(); document.getElementById(id).classList.add('over'); }
+function onDragLeave(id)   { document.getElementById(id).classList.remove('over'); }
+function onDrop(e, inputId, zoneId) {
+  e.preventDefault(); onDragLeave(zoneId);
+  const f = e.dataTransfer.files[0]; if (!f) return;
+  const dt = new DataTransfer(); dt.items.add(f);
+  document.getElementById(inputId).files = dt.files;
+  document.getElementById(inputId).dispatchEvent(new Event('change'));
+}
+function onFilePicked(input) {
+  const f = input.files[0]; if (!f) return;
+  document.getElementById('lblKpi').textContent = `📎 ${f.name}  (${(f.size/1024/1024).toFixed(1)} MB)`;
+}
+
+// ── Helpers UI ────────────────────────────────────────────────────────────
+function showProg(pId, bId, tId, pct, msg) {
+  document.getElementById(pId).classList.add('show');
+  document.getElementById(bId).style.width = pct + '%';
+  document.getElementById(tId).textContent = msg;
+}
+function hideProg(id) { setTimeout(() => document.getElementById(id).classList.remove('show'), 1200); }
+function showRes(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = `result-box show ${type}`;
+  el.innerHTML = msg;
+}
+function addLog(msg, tipo = 'inf') {
+  const log = document.getElementById('etlLog');
+  const d = document.createElement('div'); d.className = 'lg-' + tipo;
+  d.textContent = `[${new Date().toLocaleTimeString('es-CO')}] ${msg}`;
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+}
+
+// ── Cargue principal ──────────────────────────────────────────────────────
+async function subirKpi() {
+  const file            = document.getElementById('fileKpi').files[0];
+  const periodoSelector = document.getElementById('uploadPeriodo').value;
+
+  if (!file) { showRes('resKpi', 'warn', '⚠️ Selecciona un archivo primero.'); return; }
+
+  const btn = document.getElementById('btnCargar');
+  btn.disabled = true;
+  addLog(`Iniciando cargue: ${file.name}…`, 'inf');
+  showProg('progKpi', 'barKpi', 'progKpiTxt', 5, 'Leyendo archivo…');
+
+  try {
+    // El ETL autodetecta el período; pasamos el selector como referencia
+    let progPct = 5;
+    const onProgress = msg => {
+      progPct = Math.min(progPct + 8, 88);
+      showProg('progKpi', 'barKpi', 'progKpiTxt', progPct, msg);
+      addLog(msg, msg.startsWith('✅') || msg.startsWith('🏁') ? 'ok' : msg.startsWith('⚠') ? 'warn' : 'inf');
+    };
+
+    showProg('progKpi', 'barKpi', 'progKpiTxt', 12, 'Analizando hojas Excel…');
+    const result = await procesarNivelServicio(file, periodoSelector, onProgress);
+
+    const { periodoId, periodoDetectado, nsPct, undPedidas, undDesp, undCortadas,
+            numPedidos, semanas, dias, skus, sinMatch, conCapeo } = result;
+
+    const labelPeriodo = CONFIG.meses.find(m => m.id === periodoId)?.label || periodoId;
+    const labelSel     = CONFIG.meses.find(m => m.id === periodoSelector)?.label || periodoSelector;
+
+    // ── Aviso de conflicto de período ──────────────────────────────────────
+    if (periodoDetectado && periodoDetectado !== periodoSelector) {
+      const continuar = confirm(
+        `⚠️ Seleccionó el período "${labelSel}" pero las fechas del archivo corresponden a "${labelPeriodo}".\n\n` +
+        `¿Desea continuar y registrarlo como "${labelPeriodo}" (recomendado)?\n\n` +
+        `Presione Aceptar para registrar como ${labelPeriodo}.\nPresione Cancelar para revisar el archivo.`
+      );
+      if (!continuar) {
+        hideProg('progKpi');
+        showRes('resKpi', 'warn',
+          `⚠️ Cargue detenido. Las fechas del archivo corresponden a <b>${labelPeriodo}</b>. ` +
+          `Revisa la selección del período y vuelve a intentarlo.`);
+        btn.disabled = false; return;
+      }
+      addLog(`Período corregido automáticamente: ${labelSel} → ${labelPeriodo}`, 'warn');
+    }
+
+    showProg('progKpi', 'barKpi', 'progKpiTxt', 95, 'Registrando en log…');
+    try {
+      await sb.rest('POST', 'etl_log', [{
+        run_id:          `des003-${Date.now()}`,
+        mes_id:          periodoId,
+        archivo:         file.name,
+        estado:          'completado',
+        docs_procesados: numPedidos,
+        docs_insertados: numPedidos,
+        docs_actualizados: 0,
+        completado_at:   new Date().toISOString(),
+      }], { 'Prefer': 'return=minimal' });
+    } catch(e) { addLog('Advertencia etl_log: ' + e.message, 'warn'); }
+
+    showProg('progKpi', 'barKpi', 'progKpiTxt', 100, 'Completado');
+    hideProg('progKpi');
+
+    const sem = nsPct >= 98 ? '🟢' : nsPct >= 90 ? '🟡' : '🔴';
+    const msgConflicto = (periodoDetectado && periodoDetectado !== periodoSelector)
+      ? `<br>ℹ️ Registrado como <b>${labelPeriodo}</b> (período corregido automáticamente)` : '';
+
+    showRes('resKpi', 'ok',
+      `✅ <b>Cargue completado — ${labelPeriodo}</b>${msgConflicto}<br>` +
+      `${sem} NS: <b>${nsPct.toFixed(2)}%</b><br>` +
+      `📦 Pedidos B2B: <b>${numPedidos.toLocaleString('es-CO')}</b> · ` +
+      `Und. pedidas: <b>${undPedidas.toLocaleString('es-CO')}</b><br>` +
+      `✅ Despachadas: <b>${undDesp.toLocaleString('es-CO')}</b> · ` +
+      `✂️ Cortadas: <b>${undCortadas.toLocaleString('es-CO')}</b><br>` +
+      `📅 Semanas: <b>${semanas}</b> · 📆 Días: <b>${dias}</b> · 🏷️ SKUs: <b>${skus}</b>` +
+      (sinMatch > 0 ? `<br>⚠️ Sin match WMS: <b>${sinMatch}</b> pedidos` : '') +
+      (conCapeo  > 0 ? `<br>ℹ️ Con capeo: <b>${conCapeo}</b> pedidos` : '')
+    );
+    addLog(`✓ ${labelPeriodo}: NS ${nsPct.toFixed(2)}% · ${numPedidos} pedidos · ${skus} SKUs`, 'ok');
+    cargarPeriodos();
+
+  } catch(e) {
+    hideProg('progKpi');
+    showRes('resKpi', 'err',
+      `❌ <b>Error al cargar</b><br>${e.message}<br>` +
+      `<small style="color:var(--muted)">Verifica que el archivo tenga las hojas ALISTAMIENTO y PICKING WMS.</small>`);
+    addLog('✗ ' + e.message, 'err');
+  }
+  btn.disabled = false;
+}
+
+// ── Períodos cargados ─────────────────────────────────────────────────────
+async function cargarPeriodos() {
+  const lista = document.getElementById('reproList');
+  try {
+    const res = await sb.rest('GET', 'kpi_ns_resumen?semana=is.null&order=periodo_id.asc');
+    if (!res || !res.length) {
+      lista.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">No hay períodos cargados aún.</div>`;
+      return;
+    }
+    const lbl = id => CONFIG.meses.find(m => m.id === id)?.label || id;
+    lista.innerHTML = res.map(r => `
+      <div class="repro-item">
+        <div class="repro-item-info">
+          <span class="repro-label">${lbl(r.periodo_id)}</span>
+          <span class="repro-stats">
+            <b>${(r.num_pedidos||0).toLocaleString('es-CO')}</b> pedidos ·
+            NS <b>${parseFloat(r.ns_pct||0).toFixed(2)}%</b> ·
+            Und. pedidas: <b>${(r.und_pedidas||0).toLocaleString('es-CO')}</b>
+          </span>
+        </div>
+        <div style="display:flex;gap:.35rem">
+          <button class="btn btn-sm btn-danger" style="touch-action:manipulation"
+            onclick="eliminarPeriodo('${r.periodo_id}','${lbl(r.periodo_id)}')">🗑️ Eliminar</button>
+        </div>
+      </div>`).join('');
+  } catch(e) {
+    lista.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">Sin conexión a Supabase.</div>`;
+  }
+}
+
+async function eliminarPeriodo(periodoId, label) {
+  if (!confirm(`⚠️ ¿Eliminar TODOS los datos de "${label}"?\n\nEsta acción es irreversible.\n\nPresiona Cancelar si tienes dudas.`)) return;
+  try {
+    addLog(`Eliminando ${label}…`, 'warn');
+    for (const tabla of ['kpi_ns_resumen', 'kpi_ns_diario', 'kpi_ns_skus']) {
+      await sb.rest('DELETE', `${tabla}?periodo_id=eq.${periodoId}`, null, { 'Prefer': 'return=minimal' });
+    }
+    addLog(`✓ ${label} eliminado de Supabase`, 'warn');
+    showRes('resRepro', 'warn', `🗑️ <b>${label} eliminado.</b> Puedes volver a cargarlo.`);
+    cargarPeriodos();
+  } catch(e) {
+    addLog('✗ Error al eliminar: ' + e.message, 'err');
+    alert('Error al eliminar el período: ' + e.message);
+  }
+}
+
+// ── Log ETL ───────────────────────────────────────────────────────────────
+async function loadEtlLog() {
+  try {
+    const rows = await sb.rest('GET', 'etl_log?order=iniciado_at.desc&limit=20');
+    if (!rows || !rows.length) { addLog('Sin registros de cargue aún.', 'inf'); return; }
+    rows
+      .filter(r => r.mes_id && (r.archivo || '').toLowerCase().includes('ns') || r.mes_id)
+      .slice(0, 10)
+      .forEach(r => {
+        const dt = new Date(r.iniciado_at).toLocaleString('es-CO');
+        const tp = r.estado === 'completado' ? 'ok' : r.estado === 'error' ? 'err' : 'inf';
+        addLog(`[${dt}] ${r.mes_id||'—'} | ${r.archivo||'—'} | ${r.estado} | docs:${r.docs_procesados||0}`, tp);
+      });
+  } catch(e) { addLog('No se pudo cargar el historial: ' + e.message, 'warn'); }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  const user = await checkAuth('admin'); if (!user) return;
+  renderUser();
+  const sel = document.getElementById('uploadPeriodo');
+  sel.innerHTML = CONFIG.meses
+    .map((m, i) => `<option value="${m.id}" ${i === CONFIG.meses.length - 1 ? 'selected' : ''}>${m.label}</option>`)
+    .join('');
+  await cargarPeriodos();
+  loadEtlLog();
+  const ol = document.getElementById('overlay');
+  setTimeout(() => ol.classList.add('out'), 200);
+  setTimeout(() => ol.remove(), 600);
+});
+</script>
+</body>
+</html>

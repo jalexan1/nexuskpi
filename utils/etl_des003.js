@@ -1,12 +1,14 @@
 /**
  * etl_des003.js — ETL KPI-DES-003 Nivel de Servicio CEDI (NS %)
  * NexusKPI · Logistics & Service × Click Cosmetics
- * Versión 1.3 · Junio 2026
+ * Versión 1.4 · Junio 2026
  *
  * REGLAS PERMANENTES:
  *  ✅ Sin "export" — script clásico, funciones globales
  *  ✅ Usa sb.rest() — sin credenciales como parámetros
- *  ✅ Firma: procesarNivelServicio(file, periodoId, onProgress)
+ *  ✅ Firmas públicas:
+ *       procesarNS(file, periodoId, onProgress)          ← alias principal (cargue_des003)
+ *       procesarNivelServicio(file, periodoId, onProgress) ← alias legacy
  *
  * LÓGICA ETL (validada contra datos reales Abril 2026 → NS 98.75%):
  *  JOIN: ALISTAMIENTO.Comprobante = PICKING_WMS.PedidoWMS  (match directo)
@@ -318,10 +320,18 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
   log(`   ${totalPedidas.toLocaleString()} pedidas | ${totalDesp.toLocaleString()} desp | ${totalCortadas.toLocaleString()} cortadas`);
 
   return {
-    periodoId, nsPct: parseFloat(nsPeriodo.toFixed(2)),
+    periodoId, periodoDetectado,
+    nsPct: parseFloat(nsPeriodo.toFixed(2)),
     estado: _semaforoNS(nsPeriodo),
     undPedidas: totalPedidas, undDesp: totalDesp, undCortadas: totalCortadas,
     numPedidos: totalPedidos, semanas: semanaMap.size,
     dias: diarioMap.size, skus: skuMap.size, sinMatch, conCapeo,
   };
+}
+
+// ── Alias público requerido por cargue_des003.html ────────────────────────
+// procesarNS es el punto de entrada oficial; procesarNivelServicio se conserva
+// por compatibilidad con llamadas existentes en la plataforma.
+function procesarNS(file, periodoId, onProgress) {
+  return procesarNivelServicio(file, periodoId, onProgress);
 }

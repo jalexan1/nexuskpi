@@ -146,6 +146,7 @@
     <span class="topbar-sep">/</span>
     <span class="topbar-title">KPI-DES-003</span>
     <div class="topbar-spacer"></div>
+    <a href="menu.html" class="btn btn-sm" style="font-size:.75rem">← Menú</a>
     <div class="theme-bar">
       <button class="theme-btn" onclick="setTheme('')">🌙</button>
       <button class="theme-btn" onclick="setTheme('light')">☀️</button>
@@ -155,10 +156,10 @@
 
   <!-- ══ TABS ══════════════════════════════════════════════════════════════ -->
   <nav class="tabs-nav">
-    <button class="tab-btn on" onclick="tab('resumen',this)">📊 Resumen</button>
-    <button class="tab-btn"   onclick="tab('comparativo',this)">⚖️ Comparativo</button>
-    <button class="tab-btn"   onclick="tab('detalle',this)">📋 Detalle Diario</button>
-    <button class="tab-btn"   onclick="tab('skus',this)">🏷️ SKUs con Cortes</button>
+    <button class="tab-btn on" onclick="tab('resumen',this)"    style="touch-action:manipulation">📊 Resumen</button>
+    <button class="tab-btn"   onclick="tab('detalle',this)"     style="touch-action:manipulation">📋 Detalle Diario</button>
+    <button class="tab-btn"   onclick="tab('skus',this)"        style="touch-action:manipulation">🏷️ SKUs con Cortes</button>
+    <button class="tab-btn"   onclick="tab('comparativo',this)" style="touch-action:manipulation">⚖️ Comparativo</button>
   </nav>
 
   <!-- ══ CONTENT ════════════════════════════════════════════════════════════ -->
