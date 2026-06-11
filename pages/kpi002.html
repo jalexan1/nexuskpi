@@ -98,6 +98,14 @@
     .wt .tr-tot{background:var(--surface2);font-weight:700}
     .wt .tr-tot td{border-bottom:none}
 
+    /* ── Tabs nav ── */
+    .tabs-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 1.25rem;gap:.1rem;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--topbar-h);z-index:90;}
+    .tabs-nav::-webkit-scrollbar{display:none}
+    .tab-btn{padding:.8rem .9rem;font-size:.8rem;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;min-height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+    .tab-btn:hover{color:var(--text)}
+    .tab-btn.on{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-panel{display:none}.tab-panel.on{display:block}
+
     /* ── Error / Loading ── */
     .err-box{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25);border-radius:var(--r);padding:1rem;color:var(--error);font-size:.82rem;display:none}
     .err-box.show{display:block}
@@ -113,12 +121,19 @@
     <span class="topbar-sep">/</span>
     <span class="topbar-title">KPI-INV-002</span>
     <div class="topbar-spacer"></div>
+    <a href="menu.html" class="btn btn-sm" style="font-size:.75rem">← Menú</a>
     <div class="theme-bar">
       <button class="theme-btn" onclick="setTheme('')">🌙</button>
       <button class="theme-btn" onclick="setTheme('light')">☀️</button>
     </div>
     <div class="topbar-user" id="topbarUser"></div>
   </header>
+
+  <nav class="tabs-nav">
+    <button class="tab-btn on" onclick="tab('dashboard',this)">📊 Dashboard</button>
+    <button class="tab-btn"   onclick="tab('conteos',this)">📋 Conteos</button>
+    <button class="tab-btn"   onclick="tab('skus',this)">🔍 SKUs</button>
+  </nav>
 
   <main class="content">
 
@@ -143,6 +158,9 @@
 
     <!-- Error box -->
     <div class="err-box" id="error-box"><span id="error-msg"></span></div>
+
+    <!-- ── TAB: Dashboard ── -->
+    <div class="tab-panel on" id="tab-dashboard">
 
     <!-- ── HERO ── -->
     <div class="hero" id="dashboard" style="display:none">
@@ -196,6 +214,11 @@
       </div>
     </div>
 
+    </div><!-- /tab-dashboard -->
+
+    <!-- ── TAB: Conteos ── -->
+    <div class="tab-panel" id="tab-conteos">
+
     <!-- ── TABLA CONTEOS ── -->
     <div class="sec-card" id="sec-tabla" style="display:none">
       <div class="sec-title">
@@ -216,6 +239,11 @@
         </table>
       </div></div>
     </div>
+
+    </div><!-- /tab-conteos -->
+
+    <!-- ── TAB: SKUs ── -->
+    <div class="tab-panel" id="tab-skus">
 
     <!-- ── RANKINGS ── -->
     <div class="ranks-2col" id="sec-ranks" style="display:none">
@@ -280,6 +308,8 @@
         </div></div>
       </div>
     </div>
+
+    </div><!-- /tab-skus -->
 
   </main>
 </div>
@@ -560,6 +590,15 @@ function toggleDetalle() {
   const vis = w.style.display !== 'none';
   w.style.display = vis ? 'none' : '';
   lbl.textContent = vis ? '▼ Mostrar' : '▲ Ocultar';
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+function tab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
+  const panel = document.getElementById('tab-' + id);
+  if (panel) panel.classList.add('on');
+  btn.classList.add('on');
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────
