@@ -15,7 +15,9 @@ function tiempoEfectivoHoras(dtIni,dtFin){
   return h>0?h:null;
 }
 function parseHoraTT(val,mesId){
-  if(mesId==='2026-03'||(typeof val==='string'&&/^\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$/.test(String(val).trim()))){
+  // Detectar formato string DD-MM-AA-HH-MM sin importar el mes
+  // Abril 2026 también usa este formato en HORA TT RECIBO
+  if(typeof val==='string'&&/^\d{2}-\d{2}-\d{2}-\d{2}-\d{2}$/.test(String(val).trim())){
     const p=String(val).trim().split('-');
     if(p.length===5) return {fecha:new Date(2000+parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])),h:parseInt(p[3]),m:parseInt(p[4])};
   }
