@@ -402,7 +402,12 @@ function poblarSelectores(periodos) {
   onMesChange();
 }
 
-function onMesChange() { renderResumen(); }
+function onMesChange() {
+  renderResumen();
+  // Actualizar también Detalle y SKUs si ya están activos
+  if (document.getElementById('tab-detalle').classList.contains('on'))  renderDetalleDiario();
+  if (document.getElementById('tab-skus').classList.contains('on'))     renderSkus();
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function fmt(n)    { return (n || 0).toLocaleString('es-CO'); }
