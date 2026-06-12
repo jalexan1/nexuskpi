@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — KPI-DES-008 · Lead Time</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    /* ── Variables de color del dashboard ── */
+    :root{
+      --d-navy:#1B3A6B; --d-teal:#0D7A5F; --d-green:#1A8754;
+      --d-amber:#D97706; --d-red:#C0392B; --d-muted:#6B7280;
+    }
+
+    /* ── Tabs principales (meses) ── */
+    .tabs-main{background:var(--surface);border-bottom:1px solid var(--border);
+      position:sticky;top:var(--topbar-h);z-index:90}
+    .tabs-bar{display:flex;gap:2px;padding:0 1.25rem;overflow-x:auto;scrollbar-width:none}
+    .tabs-bar::-webkit-scrollbar{display:none}
+    .tab-main-btn{background:none;border:none;cursor:pointer;
+      padding:.75rem 1.1rem;font-size:.82rem;font-weight:600;color:var(--muted);
+      border-bottom:3px solid transparent;margin-bottom:-1px;
+      display:flex;align-items:center;gap:.4rem;transition:all .15s;
+      white-space:nowrap;min-height:44px;touch-action:manipulation;
+      -webkit-tap-highlight-color:transparent}
+    .tab-main-btn:hover{color:var(--text)}
+    .tab-main-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-panel-main{display:none;padding:1.25rem;max-width:1320px;margin:0 auto}
+    .tab-panel-main.active{display:block}
+
+    /* ── Sub-tabs proceso ── */
+    .subtabs-bar{display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+    .subtab-lbl{font-size:.62rem;font-weight:700;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.1em;margin-right:.2rem;white-space:nowrap}
+    .subtab-btn{background:var(--surface);border:1.5px solid var(--border2);
+      cursor:pointer;padding:.35rem .85rem;font-size:.78rem;font-weight:600;
+      color:var(--muted);border-radius:20px;transition:all .15s;white-space:nowrap;
+      touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    .subtab-btn:hover{border-color:var(--accent);color:var(--text)}
+    .subtab-btn.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+    .subtab-panel{display:none}.subtab-panel.active{display:block}
+
+    /* ── Info banner ── */
+    .info-banner{background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.25);
+      border-radius:var(--r);padding:.7rem 1rem;margin-bottom:1rem;
+      font-size:.78rem;color:var(--accent);display:flex;align-items:flex-start;gap:.5rem;
+      line-height:1.5}
+    .info-banner b{color:var(--text)}
+
+    /* ── Hero: semáforo + métricas ── */
+    .hero{display:grid;grid-template-columns:280px 1fr;gap:1rem;margin-bottom:1rem}
+    @media(max-width:899px){.hero{grid-template-columns:1fr}}
+
+    /* ── Semáforo card ── */
+    .semaforo-card{background:var(--surface);border:2px solid var(--border);
+      border-radius:var(--r);padding:1.5rem 1.25rem;
+      display:flex;flex-direction:column;align-items:center;gap:.6rem;text-align:center}
+    .sem-label{font-size:.6rem;font-weight:700;letter-spacing:.15em;
+      color:var(--muted);text-transform:uppercase}
+    .sem-value{font-size:clamp(3.5rem,8vw,4.5rem);font-weight:900;line-height:1}
+    .sem-unit{font-size:1.1rem;color:var(--muted);margin-left:1px}
+    .sem-meta{font-size:.72rem;color:var(--muted)}
+    .sem-pill{font-weight:700;font-size:.82rem;padding:.35rem 1.1rem;
+      border-radius:20px;display:flex;align-items:center;gap:.35rem;border:2px solid}
+    .pill-ok  {background:rgba(26,135,84,.12);color:#1A8754;border-color:#1A8754}
+    .pill-alr {background:rgba(217,119,6,.12);color:#D97706;border-color:#D97706}
+    .pill-crit{background:rgba(192,57,43,.12);color:#C0392B;border-color:#C0392B}
+    .sem-pbar-wrap{width:100%;background:var(--surface3);border-radius:4px;height:7px;overflow:hidden}
+    .sem-pbar{height:7px;border-radius:4px;transition:width .5s}
+    .sem-formula{background:var(--surface2);border:1px solid var(--border);
+      border-radius:var(--r-sm);padding:.4rem .85rem;font-size:.72rem;
+      font-weight:600;color:var(--text);width:100%;text-align:center}
+    .sem-note{font-size:.68rem;color:var(--muted);font-style:italic}
+
+    /* ── Métricas 2×3 ── */
+    .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+    @media(min-width:1200px){.metrics-grid{grid-template-columns:1fr 1fr 1fr}}
+    .mc{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r-sm);padding:1rem 1.1rem}
+    .mc .ml{font-size:.6rem;font-weight:700;letter-spacing:.1em;
+      color:var(--muted);text-transform:uppercase;margin-bottom:.25rem}
+    .mc .mv{font-size:clamp(1.5rem,3vw,2rem);font-weight:800;line-height:1.1}
+    .mc .ms{font-size:.7rem;color:var(--muted);margin-top:.15rem}
+
+    /* ── Charts ── */
+    .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+    @media(max-width:699px){.charts-row{grid-template-columns:1fr}}
+    .chart-card{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:1rem 1.1rem}
+    .chart-title{font-size:.62rem;font-weight:700;letter-spacing:.1em;
+      color:var(--muted);text-transform:uppercase;margin-bottom:.85rem}
+
+    /* ── Transportadoras ── */
+    .trans-section{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1rem}
+    .trans-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-top:.75rem}
+    .trans-item{background:var(--surface2);border:1px solid var(--border);
+      border-radius:var(--r-sm);padding:.85rem 1rem}
+    .trans-name{font-size:.65rem;font-weight:700;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem}
+    .trans-val{font-size:1.6rem;font-weight:800;line-height:1}
+    .trans-detail{font-size:.7rem;color:var(--muted);margin-top:.15rem}
+    .trans-bar-wrap{margin-top:.45rem;background:var(--surface3);border-radius:3px;height:5px;overflow:hidden}
+    .trans-bar{height:5px;border-radius:3px;transition:width .4s}
+
+    /* ── Tabla pedidos ── */
+    .table-section{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1rem}
+    .table-controls{display:flex;align-items:center;gap:.65rem;margin-bottom:.75rem;flex-wrap:wrap}
+    .tbl-toggle-btn{background:none;border:1.5px solid var(--border2);
+      border-radius:var(--r-sm);padding:.4rem .85rem;font-size:.78rem;
+      font-weight:600;cursor:pointer;color:var(--muted);
+      display:flex;align-items:center;gap:.4rem;transition:background .15s;
+      touch-action:manipulation}
+    .tbl-toggle-btn:hover{background:var(--surface2)}
+    .search-inp{background:var(--surface2);border:1.5px solid var(--border2);
+      border-radius:var(--r-sm);padding:.38rem .75rem;font-size:.78rem;
+      color:var(--text);outline:none;width:220px;font-family:'DM Sans',sans-serif}
+    .search-inp:focus{border-color:var(--accent)}
+    .tbl-hidden{display:none}
+    .tbl-scroll{overflow-x:auto;max-height:420px;overflow-y:auto;
+      -webkit-overflow-scrolling:touch}
+    table{width:100%;border-collapse:collapse;font-size:.77rem}
+    thead tr{background:var(--accent2);color:#fff}
+    thead th{padding:.5rem .75rem;text-align:left;font-weight:700;
+      font-size:.65rem;letter-spacing:.06em;white-space:nowrap;
+      position:sticky;top:0;z-index:1}
+    tbody tr:nth-child(even){background:var(--surface2)}
+    tbody tr:hover{background:rgba(0,212,255,.05)}
+    tbody td{padding:.45rem .75rem;border-bottom:1px solid var(--border);white-space:nowrap}
+    .badge-ok  {background:rgba(26,135,84,.15);color:#1A8754;
+      border-radius:10px;padding:.1rem .55rem;font-size:.7rem;font-weight:600}
+    .badge-alr {background:rgba(217,119,6,.15);color:#D97706;
+      border-radius:10px;padding:.1rem .55rem;font-size:.7rem;font-weight:600}
+    .badge-crit{background:rgba(192,57,43,.15);color:#C0392B;
+      border-radius:10px;padding:.1rem .55rem;font-size:.7rem;font-weight:600}
+
+    /* ── Comparativo ── */
+    .comp-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem}
+    @media(max-width:599px){.comp-summary{grid-template-columns:1fr}}
+    .comp-card{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:1rem;text-align:center}
+    .comp-lbl{font-size:.62rem;font-weight:700;letter-spacing:.1em;
+      color:var(--muted);text-transform:uppercase;margin-bottom:.5rem}
+    .comp-val{font-size:2.2rem;font-weight:900;line-height:1}
+    .comp-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem}
+    .comp-table-wrap{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:1rem;margin-bottom:1rem}
+
+    /* ── Colores semáforo ── */
+    .c-ok   {color:#1A8754} .c-alr{color:#D97706} .c-crit{color:#C0392B}
+    .c-acc  {color:var(--accent)} .c-acc2{color:var(--accent2)}
+    .c-navy {color:var(--text)}
+
+    /* ── Note box ── */
+    .note-box{background:rgba(255,176,32,.07);border:1px solid rgba(255,176,32,.25);
+      border-radius:var(--r);padding:.7rem 1rem;font-size:.78rem;
+      color:var(--warn);margin-bottom:1rem;line-height:1.5}
+
+    /* ── Empty state ── */
+    .empty{text-align:center;color:var(--muted)}
+    .empty-icon{font-size:2.5rem;margin-bottom:.5rem}
+
+    /* ── Responsive obligatorio ── */
+    body{min-height:100dvh}
+    @media(max-width:768px){.pipeline-svg{display:none};.search-inp{width:100%}}
+    @media(min-width:1920px){html{font-size:18px}}
+    @media(max-width:479px){
+      .tab-panel-main{padding:.75rem .6rem}
+      .trans-grid{grid-template-columns:1fr 1fr}
+    }
+
+    /* ── Nav buttons (Ajuste 5/7) ── */
+    .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
+    .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
+    @media(max-width:479px){.nav-btn span{display:none}}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando datos…</p></div></div>
+<div class="page">
+
+  <header class="topbar">
+    <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-title">KPI-DES-008 · Lead Time</span>
+    <div class="topbar-spacer"></div>
+    <div class="nav-btns">
+      <a href="menu.html" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Volver al menú principal">🏠 <span>Menú</span></a>
+      <a href="admin.html#accesos-rapidos" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Panel de administración">⚙️ <span>Admin</span></a>
+      <a href="cargue_des008.html" class="btn btn-sm nav-btn" id="btnCargar" style="display:none;touch-action:manipulation" title="Cargar datos">⬆️ <span>Cargar</span></a>
+    </div>
+    <button class="btn btn-sm" onclick="cargarDatos()" id="btnRefresh">🔄</button>
+    <span id="tsUpdate" style="font-size:.65rem;color:var(--dim)"></span>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+      <button class="theme-btn" onclick="setTheme('sepia')">📜</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <!-- ── TABS PRINCIPALES (meses + comparativo) ── -->
+  <div class="tabs-main">
+    <div class="tabs-bar" id="tabsBar">
+      <!-- Generado dinámicamente -->
+    </div>
+  </div>
+
+  <!-- ── CONTENIDO PRINCIPAL ── -->
+  <div id="mainContent">
+    <div class="tab-panel-main active" id="panel-empty">
+      <div class="empty" style="margin-top:3rem">
+        <div class="empty-icon">⏱️</div>
+        <p>Cargando datos…</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+applyTheme();
+
+// ── Estado global ──────────────────────────────────────────────────────────
+let DATA = {};       // periodoId → { proceso:[], trans:[], diario:[], detalle:[] }
+let periodos = [];   // lista de periodoIds disponibles
+let charts   = {};
+
+const META    = 24;  // h - meta Lead Time B2B+B2C (semáforo)
+const META_PCT= 95;  // % - meta pedidos ≤24h
+const PROCESOS_INFO = ['TRASLADO','RETAIL','CLICK','MARKETPLACE','MAQUINAS','OTRO'];
+const DIST_RANGOS = [
+  {label:'0–4h',  min:0,  max:4},
+  {label:'4–8h',  min:4,  max:8},
+  {label:'8–12h', min:8,  max:12},
+  {label:'12–24h',min:12, max:24},
+  {label:'24–48h',min:24, max:48},
+  {label:'>48h',  min:48, max:Infinity},
+];
+
+// ── Helpers visuales ─────────────────────────────────────────────────────
+function ltColor(h) {
+  return h < META ? '#1A8754' : h <= 28 ? '#D97706' : '#C0392B';
+}
+function pillClass(h) {
+  return h < META ? 'pill-ok' : h <= 28 ? 'pill-alr' : 'pill-crit';
+}
+function pillTxt(h) {
+  return h < META ? '🟢 BIEN' : h <= 28 ? '🟡 ALERTA' : '🔴 CRÍTICO';
+}
+function pctColor(pct) {
+  return pct >= META_PCT ? '#1A8754' : pct >= 80 ? '#D97706' : '#C0392B';
+}
+function badgeEstado(estado) {
+  if (estado === 'BIEN')   return '<span class="badge-ok">🟢 BIEN</span>';
+  if (estado === 'ALERTA') return '<span class="badge-alr">🟡 ALERTA</span>';
+  return '<span class="badge-crit">🔴 CRÍTICO</span>';
+}
+function lbl(id) {
+  return CONFIG.meses.find(m => m.id === id)?.label || id;
+}
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+// ── Cargar datos desde Supabase ───────────────────────────────────────────
+async function cargarDatos() {
+  const btn = document.getElementById('btnRefresh');
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    const [proceso, trans, diario, detalle] = await Promise.all([
+      sb.rest('GET','kpi_des008_proceso?order=periodo_id.asc'),
+      sb.rest('GET','kpi_des008_trans?order=periodo_id.asc,transportador.asc'),
+      sb.rest('GET','kpi_des008_diario?order=periodo_id.asc,fecha.asc'),
+      sb.rest('GET','kpi_des008_detalle?order=periodo_id.asc,fecha.asc'),
+    ]);
+
+    // Agrupar por periodo
+    DATA = {};
+    const addTo = (key, row) => {
+      if (!DATA[row.periodo_id]) DATA[row.periodo_id] = {proceso:[],trans:[],diario:[],detalle:[]};
+      DATA[row.periodo_id][key].push(row);
+    };
+    (proceso||[]).forEach(r => addTo('proceso',r));
+    (trans||[]).forEach(r   => addTo('trans',r));
+    (diario||[]).forEach(r  => addTo('diario',r));
+    (detalle||[]).forEach(r => addTo('detalle',r));
+
+    periodos = Object.keys(DATA).sort();
+    document.getElementById('tsUpdate').textContent = new Date().toLocaleTimeString('es-CO');
+    buildTabs();
+    if (periodos.length > 0) switchMainTab(periodos[periodos.length-1]);
+  } catch(e) {
+    document.getElementById('mainContent').innerHTML =
+      `<div class="tab-panel-main active"><div class="empty" style="margin-top:3rem">
+        <div class="empty-icon">⚠️</div><p>Error cargando datos: ${e.message}</p>
+        <p style="margin-top:.5rem"><a href="cargue_des008.html" style="color:var(--accent)">→ Cargar datos</a></p>
+      </div></div>`;
+  }
+  btn.disabled = false; btn.textContent = '🔄';
+}
+
+// ── Construir tabs de meses + comparativo ─────────────────────────────────
+function buildTabs() {
+  const bar = document.getElementById('tabsBar');
+  if (!periodos.length) {
+    bar.innerHTML = '<span style="padding:.75rem 1rem;font-size:.78rem;color:var(--muted)">Sin datos cargados · <a href="cargue_des008.html" style="color:var(--accent)">Cargar</a></span>';
+    return;
+  }
+  let html = periodos.map((p,i) =>
+    `<button class="tab-main-btn" id="tab-${p}" onclick="switchMainTab('${p}')">📅 ${lbl(p)}</button>`
+  ).join('');
+  if (periodos.length >= 2) {
+    html += `<button class="tab-main-btn" id="tab-comp" onclick="switchMainTab('comp')">📊 Comparativo</button>`;
+  }
+  bar.innerHTML = html;
+}
+
+function switchMainTab(tabId) {
+  document.querySelectorAll('.tab-main-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('tab-'+tabId);
+  if (btn) btn.classList.add('active');
+
+  const content = document.getElementById('mainContent');
+  if (tabId === 'comp') {
+    renderComp(content);
+  } else {
+    renderMes(tabId, content);
+  }
+}
+
+// ── Render de un mes completo ─────────────────────────────────────────────
+function renderMes(periodoId, container) {
+  const d = DATA[periodoId];
+  if (!d) {
+    container.innerHTML = `<div class="tab-panel-main active">
+      <div class="empty" style="margin-top:3rem">
+        <div class="empty-icon">📭</div>
+        <p>Sin datos para ${lbl(periodoId)}.<br>
+        <a href="cargue_des008.html" style="color:var(--accent)">→ Cargar datos</a></p>
+      </div></div>`;
+    return;
+  }
+
+  const getPr  = proc => d.proceso.find(r => r.proceso === proc);
+  const global = d.proceso.find(r => r.proceso === null) || {};
+  const b2b2c  = getPr('B2B+B2C') || {};
+  const b2b    = getPr('B2B') || {};
+  const b2c    = getPr('B2C') || {};
+  const cp     = Number(b2b2c.cp_prom || 0);
+  const fueraMeta = (b2b2c.total_pedidos||0) - (b2b2c.ok_24h||0);
+
+  // Procesos informativos disponibles
+  const otrosProcs = d.proceso
+    .filter(r => r.proceso && r.proceso !== 'B2B+B2C' && r.proceso !== 'B2B' && r.proceso !== 'B2C')
+    .sort((a,b) => (b.total_pedidos||0) - (a.total_pedidos||0));
+
+  const label = lbl(periodoId);
+
+  container.innerHTML = `<div class="tab-panel-main active" id="panel-${periodoId}">
+
+    <!-- Sub-tabs proceso -->
+    <div class="subtabs-bar">
+      <span class="subtab-lbl">Proceso:</span>
+      <button class="subtab-btn active" id="${periodoId}-st-b2b2c" onclick="switchSubTab('${periodoId}','b2b2c',this)">B2B + B2C <span style="opacity:.7">· KPI</span></button>
+      ${otrosProcs.map(r =>
+        `<button class="subtab-btn" id="${periodoId}-st-${r.proceso.toLowerCase()}"
+           onclick="switchSubTab('${periodoId}','${r.proceso.toLowerCase()}',this)">
+           ${r.proceso}</button>`
+      ).join('')}
+    </div>
+
+    <!-- SUBTAB B2B+B2C (indicador principal) -->
+    <div class="subtab-panel active" id="${periodoId}-sp-b2b2c">
+
+      <div class="info-banner">📋
+        <div><b>B2B + B2C — ${label}:</b>
+        Indicador principal Lead Time. CP = SOLICITUD − DIA, en horas hábiles (Lun–Sáb 07:00–17:00, sin domingos/festivos).
+        B2B: ${b2b.total_pedidos||0} pedidos · B2C: ${b2c.total_pedidos||0} pedidos · Total: ${b2b2c.total_pedidos||0} pedidos.
+        </div>
+      </div>
+
+      <div class="hero">
+        <div class="semaforo-card">
+          <div class="sem-label">Lead Time B2B + B2C — ${label}</div>
+          <div><span class="sem-value" style="color:${ltColor(cp)}">${cp.toFixed(1)}</span><span class="sem-unit">h</span></div>
+          <div class="sem-pbar-wrap"><div class="sem-pbar" style="width:${Math.min(cp/28*100,100)}%;background:${ltColor(cp)}"></div></div>
+          <div class="sem-meta">Meta: &lt; ${META} h · Variación:
+            <strong style="color:${ltColor(cp)}">${cp<=META?'':'+'}${(cp-META).toFixed(1)} h</strong>
+          </div>
+          <span class="sem-pill ${pillClass(cp)}">${pillTxt(cp)}</span>
+          <div class="sem-note">${fueraMeta===0
+            ? `0 pedidos fuera de meta en ${b2b2c.total_pedidos||0} · ¡Mes perfecto!`
+            : `${fueraMeta} pedido(s) fuera de meta (&gt;24h) de ${b2b2c.total_pedidos||0}`}</div>
+          <div class="sem-formula">CP = SOLICITUD − DIA (h hábiles) = <strong>${cp.toFixed(1)}h</strong> promedio</div>
+        </div>
+        <div class="metrics-grid">
+          <div class="mc">
+            <div class="ml">Total Pedidos B2B + B2C</div>
+            <div class="mv c-navy">${(b2b2c.total_pedidos||0).toLocaleString('es-CO')}</div>
+            <div class="ms">B2B: ${b2b.total_pedidos||0} · B2C: ${b2c.total_pedidos||0}</div>
+          </div>
+          <div class="mc">
+            <div class="ml">LT Mínimo</div>
+            <div class="mv c-ok">${Number(b2b2c.cp_min||0).toFixed(1)}h</div>
+            <div class="ms">Mejor tiempo registrado</div>
+          </div>
+          <div class="mc">
+            <div class="ml">LT Máximo</div>
+            <div class="mv c-crit">${Number(b2b2c.cp_max||0).toFixed(1)}h</div>
+            <div class="ms">Pedido más tardío</div>
+          </div>
+          <div class="mc">
+            <div class="ml">Mediana</div>
+            <div class="mv" style="color:${ltColor(Number(b2b2c.cp_mediana||0))}">${Number(b2b2c.cp_mediana||0).toFixed(1)}h</div>
+            <div class="ms">Valor central distribución</div>
+          </div>
+          <div class="mc">
+            <div class="ml">% Pedidos ≤ 24h</div>
+            <div class="mv" style="color:${pctColor(Number(b2b2c.pct_24h||0))}">${Number(b2b2c.pct_24h||0).toFixed(1)}%</div>
+            <div class="ms">Meta: ≥ ${META_PCT}% · ${b2b2c.ok_24h||0}/${b2b2c.total_pedidos||0}</div>
+          </div>
+          <div class="mc">
+            <div class="ml">Fuera de Meta (&gt;24h)</div>
+            <div class="mv" style="color:${fueraMeta>0?'#D97706':'#1A8754'}">${fueraMeta}</div>
+            <div class="ms">${fueraMeta===0?'Sin novedades':'Pedidos a revisar'}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">LT Diario Promedio (h hábiles) vs. Meta ${META}h — ${label}</div>
+          <canvas id="chart-${periodoId}-daily" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Distribución por Rangos — B2B+B2C</div>
+          <canvas id="chart-${periodoId}-dist" height="200"></canvas>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">% Pedidos ≤ 24h por Semana vs. Meta ${META_PCT}%</div>
+          <canvas id="chart-${periodoId}-weekly" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">LT Promedio por Transportadora (h)</div>
+          <canvas id="chart-${periodoId}-transp" height="200"></canvas>
+        </div>
+      </div>
+
+    </div><!-- /subtab b2b2c -->
+
+    <!-- SUBTABS OTROS PROCESOS (informativos) -->
+    ${otrosProcs.map(r => `
+    <div class="subtab-panel" id="${periodoId}-sp-${r.proceso.toLowerCase()}">
+      ${buildOtroProcesoHTML(periodoId, r, label)}
+    </div>`).join('')}
+
+    <!-- Tabla detallada con toggle -->
+    <div class="table-section">
+      <div class="table-controls">
+        <button class="tbl-toggle-btn" onclick="toggleTabla('tbl-${periodoId}','tbl-icon-${periodoId}')">
+          <span id="tbl-icon-${periodoId}">▼</span> Mostrar / Ocultar tabla de pedidos
+        </button>
+        <input class="search-inp" type="text" placeholder="Buscar picking, proceso, transportadora…"
+          oninput="filtrarTabla('tbody-${periodoId}',this.value)"/>
+      </div>
+      <div id="tbl-${periodoId}" class="tbl-hidden">
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr>
+              <th>#</th><th>Fecha</th><th>Picking</th><th>Proceso</th>
+              <th>Transportadora</th><th>CP (h)</th><th>Estado</th>
+            </tr></thead>
+            <tbody id="tbody-${periodoId}"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-panel-main -->`;
+
+  // Render asíncrono de charts y datos
+  requestAnimationFrame(() => {
+    buildDailyChart(periodoId, d.diario);
+    buildDistChart(periodoId, d.detalle);
+    buildWeeklyChart(periodoId, d.detalle);
+    buildTransChart(periodoId, d.trans);
+    buildTablaDetalle(periodoId);
+    otrosProcs.forEach(r => buildOtroProcesoChart(periodoId, r.proceso, d.detalle));
+  });
+}
+
+// ── HTML para otros procesos (informativos, sin semáforo de gestión) ───────
+function buildOtroProcesoHTML(periodoId, r, label) {
+  const cp    = Number(r.cp_prom||0);
+  const color = ltColor(cp);
+  return `
+    <div class="info-banner">📋 <div><b>${r.proceso} — ${label}:</b>
+    Canal informativo. Sin semáforo de gestión.
+    ${r.total_pedidos||0} pedidos · LT Prom ${cp.toFixed(1)}h · LT Máx ${Number(r.cp_max||0).toFixed(1)}h.
+    </div></div>
+    <div class="hero">
+      <div class="semaforo-card">
+        <div class="sem-label">LT Promedio ${r.proceso} — ${label}</div>
+        <div><span class="sem-value" style="color:${color}">${cp.toFixed(1)}</span><span class="sem-unit">h</span></div>
+        <div class="sem-pbar-wrap"><div class="sem-pbar" style="width:${Math.min(cp/28*100,100)}%;background:${color}"></div></div>
+        <div class="sem-note">Solo datos · Sin semáforo de gestión</div>
+        <div class="sem-formula">${r.total_pedidos||0} pedidos · LT Prom <strong>${cp.toFixed(1)}h</strong></div>
+      </div>
+      <div class="metrics-grid">
+        <div class="mc"><div class="ml">Total Pedidos</div>
+          <div class="mv c-acc">${r.total_pedidos||0}</div></div>
+        <div class="mc"><div class="ml">LT Mínimo</div>
+          <div class="mv c-ok">${Number(r.cp_min||0).toFixed(1)}h</div></div>
+        <div class="mc"><div class="ml">LT Máximo</div>
+          <div class="mv c-crit">${Number(r.cp_max||0).toFixed(1)}h</div></div>
+        <div class="mc"><div class="ml">% ≤ 24h</div>
+          <div class="mv" style="color:${pctColor(Number(r.pct_24h||0))}">${Number(r.pct_24h||0).toFixed(1)}%</div></div>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-bottom:1rem">
+      <div class="chart-title">LT Diario — ${r.proceso} ${label}</div>
+      <canvas id="chart-${periodoId}-${r.proceso.toLowerCase()}-daily" height="180"></canvas>
+    </div>`;
+}
+
+// ── Chart LT diario B2B+B2C ────────────────────────────────────────────────
+function buildDailyChart(periodoId, diario) {
+  const id = `chart-${periodoId}-daily`;
+  destroyChart(id);
+  if (!diario || !diario.length) return;
+
+  const labels = diario.map(d => d.fecha?.slice(5) || '');
+  const vals   = diario.map(d => Number(d.cp_prom||0));
+
+  charts[id] = new Chart(document.getElementById(id), {
+    type:'line',
+    data:{labels, datasets:[
+      {label:'LT Prom (h)', data:vals, borderColor:'#00D4FF',
+        backgroundColor:'rgba(0,212,255,.07)', fill:true, tension:.35,
+        pointRadius:4, spanGaps:false,
+        pointBackgroundColor: vals.map(v => v < META ? '#1A8754' : v <= 28 ? '#D97706' : '#C0392B')},
+      {label:'LT Mín (h)', data: diario.map(d => Number(d.cp_min||0)),
+        borderColor:'rgba(26,135,84,.7)', borderDash:[4,3], pointRadius:0, fill:false, tension:.3},
+      {label:`Meta ${META}h`, data:labels.map(()=>META),
+        borderColor:'rgba(192,57,43,.6)', borderDash:[5,3], pointRadius:0, fill:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12}}},
+      scales:{
+        y:{beginAtZero:true, ticks:{callback:v=>v+'h',font:{size:10}},
+          grid:{color:'rgba(128,128,128,.07)'}},
+        x:{grid:{display:false},ticks:{font:{size:9},maxTicksLimit:14}}}}
+  });
+}
+
+// ── Chart distribución por rangos (B2B+B2C) ───────────────────────────────
+function buildDistChart(periodoId, detalle) {
+  const id = `chart-${periodoId}-dist`;
+  destroyChart(id);
+  const items = (detalle||[]).filter(r => r.proceso === 'B2B' || r.proceso === 'B2C');
+  if (!items.length) return;
+
+  const counts = DIST_RANGOS.map(rg =>
+    items.filter(r => Number(r.cp_horas) >= rg.min && Number(r.cp_horas) < rg.max).length
+  );
+  const colors = ['#1A8754','#0D7A5F','#00D4FF','#D97706','#C0392B','#7B2FFF'];
+
+  charts[id] = new Chart(document.getElementById(id), {
+    type:'bar',
+    data:{labels: DIST_RANGOS.map(r=>r.label), datasets:[
+      {label:'Pedidos', data:counts, backgroundColor:colors, borderRadius:6, borderSkipped:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:'rgba(128,128,128,.07)'}}}}
+  });
+}
+
+// ── Chart % ≤24h por semana (B2B+B2C) ──────────────────────────────────────
+function buildWeeklyChart(periodoId, detalle) {
+  const id = `chart-${periodoId}-weekly`;
+  destroyChart(id);
+  const items = (detalle||[]).filter(r => r.proceso === 'B2B' || r.proceso === 'B2C');
+  if (!items.length) return;
+
+  const semMap = {};
+  items.forEach(r => {
+    const s = r.semana || '—';
+    if (!semMap[s]) semMap[s] = {total:0, ok:0};
+    semMap[s].total++;
+    if (Number(r.cp_horas) < META) semMap[s].ok++;
+  });
+  const sems = Object.keys(semMap).sort();
+  const vals = sems.map(s => semMap[s].total ? Math.round(semMap[s].ok/semMap[s].total*1000)/10 : 0);
+  const semLabels = sems.map(s => s.replace('Sem ','S').replace(/-\d{4}/,''));
+
+  charts[id] = new Chart(document.getElementById(id), {
+    type:'bar',
+    data:{labels: semLabels, datasets:[
+      {label:'% ≤24h', data:vals,
+        backgroundColor: vals.map(v=>v>=META_PCT?'rgba(26,135,84,.75)':v>=80?'rgba(217,119,6,.7)':'rgba(192,57,43,.65)'),
+        borderRadius:6},
+      {label:`Meta ${META_PCT}%`, data:semLabels.map(()=>META_PCT),
+        type:'line', borderColor:'rgba(255,176,32,.7)', borderDash:[5,3], pointRadius:0, fill:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12}}},
+      scales:{y:{min:0,max:110,ticks:{callback:v=>v+'%',font:{size:10}}},
+        x:{grid:{display:false}}}}
+  });
+}
+
+// ── Chart LT promedio por transportadora ──────────────────────────────────
+function buildTransChart(periodoId, trans) {
+  const id = `chart-${periodoId}-transp`;
+  destroyChart(id);
+  if (!trans || !trans.length) return;
+
+  const labels = trans.map(t=>t.transportador);
+  const vals   = trans.map(t=>Number(t.cp_prom||0));
+
+  charts[id] = new Chart(document.getElementById(id), {
+    type:'bar',
+    data:{labels, datasets:[
+      {label:'LT Prom (h)', data:vals,
+        backgroundColor: vals.map(v=>ltColor(v)+'bb'), borderRadius:8},
+    ]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.parsed.x.toFixed(1)}h (${trans[c.dataIndex].total_pedidos||0} ped.)`}}},
+      scales:{x:{grid:{color:'rgba(128,128,128,.07)'},ticks:{callback:v=>v+'h',font:{size:10}}},y:{grid:{display:false}}}}
+  });
+}
+
+// ── Chart LT diario para otros procesos ────────────────────────────────────
+function buildOtroProcesoChart(periodoId, proceso, detalle) {
+  const id = `chart-${periodoId}-${proceso.toLowerCase()}-daily`;
+  destroyChart(id);
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  const items = (detalle||[]).filter(r => r.proceso === proceso);
+  if (!items.length) return;
+
+  const diaMap = {};
+  items.forEach(r => {
+    if (!diaMap[r.fecha]) diaMap[r.fecha] = [];
+    diaMap[r.fecha].push(Number(r.cp_horas));
+  });
+  const fechas = Object.keys(diaMap).sort();
+  const vals   = fechas.map(f => {
+    const arr = diaMap[f];
+    return Math.round(arr.reduce((a,b)=>a+b,0)/arr.length*10)/10;
+  });
+
+  charts[id] = new Chart(el, {
+    type:'bar',
+    data:{labels: fechas.map(f=>f.slice(5)), datasets:[
+      {label:'LT Prom (h)', data:vals, backgroundColor:'rgba(0,212,255,.6)', borderRadius:5},
+      {label:`Meta ${META}h`, data:fechas.map(()=>META), type:'line',
+        borderColor:'rgba(192,57,43,.6)', borderDash:[5,3], pointRadius:0, fill:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12}}},
+      scales:{y:{beginAtZero:true,ticks:{callback:v=>v+'h',font:{size:10}}},
+        x:{grid:{display:false},ticks:{font:{size:9},maxTicksLimit:14}}}}
+  });
+}
+
+// ── Tabla detalle pedidos ─────────────────────────────────────────────────
+function buildTablaDetalle(periodoId) {
+  const d = DATA[periodoId];
+  if (!d) return;
+  const tbody = document.getElementById(`tbody-${periodoId}`);
+  if (!tbody) return;
+
+  tbody.innerHTML = d.detalle.map((r,i) => `<tr>
+    <td style="color:var(--muted)">${i+1}</td>
+    <td>${r.fecha||'—'}</td>
+    <td><strong>${r.picking_id||'—'}</strong></td>
+    <td>${r.proceso||'—'}</td>
+    <td>${r.transportador||'—'}</td>
+    <td style="color:${ltColor(Number(r.cp_horas||0))}">${Number(r.cp_horas||0).toFixed(1)}</td>
+    <td>${badgeEstado(r.estado_semaforo)}</td>
+  </tr>`).join('');
+}
+
+// ── Sub-tab switch ────────────────────────────────────────────────────────
+function switchSubTab(periodoId, st, btn) {
+  const panel = document.getElementById(`panel-${periodoId}`);
+  if (!panel) return;
+  panel.querySelectorAll('.subtab-panel').forEach(p => p.classList.remove('active'));
+  panel.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
+  const sp = document.getElementById(`${periodoId}-sp-${st}`);
+  if (sp) sp.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+// ── Toggle tabla ──────────────────────────────────────────────────────────
+function toggleTabla(tblId, iconId) {
+  const el   = document.getElementById(tblId);
+  const icon = document.getElementById(iconId);
+  if (el.classList.toggle('tbl-hidden')) {
+    icon.textContent = '▼';
+  } else {
+    icon.textContent = '▲';
+  }
+}
+
+// ── Filtrar tabla ─────────────────────────────────────────────────────────
+function filtrarTabla(tbodyId, q) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  const term = q.toLowerCase();
+  Array.from(tbody.rows).forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+  });
+}
+
+// ── Comparativo ───────────────────────────────────────────────────────────
+function renderComp(container) {
+  if (periodos.length < 2) return;
+
+  const pA = periodos[periodos.length-2];
+  const pB = periodos[periodos.length-1];
+  const dA = DATA[pA] || {};
+  const dB = DATA[pB] || {};
+  const gA = (dA.proceso||[]).find(r=>r.proceso==='B2B+B2C') || {};
+  const gB = (dB.proceso||[]).find(r=>r.proceso==='B2B+B2C') || {};
+  const cpA = Number(gA.cp_prom||0);
+  const cpB = Number(gB.cp_prom||0);
+  const diff = cpB - cpA;
+  const diffStr = (diff>=0?'+':'')+diff.toFixed(1)+' h';
+  const diffCol = diff<=0?'#1A8754':'#C0392B'; // bajar LT es mejora
+
+  // Tabla por proceso
+  const procLabels = ['B2B+B2C','B2B','B2C','TRASLADO','RETAIL','CLICK','MARKETPLACE','MAQUINAS'];
+  const procRows   = procLabels.map(pr => {
+    const rA = (dA.proceso||[]).find(r=>(r.proceso||'GLOBAL')===pr)||{};
+    const rB = (dB.proceso||[]).find(r=>(r.proceso||'GLOBAL')===pr)||{};
+    const vA = rA.total_pedidos ? Number(rA.cp_prom||0) : null;
+    const vB = rB.total_pedidos ? Number(rB.cp_prom||0) : null;
+    const dv = (vA!=null && vB!=null) ? vB-vA : null;
+    return `<tr>
+      <td><strong>${pr==='B2B+B2C'?'B2B + B2C ⭐':pr}</strong></td>
+      <td>${vA!=null?vA.toFixed(1)+'h':'—'}</td><td>${rA.total_pedidos||'—'}</td>
+      <td style="color:#D97706">${rA.pct_24h!=null?Number(rA.pct_24h).toFixed(1)+'%':'—'}</td>
+      <td>${vB!=null?vB.toFixed(1)+'h':'—'}</td><td>${rB.total_pedidos||'—'}</td>
+      <td style="color:#D97706">${rB.pct_24h!=null?Number(rB.pct_24h).toFixed(1)+'%':'—'}</td>
+      <td style="color:${dv==null?'inherit':dv<=0?'#1A8754':'#C0392B'}">${dv!=null?(dv>=0?'+':'')+dv.toFixed(1)+'h':'—'}</td>
+    </tr>`;
+  }).join('');
+
+  container.innerHTML = `<div class="tab-panel-main active">
+    <div class="info-banner">📊 <div><b>Comparativo ${lbl(pA)} vs ${lbl(pB)}:</b>
+    Lead Time por proceso. Indicador principal: B2B + B2C (meta &lt; ${META}h).</div></div>
+
+    <div class="comp-summary">
+      <div class="comp-card">
+        <div class="comp-lbl">CP Prom B2B+B2C ${lbl(pA).split(' ')[0]}</div>
+        <div class="comp-val" style="color:${ltColor(cpA)}">${cpA.toFixed(1)}h</div>
+        <div class="comp-sub">${gA.ok_24h||0} / ${gA.total_pedidos||0} ≤24h · ${Number(gA.pct_24h||0).toFixed(1)}%</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-lbl">CP Prom B2B+B2C ${lbl(pB).split(' ')[0]}</div>
+        <div class="comp-val" style="color:${ltColor(cpB)}">${cpB.toFixed(1)}h</div>
+        <div class="comp-sub">${gB.ok_24h||0} / ${gB.total_pedidos||0} ≤24h · ${Number(gB.pct_24h||0).toFixed(1)}%</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-lbl">Variación</div>
+        <div class="comp-val" style="color:${diffCol}">${diffStr}</div>
+        <div class="comp-sub">${diff<=0?'Mejora':'Aumento'} vs mes anterior</div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">CP Promedio B2B+B2C — ${lbl(pA)} vs ${lbl(pB)}</div>
+        <canvas id="chart-comp-bar" height="220"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">CP Promedio por Proceso</div>
+        <canvas id="chart-comp-proc" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="comp-table-wrap">
+      <div class="chart-title" style="margin-bottom:.75rem">Detalle por Proceso — ${lbl(pA)} vs ${lbl(pB)}</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th>Proceso</th>
+            <th>${lbl(pA).split(' ')[0]} CP Prom</th><th>Pedidos</th><th>% ≤24h</th>
+            <th>${lbl(pB).split(' ')[0]} CP Prom</th><th>Pedidos</th><th>% ≤24h</th>
+            <th>Variación</th>
+          </tr></thead>
+          <tbody>${procRows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Comparativo transportadoras -->
+    <div class="comp-table-wrap">
+      <div class="chart-title" style="margin-bottom:.75rem">LT Promedio por Transportadora — ${lbl(pA)} vs ${lbl(pB)}</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th>Transportadora</th>
+            <th>${lbl(pA).split(' ')[0]} — Pedidos</th><th>CP Prom</th>
+            <th>${lbl(pB).split(' ')[0]} — Pedidos</th><th>CP Prom</th>
+            <th>Variación</th>
+          </tr></thead>
+          <tbody id="comp-trans-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+
+  requestAnimationFrame(() => {
+    // Chart bar comparativo
+    destroyChart('chart-comp-bar');
+    charts['chart-comp-bar'] = new Chart(document.getElementById('chart-comp-bar'), {
+      type:'bar',
+      data:{
+        labels:[`CP B2B+B2C`,`Meta ${META}h`],
+        datasets:[
+          {label:lbl(pA).split(' ')[0], data:[cpA, META],
+            backgroundColor:'rgba(27,58,107,.7)', borderRadius:5},
+          {label:lbl(pB).split(' ')[0], data:[cpB, META],
+            backgroundColor:'rgba(13,122,95,.7)', borderRadius:5},
+        ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:11}}}},
+        scales:{y:{beginAtZero:true,ticks:{callback:v=>v+'h',font:{size:10}}}}}
+    });
+
+    // Chart procesos
+    const procValsA = procLabels.map(pr => {
+      const r = (dA.proceso||[]).find(x=>(x.proceso||'')===pr);
+      return r ? Number(r.cp_prom||0) : 0;
+    });
+    const procValsB = procLabels.map(pr => {
+      const r = (dB.proceso||[]).find(x=>(x.proceso||'')===pr);
+      return r ? Number(r.cp_prom||0) : 0;
+    });
+    destroyChart('chart-comp-proc');
+    charts['chart-comp-proc'] = new Chart(document.getElementById('chart-comp-proc'), {
+      type:'bar',
+      data:{labels:procLabels,datasets:[
+        {label:lbl(pA).split(' ')[0], data:procValsA,
+          backgroundColor:'rgba(27,58,107,.65)', borderRadius:4},
+        {label:lbl(pB).split(' ')[0], data:procValsB,
+          backgroundColor:'rgba(13,122,95,.65)', borderRadius:4},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12}}},
+        scales:{y:{beginAtZero:true,ticks:{callback:v=>v+'h',font:{size:10}}},
+          x:{ticks:{font:{size:9}}}}}
+    });
+
+    // Tabla comparativo transportadoras
+    const allTrans = new Set([
+      ...(dA.trans||[]).map(t=>t.transportador),
+      ...(dB.trans||[]).map(t=>t.transportador),
+    ]);
+    const tbody = document.getElementById('comp-trans-tbody');
+    if (tbody) {
+      tbody.innerHTML = [...allTrans].map(trans => {
+        const tA = (dA.trans||[]).find(t=>t.transportador===trans)||{};
+        const tB = (dB.trans||[]).find(t=>t.transportador===trans)||{};
+        const vA = tA.total_pedidos ? Number(tA.cp_prom||0) : null;
+        const vB = tB.total_pedidos ? Number(tB.cp_prom||0) : null;
+        const dv = (vA!=null && vB!=null) ? vB-vA : null;
+        return `<tr>
+          <td><strong>${trans}</strong></td>
+          <td>${tA.total_pedidos||'—'}</td>
+          <td>${vA!=null?vA.toFixed(1)+'h':'—'}</td>
+          <td>${tB.total_pedidos||'—'}</td>
+          <td>${vB!=null?vB.toFixed(1)+'h':'—'}</td>
+          <td style="color:${dv==null?'inherit':dv<=0?'#1A8754':'#C0392B'}">${dv!=null?(dv>=0?'+':'')+dv.toFixed(1)+'h':'—'}</td>
+        </tr>`;
+      }).join('');
+    }
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  const user = await checkAuth(); if (!user) return;
+  renderUser();
+  if (getRole() === 'admin') document.getElementById('btnCargar').style.display = 'inline-flex';
+  await cargarDatos();
+  const ol = document.getElementById('overlay');
+  setTimeout(()=>ol.classList.add('out'),100);
+  setTimeout(()=>ol.remove(),500);
+});
+</script>
+</body>
+</html>

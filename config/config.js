@@ -45,7 +45,7 @@ const CONFIG = Object.freeze({
     { code:'KPI-ALI-004', name:'Productividad Alistamiento',  icon:'🔧', href:'kpi004.html', activo:true  },
     { code:'KPI-DES-005', name:'On-Time Delivery (OTD)',      icon:'🚚', href:'kpi005.html', activo:true  },
     { code:'KPI-INV-007', name:'Utilización Capacidad CEDI',  icon:'📊', href:'kpi007.html', activo:true  },
-    { code:'KPI-DES-008', name:'Ciclo de Pedido (Lead Time)', icon:'⏱️', href:null,           activo:false },
+    { code:'KPI-DES-008', name:'Ciclo de Pedido (Lead Time)', icon:'⏱️', href:'kpi008.html', activo:true  },
     { code:'KPI-DEV-006', name:'Tasa de Devoluciones',        icon:'↩️', href:null,           activo:false, hidden:true },
   ],
 });
