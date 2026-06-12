@@ -3,650 +3,865 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <title>NexusKPI — KPI-DES-005</title>
+  <title>NexusKPI — KPI-DES-005 · OTD</title>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="../styles/base.css"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
-    /* ── Tabs ── */
-    .tabs-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 1.25rem;gap:.1rem;overflow-x:auto;scrollbar-width:none}
-    .tabs-nav::-webkit-scrollbar{display:none}
-    .tab-btn{padding:.8rem .9rem;font-size:.8rem;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s;min-height:44px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-    .tab-btn:hover{color:var(--text)}
-    .tab-btn.on{color:var(--accent);border-bottom-color:var(--accent)}
-    .tab-panel{display:none}.tab-panel.on{display:block}
+    /* ── Variables de color del dashboard ── */
+    :root{
+      --d-navy:#1B3A6B; --d-teal:#0D7A5F; --d-green:#1A8754;
+      --d-amber:#D97706; --d-red:#C0392B; --d-muted:#6B7280;
+    }
 
-    /* ── KPI header ── */
-    .kpi-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem;flex-wrap:wrap}
-    .kpi-hdr h1{font-size:clamp(1rem,3vw,1.25rem);font-weight:800;display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
-    .kpi-hdr-sub{font-size:.76rem;color:var(--muted);margin-top:.15rem}
-    .kpi-actions{display:flex;gap:.4rem;align-items:center;flex-shrink:0;flex-wrap:wrap}
+    /* ── Tabs principales (meses) ── */
+    .tabs-main{background:var(--surface);border-bottom:1px solid var(--border);
+      position:sticky;top:var(--topbar-h);z-index:90}
+    .tabs-bar{display:flex;gap:2px;padding:0 1.25rem;overflow-x:auto;scrollbar-width:none}
+    .tabs-bar::-webkit-scrollbar{display:none}
+    .tab-main-btn{background:none;border:none;cursor:pointer;
+      padding:.75rem 1.1rem;font-size:.82rem;font-weight:600;color:var(--muted);
+      border-bottom:3px solid transparent;margin-bottom:-1px;
+      display:flex;align-items:center;gap:.4rem;transition:all .15s;
+      white-space:nowrap;min-height:44px;touch-action:manipulation;
+      -webkit-tap-highlight-color:transparent}
+    .tab-main-btn:hover{color:var(--text)}
+    .tab-main-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+    .tab-panel-main{display:none;padding:1.25rem;max-width:1320px;margin:0 auto}
+    .tab-panel-main.active{display:block}
 
-    /* ── Banners ── */
-    .b-strip{border-radius:var(--r);padding:.75rem 1rem;margin-bottom:1rem;font-size:.82rem;line-height:1.5;display:flex;align-items:flex-start;gap:.65rem}
-    .b-ok  {background:rgba(0,255,136,.07);border:1px solid rgba(0,255,136,.2);color:var(--ok)}
-    .b-warn{background:rgba(255,176,32,.07);border:1px solid rgba(255,176,32,.2);color:var(--warn)}
-    .b-crit{background:rgba(255,77,109,.07);border:1px solid rgba(255,77,109,.2);color:var(--error)}
-    .method-strip{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:.6rem 1rem;margin-bottom:1rem;font-size:.74rem;color:var(--muted)}
+    /* ── Sub-tabs proceso ── */
+    .subtabs-bar{display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+    .subtab-lbl{font-size:.62rem;font-weight:700;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.1em;margin-right:.2rem;white-space:nowrap}
+    .subtab-btn{background:var(--surface);border:1.5px solid var(--border2);
+      cursor:pointer;padding:.35rem .85rem;font-size:.78rem;font-weight:600;
+      color:var(--muted);border-radius:20px;transition:all .15s;white-space:nowrap;
+      touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    .subtab-btn:hover{border-color:var(--accent);color:var(--text)}
+    .subtab-btn.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+    .subtab-panel{display:none}.subtab-panel.active{display:block}
 
-    /* ── Selector meses ── */
-    .mes-bar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.75rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:1rem}
-    .mes-bar label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
-    .mes-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:.35rem .65rem;cursor:pointer;outline:none}
-    .mes-sel:focus{border-color:var(--accent)}
+    /* ── Info banner ── */
+    .info-banner{background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.25);
+      border-radius:var(--r);padding:.7rem 1rem;margin-bottom:1rem;
+      font-size:.78rem;color:var(--accent);display:flex;align-items:flex-start;gap:.5rem;
+      line-height:1.5}
+    .info-banner b{color:var(--text)}
 
-    /* ── HERO ── */
-    .hero{display:grid;grid-template-columns:220px 1fr;gap:1rem;margin-bottom:1rem}
-    @media(max-width:799px){.hero{grid-template-columns:1fr}}
-    @media(min-width:1920px){.hero{grid-template-columns:280px 1fr}}
+    /* ── Hero: semáforo + métricas ── */
+    .hero{display:grid;grid-template-columns:280px 1fr;gap:1rem;margin-bottom:1rem}
+    @media(max-width:899px){.hero{grid-template-columns:1fr}}
 
-    .semaforo{background:var(--surface);border:2px solid var(--border);border-radius:var(--r);padding:1.25rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.5rem;text-align:center}
-    .sem-lbl{font-size:.65rem;font-weight:700;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
-    .sem-num{font-size:clamp(2.8rem,7vw,3.8rem);font-weight:900;line-height:1}
-    .sem-unit{font-size:.95rem;color:var(--muted)}
-    .sem-meta{font-size:.72rem;color:var(--muted);line-height:1.7}
-    .sem-pill{font-weight:700;font-size:.78rem;padding:.3rem 1rem;border-radius:20px;border:2px solid}
-    .sem-pill.verde  {background:rgba(0,255,136,.12);color:var(--ok);border-color:var(--ok)}
-    .sem-pill.amarillo{background:rgba(255,176,32,.12);color:var(--warn);border-color:var(--warn)}
-    .sem-pill.rojo   {background:rgba(255,77,109,.12);color:var(--error);border-color:var(--error)}
-    .sem-barra-wrap{width:100%;height:7px;background:var(--surface3);border-radius:9999px;overflow:hidden}
-    .sem-barra{height:7px;border-radius:9999px;transition:width .5s ease}
-    .sem-delta{font-size:.72rem;color:var(--muted)}
-    .sem-circles{display:flex;gap:.75rem;justify-content:center;margin:.15rem 0}
-    .sem-circle{display:flex;flex-direction:column;align-items:center;gap:.1rem}
-    .sem-circle .cn{font-size:1.5rem;font-weight:900;line-height:1}
-    .sem-circle .cl{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+    /* ── Semáforo card ── */
+    .semaforo-card{background:var(--surface);border:2px solid var(--border);
+      border-radius:var(--r);padding:1.5rem 1.25rem;
+      display:flex;flex-direction:column;align-items:center;gap:.6rem;text-align:center}
+    .sem-label{font-size:.6rem;font-weight:700;letter-spacing:.15em;
+      color:var(--muted);text-transform:uppercase}
+    .sem-value{font-size:clamp(3.5rem,8vw,4.5rem);font-weight:900;line-height:1}
+    .sem-unit{font-size:1.1rem;color:var(--muted);margin-left:1px}
+    .sem-meta{font-size:.72rem;color:var(--muted)}
+    .sem-pill{font-weight:700;font-size:.82rem;padding:.35rem 1.1rem;
+      border-radius:20px;display:flex;align-items:center;gap:.35rem;border:2px solid}
+    .pill-ok  {background:rgba(26,135,84,.12);color:#1A8754;border-color:#1A8754}
+    .pill-alr {background:rgba(217,119,6,.12);color:#D97706;border-color:#D97706}
+    .pill-crit{background:rgba(192,57,43,.12);color:#C0392B;border-color:#C0392B}
+    .sem-pbar-wrap{width:100%;background:var(--surface3);border-radius:4px;height:7px;overflow:hidden}
+    .sem-pbar{height:7px;border-radius:4px;transition:width .5s}
+    .sem-formula{background:var(--surface2);border:1px solid var(--border);
+      border-radius:var(--r-sm);padding:.4rem .85rem;font-size:.72rem;
+      font-weight:600;color:var(--text);width:100%;text-align:center}
+    .sem-note{font-size:.68rem;color:var(--muted);font-style:italic}
 
-    .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
+    /* ── Métricas 2×3 ── */
+    .metrics-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
     @media(min-width:1200px){.metrics-grid{grid-template-columns:1fr 1fr 1fr}}
-    .mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:.85rem 1rem;display:flex;flex-direction:column;gap:.15rem}
-    .mc .ml{font-size:.63rem;font-weight:700;letter-spacing:.07em;color:var(--muted);text-transform:uppercase}
-    .mc .mv{font-size:clamp(1.2rem,2.5vw,1.55rem);font-weight:800;line-height:1.1}
-    .mc .ms{font-size:.68rem;color:var(--muted)}
+    .mc{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r-sm);padding:1rem 1.1rem}
+    .mc .ml{font-size:.6rem;font-weight:700;letter-spacing:.1em;
+      color:var(--muted);text-transform:uppercase;margin-bottom:.25rem}
+    .mc .mv{font-size:clamp(1.5rem,3vw,2rem);font-weight:800;line-height:1.1}
+    .mc .ms{font-size:.7rem;color:var(--muted);margin-top:.15rem}
 
     /* ── Charts ── */
-    .charts-2col{display:grid;grid-template-columns:3fr 2fr;gap:.75rem;margin-bottom:.75rem}
-    @media(max-width:799px){.charts-2col{grid-template-columns:1fr}}
-    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
-    .chart-wrap{position:relative}
-    .sec-title{font-size:.78rem;font-weight:700;color:var(--text);margin-bottom:.85rem;display:flex;align-items:center;gap:.5rem}
-    .sec-title .bar{width:4px;height:14px;border-radius:2px;flex-shrink:0}
+    .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+    @media(max-width:699px){.charts-row{grid-template-columns:1fr}}
+    .chart-card{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:1rem 1.1rem}
+    .chart-title{font-size:.62rem;font-weight:700;letter-spacing:.1em;
+      color:var(--muted);text-transform:uppercase;margin-bottom:.85rem}
 
-    /* ── Tabla semanal ── */
-    .sec-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:.75rem}
-    .wt{width:100%;border-collapse:collapse}
-    .wt thead tr{background:var(--surface3)}
-    .wt th{padding:.5rem .75rem;font-size:.68rem;font-weight:700;text-align:center;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
-    .wt th:first-child{text-align:left}
-    .wt td{padding:.5rem .75rem;font-size:.78rem;text-align:center;border-bottom:1px solid var(--border)}
-    .wt td:first-child{text-align:left;font-weight:600}
-    .wt .tr-tot{background:var(--surface2);font-weight:700}
-    .wt .tr-tot td{border-bottom:none}
+    /* ── Transportadoras ── */
+    .trans-section{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1rem}
+    .trans-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-top:.75rem}
+    .trans-item{background:var(--surface2);border:1px solid var(--border);
+      border-radius:var(--r-sm);padding:.85rem 1rem}
+    .trans-name{font-size:.65rem;font-weight:700;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:.3rem}
+    .trans-otd{font-size:1.6rem;font-weight:800;line-height:1}
+    .trans-detail{font-size:.7rem;color:var(--muted);margin-top:.15rem}
+    .trans-bar-wrap{margin-top:.45rem;background:var(--surface3);border-radius:3px;height:5px;overflow:hidden}
+    .trans-bar{height:5px;border-radius:3px;transition:width .4s}
 
-    /* ── Detail ── */
-    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem}
-    @media(max-width:599px){.detail-grid{grid-template-columns:1fr}}
-    .detail-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
-    .detail-card h4{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.65rem}
-    .di{display:flex;justify-content:space-between;align-items:center;padding:.35rem 0;border-bottom:1px dashed var(--border);font-size:.78rem}
-    .di:last-child{border-bottom:none}
-    .dk{color:var(--muted)}.dv{font-weight:700;color:var(--text)}
-
-    /* ── Toggle tabla diaria ── */
-    .tog-hdr{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:.7rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:.4rem;transition:background .15s}
-    .tog-hdr:hover{background:var(--surface2)}
-    .tog-hdr h4{font-size:.8rem;font-weight:700;margin:0;display:flex;align-items:center;gap:.4rem}
-    .tog-arrow{transition:transform .2s;color:var(--muted)}
-    .tog-sec{overflow:hidden;transition:max-height .3s ease;max-height:0}
-    .tog-sec.open{max-height:600px}
+    /* ── Tabla pedidos ── */
+    .table-section{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:1rem}
+    .table-controls{display:flex;align-items:center;gap:.65rem;margin-bottom:.75rem;flex-wrap:wrap}
+    .tbl-toggle-btn{background:none;border:1.5px solid var(--border2);
+      border-radius:var(--r-sm);padding:.4rem .85rem;font-size:.78rem;
+      font-weight:600;cursor:pointer;color:var(--muted);
+      display:flex;align-items:center;gap:.4rem;transition:background .15s;
+      touch-action:manipulation}
+    .tbl-toggle-btn:hover{background:var(--surface2)}
+    .search-inp{background:var(--surface2);border:1.5px solid var(--border2);
+      border-radius:var(--r-sm);padding:.38rem .75rem;font-size:.78rem;
+      color:var(--text);outline:none;width:220px;font-family:'DM Sans',sans-serif}
+    .search-inp:focus{border-color:var(--accent)}
+    .tbl-hidden{display:none}
+    .tbl-scroll{overflow-x:auto;max-height:420px;overflow-y:auto;
+      -webkit-overflow-scrolling:touch}
+    table{width:100%;border-collapse:collapse;font-size:.77rem}
+    thead tr{background:var(--accent2);color:#fff}
+    thead th{padding:.5rem .75rem;text-align:left;font-weight:700;
+      font-size:.65rem;letter-spacing:.06em;white-space:nowrap;
+      position:sticky;top:0;z-index:1}
+    tbody tr:nth-child(even){background:var(--surface2)}
+    tbody tr:hover{background:rgba(0,212,255,.05)}
+    tbody td{padding:.45rem .75rem;border-bottom:1px solid var(--border);white-space:nowrap}
+    .badge-ok  {background:rgba(26,135,84,.15);color:#1A8754;
+      border-radius:10px;padding:.1rem .55rem;font-size:.7rem;font-weight:600}
+    .badge-late{background:rgba(192,57,43,.15);color:#C0392B;
+      border-radius:10px;padding:.1rem .55rem;font-size:.7rem;font-weight:600}
 
     /* ── Comparativo ── */
-    .comp-grid{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
-    @media(max-width:699px){.comp-grid{grid-template-columns:1fr}}
-    .comp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
-    .comp-card h3{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.75rem}
-    .comp-row{display:flex;justify-content:space-between;align-items:center;padding:.38rem 0;border-bottom:1px dashed var(--border);font-size:.78rem}
-    .comp-row:last-child{border-bottom:none}
-    .comp-metric{color:var(--muted);flex:1}
-    .comp-vals{display:flex;gap:.75rem;flex-shrink:0}
-    .v-a{color:var(--accent);font-weight:700;font-family:'Syne',sans-serif}
-    .v-b{color:var(--accent2);font-weight:700;font-family:'Syne',sans-serif}
-    .delta-up{color:var(--ok);font-size:.71rem}
-    .delta-dn{color:var(--error);font-size:.71rem}
+    .comp-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem}
+    @media(max-width:599px){.comp-summary{grid-template-columns:1fr}}
+    .comp-card{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:1rem;text-align:center}
+    .comp-lbl{font-size:.62rem;font-weight:700;letter-spacing:.1em;
+      color:var(--muted);text-transform:uppercase;margin-bottom:.5rem}
+    .comp-val{font-size:2.2rem;font-weight:900;line-height:1}
+    .comp-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem}
+    .comp-table-wrap{background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r);padding:1rem;margin-bottom:1rem}
 
-    /* ── Misc ── */
-    .c-ok{color:var(--ok)}.c-err{color:var(--error)}.c-warn{color:var(--warn)}.c-acc{color:var(--accent)}
-    .tag{display:inline-block;padding:.1rem .5rem;border-radius:10px;font-weight:700;font-size:.7rem}
-    .tag-ok  {background:rgba(0,255,136,.12);color:var(--ok)}
-    .tag-warn{background:rgba(255,176,32,.12);color:var(--warn)}
-    .tag-crit{background:rgba(255,77,109,.12);color:var(--error)}
+    /* ── Colores semáforo ── */
+    .c-ok   {color:#1A8754} .c-alr{color:#D97706} .c-crit{color:#C0392B}
+    .c-acc  {color:var(--accent)} .c-acc2{color:var(--accent2)}
+    .c-navy {color:var(--text)}
 
-    /* Responsive obligatorio */
+    /* ── Note box ── */
+    .note-box{background:rgba(255,176,32,.07);border:1px solid rgba(255,176,32,.25);
+      border-radius:var(--r);padding:.7rem 1rem;font-size:.78rem;
+      color:var(--warn);margin-bottom:1rem;line-height:1.5}
+
+    /* ── Responsive obligatorio ── */
     body{min-height:100dvh}
-    @media(max-width:768px){.pipeline-svg{display:none}}
+    @media(max-width:768px){.pipeline-svg{display:none};.search-inp{width:100%}}
     @media(min-width:1920px){html{font-size:18px}}
+    @media(max-width:479px){
+      .tab-panel-main{padding:.75rem .6rem}
+      .trans-grid{grid-template-columns:1fr 1fr}
+    }
   </style>
 </head>
 <body>
 <div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando datos…</p></div></div>
 <div class="page">
+
   <header class="topbar">
     <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
     <span class="topbar-sep">/</span>
-    <span class="topbar-title">KPI-DES-005</span>
+    <span class="topbar-title">KPI-DES-005 · OTD</span>
     <div class="topbar-spacer"></div>
+    <button class="btn btn-sm" onclick="cargarDatos()" id="btnRefresh">🔄</button>
+    <span id="tsUpdate" style="font-size:.65rem;color:var(--dim)"></span>
     <div class="theme-bar">
       <button class="theme-btn" onclick="setTheme('')">🌙</button>
       <button class="theme-btn" onclick="setTheme('light')">☀️</button>
-      <button class="theme-btn" onclick="setTheme('sepia')" title="Sepia">📜</button>
+      <button class="theme-btn" onclick="setTheme('sepia')">📜</button>
     </div>
     <div class="topbar-user" id="topbarUser"></div>
   </header>
 
-  <nav class="tabs-nav">
-    <button class="tab-btn on" onclick="tab('resumen',this)">📊 Resumen</button>
-    <button class="tab-btn"   onclick="tab('comparativo',this)">⚖️ Comparativo</button>
-  </nav>
+  <!-- ── TABS PRINCIPALES (meses + comparativo) ── -->
+  <div class="tabs-main">
+    <div class="tabs-bar" id="tabsBar">
+      <!-- Generado dinámicamente -->
+    </div>
+  </div>
 
-  <main class="content">
-
-    <!-- KPI header -->
-    <div class="kpi-hdr">
-      <div>
-        <h1>🚚 KPI-DES-005 <span class="badge badge-ok">En vivo</span> <span class="badge badge-info">DATA REAL</span></h1>
-        <div class="kpi-hdr-sub">On-Time Delivery (OTD %) · A tiempo: ON-TIME L&amp;S ≥ 0 · Meta ≥ 90% · Pedidos únicos por Comprobante</div>
-      </div>
-      <div class="kpi-actions">
-        <button class="btn" onclick="cargarDatos()" id="btnRefresh">🔄 Actualizar</button>
-        <span id="tsUpdate" style="font-size:.68rem;color:var(--dim)"></span>
+  <!-- ── CONTENIDO PRINCIPAL ── -->
+  <div id="mainContent">
+    <div class="tab-panel-main active" id="panel-empty">
+      <div class="empty" style="margin-top:3rem">
+        <div class="empty-icon">🚚</div>
+        <p>Cargando datos…</p>
       </div>
     </div>
+  </div>
 
-    <!-- Selector de meses -->
-    <div class="mes-bar">
-      <label>Mes A</label>
-      <select class="mes-sel" id="selA" onchange="onMesChange()"></select>
-      <span style="color:var(--dim);font-size:.8rem">vs</span>
-      <label>Mes B</label>
-      <select class="mes-sel" id="selB" onchange="onMesChange()"></select>
-      <div style="margin-left:auto;font-size:.7rem;color:var(--dim)" id="statusDatos">—</div>
-    </div>
-
-    <!-- ══ RESUMEN ══════════════════════════════════════════════════════ -->
-    <div class="tab-panel on" id="tab-resumen">
-
-      <!-- Banner estado -->
-      <div id="bannerEstado" class="b-strip b-ok" style="display:none"></div>
-
-      <!-- Banner metodología -->
-      <div class="method-strip">
-        📐 <b>OTD % = Pedidos A Tiempo / Total Despachados × 100</b> &nbsp;·&nbsp;
-        A tiempo: ON-TIME L&amp;S ≥ 0 &nbsp;·&nbsp; Tarde: ON-TIME L&amp;S &lt; 0 &nbsp;·&nbsp;
-        STATUS válidos: DESPACHADO + ENTREGADO &nbsp;·&nbsp; Fuente: Hoja ALISTAMIENTO
-      </div>
-
-      <!-- HERO -->
-      <div class="hero" id="heroWrap">
-        <div class="semaforo" id="semaforoBox">
-          <div class="sem-lbl" id="semLbl">OTD — Mes</div>
-          <div style="display:flex;align-items:flex-end;gap:3px">
-            <span class="sem-num" id="semNum">—</span><span class="sem-unit">%</span>
-          </div>
-          <div class="sem-meta" id="semMeta">Meta: ≥ 90%</div>
-          <div class="sem-barra-wrap"><div class="sem-barra" id="semBarra" style="width:0%"></div></div>
-          <span class="sem-pill verde" id="semPill">— —</span>
-          <div class="sem-delta">Δ vs. meta 90%: <b id="semDelta">—</b></div>
-          <div class="sem-circles" id="semCircles"></div>
-        </div>
-        <div class="metrics-grid" id="metricsGrid"></div>
-      </div>
-
-      <!-- Tabla semanal -->
-      <div class="sec-card">
-        <div class="sec-title">
-          <div class="bar" id="semBarColor" style="background:var(--accent)"></div>
-          📊 Registro Semanal · <span id="semTitleMes">—</span> · Meta ≥ 90%
-        </div>
-        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-          <table class="wt"><thead><tr>
-            <th>Semana</th><th>Total</th><th>A Tiempo</th><th>Tarde</th>
-            <th>OTD %</th><th>Δ pp</th><th>Lead Time</th>
-            <th>Mejor Día</th><th>Peor Día</th><th>Estado</th>
-          </tr></thead>
-          <tbody id="weeklyBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Charts: OTD diario + Donut -->
-      <div class="charts-2col">
-        <div class="chart-card">
-          <div class="sec-title"><div class="bar" style="background:var(--accent)"></div>OTD % — Evolución Diaria vs. Meta 90%</div>
-          <div class="chart-wrap"><canvas id="cDaily" height="110"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="sec-title"><div class="bar" style="background:var(--accent2)"></div>Estado Días del Mes</div>
-          <div class="chart-wrap"><canvas id="cDonut" height="200"></canvas></div>
-        </div>
-      </div>
-
-      <!-- Charts: Pedidos + Lead time -->
-      <div class="charts-2col">
-        <div class="chart-card">
-          <div class="sec-title"><div class="bar" style="background:var(--ok)"></div>Pedidos A Tiempo vs Tarde — Diario</div>
-          <div class="chart-wrap"><canvas id="cBarras" height="110"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="sec-title"><div class="bar" style="background:var(--warn)"></div>Lead Time Promedio (días SOLICITUD→DESPACHO)</div>
-          <div class="chart-wrap"><canvas id="cLead" height="110"></canvas></div>
-        </div>
-      </div>
-
-      <!-- Detail cards -->
-      <div class="detail-grid">
-        <div class="detail-card">
-          <h4>🎯 Estado del KPI</h4>
-          <div id="detalleEstado"></div>
-        </div>
-        <div class="detail-card">
-          <h4>📈 Semáforo de Días</h4>
-          <div id="detalleSemaforo"></div>
-        </div>
-      </div>
-
-      <!-- Tabla diaria colapsable -->
-      <div class="tog-hdr" onclick="toggleTabla()" id="togHdr">
-        <h4>📋 Tabla Diaria Detallada</h4>
-        <span class="tog-arrow" id="togArrow">▼</span>
-      </div>
-      <div class="tog-sec" id="togSec">
-        <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--surface);border:1px solid var(--border);border-radius:0 0 var(--r) var(--r)">
-          <table class="wt"><thead><tr>
-            <th>Fecha</th><th>Semana</th><th>Total</th><th>A Tiempo</th>
-            <th>Tarde</th><th>OTD %</th><th>Δ vs meta</th><th>Lead Time</th><th>Estado</th>
-          </tr></thead>
-          <tbody id="dailyBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-    </div><!-- /tab-resumen -->
-
-    <!-- ══ COMPARATIVO ══════════════════════════════════════════════════ -->
-    <div class="tab-panel" id="tab-comparativo">
-      <div class="comp-grid" id="compWrap">
-        <div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses para comparar</p></div>
-      </div>
-    </div>
-
-  </main>
-</div>
+</div><!-- /page -->
 
 <script src="../config/config.js"></script>
 <script src="../utils/auth.js"></script>
 <script>
 applyTheme();
 
-let allResumen = {}, allDiario = {}, charts = {};
-const META = 90;
+// ── Estado global ──────────────────────────────────────────────────────────
+let DATA = {};       // periodoId → { proceso:[], trans:[], diario:[], detalle:[] }
+let periodos = [];   // lista de periodoIds disponibles
+let charts   = {};
 
-// ── Tabs ─────────────────────────────────────────────────────────────────
-function tab(id, btn) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
-  document.getElementById('tab-' + id).classList.add('on');
-  btn.classList.add('on');
-  if (id === 'comparativo') renderComparativo();
+const META    = 95;   // % - semáforo con gestión para B2B+B2C
+const PROCESOS_INFO = ['TRASLADO','RETAIL','CLICK','MARKETPLACE','MAQUINAS','OTRO'];
+
+// ── Helpers visuales ─────────────────────────────────────────────────────
+function otdColor(v) {
+  return v >= META ? '#1A8754' : v >= 90 ? '#D97706' : '#C0392B';
 }
-
-function toggleTabla() {
-  const sec   = document.getElementById('togSec');
-  const arrow = document.getElementById('togArrow');
-  sec.classList.toggle('open');
-  arrow.textContent = sec.classList.contains('open') ? '▲' : '▼';
+function pillClass(v) {
+  return v >= META ? 'pill-ok' : v >= 90 ? 'pill-alr' : 'pill-crit';
 }
+function pillTxt(v) {
+  return v >= META ? '● BIEN' : v >= 90 ? '● ALERTA' : '● CRÍTICO';
+}
+function lbl(id) {
+  return CONFIG.meses.find(m => m.id === id)?.label || id;
+}
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
-// ── Cargar datos ──────────────────────────────────────────────────────────
+// ── Cargar datos desde Supabase ───────────────────────────────────────────
 async function cargarDatos() {
   const btn = document.getElementById('btnRefresh');
   btn.disabled = true; btn.textContent = '⏳';
-  document.getElementById('statusDatos').textContent = 'Cargando…';
   try {
-    const [resumen, diario] = await Promise.all([
-      sb.rest('GET', 'kpi_otd_resumen?order=periodo_id.asc,semana.asc'),
-      sb.rest('GET', 'kpi_otd_diario?order=periodo_id.asc,fecha.asc'),
+    const [proceso, trans, diario, detalle] = await Promise.all([
+      sb.rest('GET','kpi_otd_proceso?order=periodo_id.asc'),
+      sb.rest('GET','kpi_otd_trans?order=periodo_id.asc,transportador.asc'),
+      sb.rest('GET','kpi_otd_diario?order=periodo_id.asc,fecha.asc'),
+      sb.rest('GET','kpi_otd_detalle?order=periodo_id.asc,fecha.asc'),
     ]);
 
-    allResumen = {};
-    (resumen || []).forEach(r => {
-      if (!allResumen[r.periodo_id]) allResumen[r.periodo_id] = [];
-      allResumen[r.periodo_id].push(r);
-    });
+    // Agrupar por periodo
+    DATA = {};
+    const addTo = (arr, key, row) => {
+      if (!DATA[row.periodo_id]) DATA[row.periodo_id] = {proceso:[],trans:[],diario:[],detalle:[]};
+      DATA[row.periodo_id][key].push(row);
+    };
+    (proceso||[]).forEach(r => addTo(proceso,'proceso',r));
+    (trans||[]).forEach(r   => addTo(trans,'trans',r));
+    (diario||[]).forEach(r  => addTo(diario,'diario',r));
+    (detalle||[]).forEach(r => addTo(detalle,'detalle',r));
 
-    allDiario = {};
-    (diario || []).forEach(r => {
-      if (!allDiario[r.periodo_id]) allDiario[r.periodo_id] = [];
-      allDiario[r.periodo_id].push(r);
-    });
-
-    const periodos = Object.keys(allResumen).sort();
-    poblarSelectores(periodos);
+    periodos = Object.keys(DATA).sort();
     document.getElementById('tsUpdate').textContent = new Date().toLocaleTimeString('es-CO');
-    document.getElementById('statusDatos').textContent =
-      `${(resumen || []).length} registros · ${periodos.length} períodos`;
+    buildTabs();
+    if (periodos.length > 0) switchMainTab(periodos[periodos.length-1]);
   } catch(e) {
-    document.getElementById('statusDatos').textContent = '⚠️ ' + e.message.slice(0,60);
+    document.getElementById('mainContent').innerHTML =
+      `<div class="tab-panel-main active"><div class="empty" style="margin-top:3rem">
+        <div class="empty-icon">⚠️</div><p>Error cargando datos: ${e.message}</p>
+        <p style="margin-top:.5rem"><a href="cargue_des005.html" style="color:var(--accent)">→ Cargar datos</a></p>
+      </div></div>`;
   }
-  btn.disabled = false; btn.textContent = '🔄 Actualizar';
+  btn.disabled = false; btn.textContent = '🔄';
 }
 
-function poblarSelectores(periodos) {
-  const lbl = id => CONFIG.meses.find(m => m.id === id)?.label || id;
-  ['selA','selB'].forEach((sid, i) => {
-    const s = document.getElementById(sid);
-    s.innerHTML = periodos.map((p, j) =>
-      `<option value="${p}" ${j === (i===0 ? periodos.length-2 : periodos.length-1) ? 'selected' : ''}>${lbl(p)}</option>`
-    ).join('');
-    if (periodos.length === 1) s.value = periodos[0];
-  });
-  onMesChange();
+// ── Construir tabs de meses + comparativo ─────────────────────────────────
+function buildTabs() {
+  const bar = document.getElementById('tabsBar');
+  if (!periodos.length) {
+    bar.innerHTML = '<span style="padding:.75rem 1rem;font-size:.78rem;color:var(--muted)">Sin datos cargados · <a href="cargue_des005.html" style="color:var(--accent)">Cargar</a></span>';
+    return;
+  }
+  let html = periodos.map((p,i) =>
+    `<button class="tab-main-btn" id="tab-${p}" onclick="switchMainTab('${p}')">📅 ${lbl(p)}</button>`
+  ).join('');
+  if (periodos.length >= 2) {
+    html += `<button class="tab-main-btn" id="tab-comp" onclick="switchMainTab('comp')">📊 Comparativo</button>`;
+  }
+  bar.innerHTML = html;
 }
 
-function onMesChange() { renderResumen(); }
+function switchMainTab(tabId) {
+  document.querySelectorAll('.tab-main-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('tab-'+tabId);
+  if (btn) btn.classList.add('active');
 
-// ── Render Resumen ─────────────────────────────────────────────────────────
-function renderResumen() {
-  const mesId   = document.getElementById('selA').value;
-  const resRows = allResumen[mesId] || [];
-  const diaRows = allDiario[mesId]  || [];
-  const label   = CONFIG.meses.find(m => m.id === mesId)?.label || mesId;
+  const content = document.getElementById('mainContent');
+  if (tabId === 'comp') {
+    renderComp(content);
+  } else {
+    renderMes(tabId, content);
+  }
+}
 
-  if (!resRows.length) {
-    document.getElementById('metricsGrid').innerHTML =
-      `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📭</div>
-       <p>Sin datos para este mes.<br>Carga el archivo desde <a href="cargue_des005.html" style="color:var(--accent)">Administración → KPI-DES-005</a>.</p></div>`;
-    document.getElementById('bannerEstado').style.display = 'none';
+// ── Render de un mes completo ─────────────────────────────────────────────
+function renderMes(periodoId, container) {
+  const d = DATA[periodoId];
+  if (!d) {
+    container.innerHTML = `<div class="tab-panel-main active">
+      <div class="empty" style="margin-top:3rem">
+        <div class="empty-icon">📭</div>
+        <p>Sin datos para ${lbl(periodoId)}.<br>
+        <a href="cargue_des005.html" style="color:var(--accent)">→ Cargar datos</a></p>
+      </div></div>`;
     return;
   }
 
-  const global  = resRows.find(r => !r.semana) || resRows[0];
-  const semanas = resRows.filter(r => r.semana);
-  const otd     = Number(global.otd_pct) || 0;
+  // Obtener registros de proceso
+  const getPr   = proc => d.proceso.find(r => r.proceso === proc);
+  const global  = d.proceso.find(r => r.proceso === null) || {};
+  const b2b2c   = getPr('B2B+B2C') || {};
+  const b2b     = getPr('B2B') || {};
+  const b2c     = getPr('B2C') || {};
+  const otd     = Number(b2b2c.otd_pct || 0);
 
-  // ── Semáforo ──
-  const cls = otd >= 90 ? 'verde' : otd >= 70 ? 'amarillo' : 'rojo';
-  const txt = otd >= 90 ? '🟢 BIEN' : otd >= 70 ? '🟡 ALERTA' : '🔴 CRÍTICO';
-  const col = otd >= 90 ? 'var(--ok)' : otd >= 70 ? 'var(--warn)' : 'var(--error)';
-  const delta = otd - META;
+  // Procesos informativos disponibles
+  const otrosProcs = d.proceso
+    .filter(r => r.proceso && r.proceso !== 'B2B+B2C' && r.proceso !== 'B2B' && r.proceso !== 'B2C')
+    .sort((a,b) => (b.total_pedidos||0) - (a.total_pedidos||0));
 
-  document.getElementById('semLbl').textContent = `OTD — ${label}`;
-  const numEl = document.getElementById('semNum');
-  numEl.textContent = otd.toFixed(1);
-  numEl.style.color = col;
-  document.getElementById('semMeta').textContent =
-    `${global.pedidos_atime} a tiempo / ${global.total_pedidos} pedidos · Meta ≥ 90%`;
-  document.getElementById('semBarra').style.cssText = `width:${Math.min(otd,100)}%;background:${col}`;
-  const pill = document.getElementById('semPill');
-  pill.className = `sem-pill ${cls}`; pill.textContent = txt;
-  const dEl = document.getElementById('semDelta');
-  dEl.textContent = (delta>=0?'+':'')+delta.toFixed(1)+' pp';
-  dEl.style.color = delta>=0 ? 'var(--ok)' : 'var(--error)';
-  document.getElementById('semTitleMes').textContent = label;
-  document.getElementById('semBarColor').style.background = col;
+  const label = lbl(periodoId);
+  const mes   = periodoId === periodos[periodos.length-1] ? '🔴 Último mes' : '';
 
-  const nBien  = diaRows.filter(d => Number(d.otd_pct) >= 90).length;
-  const nAlerta= diaRows.filter(d => Number(d.otd_pct) >= 70 && Number(d.otd_pct) < 90).length;
-  const nCrit  = diaRows.filter(d => Number(d.otd_pct) < 70).length;
-  document.getElementById('semCircles').innerHTML = `
-    <div class="sem-circle"><span class="cn c-ok">${nBien}</span><span class="cl c-ok">Bien</span></div>
-    <div class="sem-circle"><span class="cn c-warn">${nAlerta}</span><span class="cl c-warn">Alerta</span></div>
-    <div class="sem-circle"><span class="cn c-err">${nCrit}</span><span class="cl c-err">Crítico</span></div>`;
+  // ── Generar HTML del panel ──
+  container.innerHTML = `<div class="tab-panel-main active" id="panel-${periodoId}">
 
-  // Banner
-  const banner = document.getElementById('bannerEstado');
-  banner.style.display = 'flex';
-  banner.className = `b-strip ${otd>=90?'b-ok':otd>=70?'b-warn':'b-crit'}`;
-  banner.innerHTML = `<b>${txt}</b> &nbsp;·&nbsp; OTD de ${label}: <b>${otd.toFixed(1)}%</b>
-    &nbsp;·&nbsp; ${delta>=0?'Supera':'Por debajo de'} la meta en <b>${Math.abs(delta).toFixed(1)} pp</b>
-    &nbsp;·&nbsp; ${nBien} de ${diaRows.length} días con OTD ≥ 90%`;
+    <!-- Sub-tabs proceso -->
+    <div class="subtabs-bar">
+      <span class="subtab-lbl">Proceso:</span>
+      <button class="subtab-btn active" id="${periodoId}-st-b2b2c" onclick="switchSubTab('${periodoId}','b2b2c',this)">B2B + B2C</button>
+      ${otrosProcs.map(r =>
+        `<button class="subtab-btn" id="${periodoId}-st-${r.proceso.toLowerCase()}"
+           onclick="switchSubTab('${periodoId}','${r.proceso.toLowerCase()}',this)">
+           ${r.proceso}</button>`
+      ).join('')}
+    </div>
 
-  // Métricas 3×2
-  const sorted   = [...diaRows].sort((a,b)=>Number(b.otd_pct)-Number(a.otd_pct));
-  const mejorDia = sorted[0];
-  const peorDia  = sorted[sorted.length-1];
-  const lt = global.lead_time_prom != null ? Number(global.lead_time_prom).toFixed(1)+' días' : '—';
-  document.getElementById('metricsGrid').innerHTML = [
-    ['OTD % del Período',         `${otd.toFixed(1)}%`,
-      `${global.pedidos_atime} a tiempo / ${global.total_pedidos} despachados`, 'c-acc'],
-    ['Lead Time Promedio',         lt,
-      'Días entre Solicitud → Despacho', 'c-ok'],
-    ['Total Pedidos Despachados',  (global.total_pedidos||0).toLocaleString('es-CO'),
-      `${diaRows.length} días activos del período`, 'c-acc'],
-    ['Días en Meta (≥90%)',        `${nBien} / ${diaRows.length}`,
-      `${diaRows.length ? Math.round(nBien/diaRows.length*100) : 0}% de los días`,
-      nBien/Math.max(diaRows.length,1)>=0.5?'c-ok':'c-warn'],
-    ['Mejor Día OTD',              mejorDia ? Number(mejorDia.otd_pct).toFixed(1)+'%' : '—',
-      mejorDia?.fecha||'', 'c-ok'],
-    ['Pedidos Tarde (período)',    (global.pedidos_tarde||0).toLocaleString('es-CO'),
-      global.total_pedidos>0
-        ? `${((global.pedidos_tarde||0)/global.total_pedidos*100).toFixed(1)}% del total` : '',
-      'c-err'],
-  ].map(([l,v,s,c]) =>
-    `<div class="mc"><div class="ml">${l}</div><div class="mv ${c}">${v}</div><div class="ms">${s}</div></div>`
-  ).join('');
+    <!-- SUBTAB B2B+B2C (indicador principal) -->
+    <div class="subtab-panel active" id="${periodoId}-sp-b2b2c">
 
-  // Tabla semanal
-  const tot = {
-    total: semanas.reduce((s,r)=>s+(r.total_pedidos||0),0),
-    aTime: semanas.reduce((s,r)=>s+(r.pedidos_atime||0),0),
-    tarde: semanas.reduce((s,r)=>s+(r.pedidos_tarde||0),0),
-  };
-  const totOTD = tot.total>0 ? (tot.aTime/tot.total*100).toFixed(1) : '—';
-  document.getElementById('weeklyBody').innerHTML =
-    semanas.sort((a,b)=>a.semana<b.semana?-1:1).map(r => {
-      const v   = Number(r.otd_pct||0);
-      const pp  = v - META;
-      const c   = v>=90?'c-ok':v>=70?'c-warn':'c-err';
-      const ltr = r.lead_time_prom!=null ? Number(r.lead_time_prom).toFixed(1)+'d' : '—';
-      return `<tr>
-        <td>${r.semana}</td><td>${(r.total_pedidos||0)}</td>
-        <td class="c-ok">${(r.pedidos_atime||0)}</td>
-        <td class="c-err">${(r.pedidos_tarde||0)}</td>
-        <td class="${c}"><b>${v.toFixed(1)}%</b></td>
-        <td class="${pp>=0?'c-ok':'c-err'}">${pp>=0?'+':''}${pp.toFixed(1)} pp</td>
-        <td>${ltr}</td>
-        <td class="c-ok">${r.mejor_dia_otd!=null?Number(r.mejor_dia_otd).toFixed(1)+'%':'—'}</td>
-        <td class="c-err">${r.peor_dia_otd!=null?Number(r.peor_dia_otd).toFixed(1)+'%':'—'}</td>
-        <td>${v>=90?'🟢 BIEN':v>=70?'🟡 ALERTA':'🔴 CRÍTICO'}</td>
-      </tr>`;
-    }).join('') +
-    `<tr class="tr-tot">
-      <td>TOTAL PERÍODO</td><td>${tot.total.toLocaleString('es-CO')}</td>
-      <td class="c-ok">${tot.aTime}</td><td class="c-err">${tot.tarde}</td>
-      <td class="${Number(totOTD)>=90?'c-ok':Number(totOTD)>=70?'c-warn':'c-err'}"><b>${totOTD}%</b></td>
-      <td class="${Number(totOTD)-META>=0?'c-ok':'c-err'}">${Number(totOTD)-META>=0?'+':''}${(Number(totOTD)-META).toFixed(1)} pp</td>
-      <td>${lt}</td>
-      <td class="c-ok">${global.mejor_dia_otd!=null?Number(global.mejor_dia_otd).toFixed(1)+'%':'—'}</td>
-      <td class="c-err">${global.peor_dia_otd!=null?Number(global.peor_dia_otd).toFixed(1)+'%':'—'}</td>
-      <td>${Number(totOTD)>=90?'🟢 BIEN':Number(totOTD)>=70?'🟡 ALERTA':'🔴 CRÍTICO'}</td>
-    </tr>`;
+      <div class="info-banner">📋
+        <div><b>B2B + B2C — ${label}:</b>
+        Indicador principal OTD. B2B: ${b2b.total_pedidos||0} pedidos · B2C: ${b2c.total_pedidos||0} pedidos.
+        Total: ${b2b2c.total_pedidos||0} pedidos.
+        ${b2b2c.pedidos_tarde===0 ? '100% de cumplimiento.' : `${b2b2c.pedidos_tarde} tardía(s).`}
+        </div>
+      </div>
 
-  // Tabla diaria
-  document.getElementById('dailyBody').innerHTML = [...diaRows]
-    .sort((a,b)=>a.fecha<b.fecha?-1:1)
-    .map(d => {
-      const v  = Number(d.otd_pct||0);
-      const pp = v - META;
-      const c  = v>=90?'c-ok':v>=70?'c-warn':'c-err';
-      const pill = v>=90?'<span class="tag tag-ok">🟢 BIEN</span>'
-                 : v>=70?'<span class="tag tag-warn">🟡 ALERTA</span>'
-                 :        '<span class="tag tag-crit">🔴 CRÍTICO</span>';
-      return `<tr>
-        <td><b>${d.fecha}</b></td><td>${d.semana||'—'}</td>
-        <td>${d.total_pedidos||0}</td><td class="c-ok">${d.pedidos_atime||0}</td>
-        <td class="c-err">${d.pedidos_tarde||0}</td>
-        <td class="${c}"><b>${v.toFixed(1)}%</b></td>
-        <td class="${pp>=0?'c-ok':'c-err'}">${pp>=0?'+':''}${pp.toFixed(1)}</td>
-        <td>${d.lead_time_prom!=null?Number(d.lead_time_prom).toFixed(1)+'d':'—'}</td>
-        <td>${pill}</td>
-      </tr>`;
-    }).join('');
+      <div class="hero">
+        <div class="semaforo-card">
+          <div class="sem-label">OTD B2B + B2C — ${label}</div>
+          <div><span class="sem-value" id="sem-val-${periodoId}" style="color:${otdColor(otd)}">${otd.toFixed(1)}</span><span class="sem-unit">%</span></div>
+          <div class="sem-pbar-wrap"><div class="sem-pbar" style="width:${Math.min(otd,100)}%;background:${otdColor(otd)}"></div></div>
+          <div class="sem-meta">Meta: ≥ ${META}% · Variación:
+            <strong style="color:${otdColor(otd)}">${otd>=META?'+':''}${(otd-META).toFixed(1)} pp</strong>
+          </div>
+          <span class="sem-pill ${pillClass(otd)}">${pillTxt(otd)}</span>
+          <div class="sem-note">${b2b2c.pedidos_tarde===0
+            ? `0 tardíos en ${b2b2c.total_pedidos||0} pedidos · ¡Mes perfecto!`
+            : `${b2b2c.pedidos_tarde} tardío(s) en ${b2b2c.total_pedidos||0} pedidos`}</div>
+          <div class="sem-formula">OTD = ${b2b2c.pedidos_atime||0} / ${b2b2c.total_pedidos||0} × 100 = <strong>${otd.toFixed(1)}%</strong></div>
+        </div>
+        <div class="metrics-grid">
+          <div class="mc">
+            <div class="ml">Total Pedidos B2B + B2C</div>
+            <div class="mv c-navy">${(b2b2c.total_pedidos||0).toLocaleString('es-CO')}</div>
+            <div class="ms">B2B: ${b2b.total_pedidos||0} · B2C: ${b2c.total_pedidos||0}</div>
+          </div>
+          <div class="mc">
+            <div class="ml">Entregados a Tiempo</div>
+            <div class="mv c-ok">${(b2b2c.pedidos_atime||0).toLocaleString('es-CO')}</div>
+            <div class="ms">≤ fecha promesa · ${b2b2c.pedidos_tarde===0?'¡Perfecto!':b2b2c.pedidos_tarde+' tardías'}</div>
+          </div>
+          <div class="mc">
+            <div class="ml">OTD B2B</div>
+            <div class="mv" style="color:${otdColor(Number(b2b.otd_pct||0))}">${Number(b2b.otd_pct||0).toFixed(1)}%</div>
+            <div class="ms">${b2b.pedidos_atime||0} / ${b2b.total_pedidos||0} · ${b2b.pedidos_tarde||0} tardías</div>
+          </div>
+          <div class="mc">
+            <div class="ml">OTD B2C</div>
+            <div class="mv" style="color:${otdColor(Number(b2c.otd_pct||0))}">${Number(b2c.otd_pct||0).toFixed(1)}%</div>
+            <div class="ms">${b2c.pedidos_atime||0} / ${b2c.total_pedidos||0} · ${b2c.pedidos_tarde||0} tardías</div>
+          </div>
+          <div class="mc">
+            <div class="ml">Tardías B2B</div>
+            <div class="mv" style="color:${(b2b.pedidos_tarde||0)>0?'#D97706':'#1A8754'}">${b2b.pedidos_tarde||0}</div>
+            <div class="ms">${(b2b.pedidos_tarde||0)===0?'Sin novedades':'Revisar detalle'}</div>
+          </div>
+          <div class="mc">
+            <div class="ml">Tardías B2C</div>
+            <div class="mv" style="color:${(b2c.pedidos_tarde||0)>0?'#D97706':'#1A8754'}">${b2c.pedidos_tarde||0}</div>
+            <div class="ms">${(b2c.pedidos_tarde||0)===0?'Sin novedades':'Revisar detalle'}</div>
+          </div>
+        </div>
+      </div>
 
-  // Detail cards
-  document.getElementById('detalleEstado').innerHTML = [
-    ['Fórmula',          '<span class="dv c-acc">A Tiempo ÷ Total Despachados × 100</span>'],
-    ['OTD Período',      `<span class="dv ${cls==='verde'?'c-ok':cls==='amarillo'?'c-warn':'c-err'}">${otd.toFixed(1)}% — ${txt}</span>`],
-    ['Meta',             `<span class="dv">≥ ${META}%</span>`],
-    ['Δ vs meta',        `<span class="dv ${delta>=0?'c-ok':'c-err'}">${delta>=0?'+':''}${delta.toFixed(1)} pp</span>`],
-    ['Lead time prom.',  `<span class="dv">${lt}</span>`],
-    ['Semáforo',         '<span class="dv">🔴&lt;70 · 🟡70–89 · 🟢≥90%</span>'],
-  ].map(([k,v])=>`<div class="di"><span class="dk">${k}</span>${v}</div>`).join('');
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">B2B vs B2C — Pedidos y OTD%</div>
+          <canvas id="chart-${periodoId}-b2b2c-bar" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Distribución B2B vs B2C</div>
+          <canvas id="chart-${periodoId}-b2b2c-donut" height="200"></canvas>
+        </div>
+      </div>
 
-  document.getElementById('detalleSemaforo').innerHTML = [
-    ['Días BIEN (≥90%)',     `<span class="dv c-ok">${nBien} días (${diaRows.length?Math.round(nBien/diaRows.length*100):0}%)</span>`],
-    ['Días ALERTA (70–89%)',`<span class="dv c-warn">${nAlerta} días (${diaRows.length?Math.round(nAlerta/diaRows.length*100):0}%)</span>`],
-    ['Días CRÍTICO (<70%)', `<span class="dv c-err">${nCrit} días (${diaRows.length?Math.round(nCrit/diaRows.length*100):0}%)</span>`],
-    ['Mejor día OTD',       `<span class="dv c-ok">${mejorDia?.fecha||'—'}: ${mejorDia?Number(mejorDia.otd_pct).toFixed(1)+'%':'—'}</span>`],
-    ['Peor día OTD',        `<span class="dv c-err">${peorDia?.fecha||'—'}: ${peorDia?Number(peorDia.otd_pct).toFixed(1)+'%':'—'}</span>`],
-    ['Días medidos',        `<span class="dv">${diaRows.length} días</span>`],
-  ].map(([k,v])=>`<div class="di"><span class="dk">${k}</span>${v}</div>`).join('');
+      <!-- Tabla tardías B2B+B2C -->
+      <div id="tardias-section-${periodoId}"></div>
 
-  renderCharts(diaRows);
+    </div><!-- /subtab b2b2c -->
+
+    <!-- SUBTABS OTROS PROCESOS (informativos) -->
+    ${otrosProcs.map(r => `
+    <div class="subtab-panel" id="${periodoId}-sp-${r.proceso.toLowerCase()}">
+      ${buildOtroProcesoHTML(r, label)}
+    </div>`).join('')}
+
+    <!-- Transportadoras (siempre visible abajo de cualquier subtab) -->
+    <div class="trans-section">
+      <div class="chart-title">OTD por Transportadora — ${label}</div>
+      <div class="trans-grid" id="trans-grid-${periodoId}"></div>
+    </div>
+
+    <!-- Tabla detallada con toggle -->
+    <div class="table-section">
+      <div class="table-controls">
+        <button class="tbl-toggle-btn" onclick="toggleTabla('tbl-${periodoId}','tbl-icon-${periodoId}')">
+          <span id="tbl-icon-${periodoId}">▼</span> Mostrar / Ocultar tabla de pedidos
+        </button>
+        <input class="search-inp" type="text" placeholder="Buscar comprobante, ciudad…"
+          oninput="filtrarTabla('tbody-${periodoId}',this.value)"/>
+      </div>
+      <div id="tbl-${periodoId}" class="tbl-hidden">
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr>
+              <th>#</th><th>Fecha</th><th>Comprobante</th><th>Proceso</th>
+              <th>Transportadora</th><th>Ciudad</th><th>ON-TIME (días)</th><th>Estado</th>
+            </tr></thead>
+            <tbody id="tbody-${periodoId}"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-panel-main -->`;
+
+  // Render asíncrono de charts y datos
+  requestAnimationFrame(() => {
+    buildChartB2B2C(periodoId, b2b, b2c);
+    buildTransGrid(periodoId);
+    buildTablaDetalle(periodoId);
+    buildTardiasBanner(periodoId);
+    buildDailyChart(periodoId, d.diario);
+  });
 }
 
-// ── Charts ─────────────────────────────────────────────────────────────────
-function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+// ── Banner de tardías B2B+B2C ─────────────────────────────────────────────
+function buildTardiasBanner(periodoId) {
+  const d = DATA[periodoId];
+  if (!d) return;
+  const tardias = d.detalle.filter(r =>
+    (r.proceso === 'B2B' || r.proceso === 'B2C') && !r.ontime
+  );
+  const el = document.getElementById(`tardias-section-${periodoId}`);
+  if (!el) return;
 
-function renderCharts(diaRows) {
-  const sorted  = [...diaRows].sort((a,b)=>a.fecha<b.fecha?-1:1);
-  const fechas  = sorted.map(d=>d.fecha.slice(5));
-  const otdVals = sorted.map(d=>Number(d.otd_pct||0));
-  const aTime   = sorted.map(d=>d.pedidos_atime||0);
-  const tarde   = sorted.map(d=>d.pedidos_tarde||0);
-  const lts     = sorted.map(d=>d.lead_time_prom!=null?Number(d.lead_time_prom):null);
+  if (tardias.length === 0) {
+    el.innerHTML = `<div class="note-box" style="background:rgba(26,135,84,.06);border-color:rgba(26,135,84,.25);color:#1A8754;margin-bottom:1rem">
+      ✅ <strong>Sin tardías en B2B + B2C durante ${lbl(periodoId)}.</strong>
+      Todas las entregas cumplieron la fecha promesa.
+    </div>`;
+    return;
+  }
 
-  // Línea OTD diario
-  destroyChart('cDaily');
-  charts.cDaily = new Chart(document.getElementById('cDaily'),{type:'line',
-    data:{labels:fechas,datasets:[
-      {label:'OTD%',data:otdVals,borderColor:'#00D4FF',backgroundColor:'rgba(0,212,255,.07)',
-       fill:true,tension:.35,pointRadius:5,
-       pointBackgroundColor:otdVals.map(v=>v>=90?'#00FF88':v>=70?'#FFB020':'#FF4D6D'),
-       spanGaps:false},
-      {label:`Meta ${META}%`,data:fechas.map(()=>META),
-       borderColor:'rgba(255,176,32,.55)',borderDash:[4,3],pointRadius:0,fill:false},
-    ]},
+  const filas = tardias.map((r,i) => `<tr>
+    <td>${i+1}</td>
+    <td>${r.fecha||'—'}</td>
+    <td><strong>${r.comprobante||'—'}</strong></td>
+    <td>${r.proceso||'—'}</td>
+    <td>${r.transportador||'—'}</td>
+    <td>${r.ciudad||'—'}</td>
+    <td style="color:#D97706">${r.ontime_dias != null ? r.ontime_dias : '—'}</td>
+    <td><span class="badge-late">TARDÍA</span></td>
+  </tr>`).join('');
+
+  el.innerHTML = `
+    <div class="note-box">⚠️ <strong>${tardias.length} tardía(s) en B2B + B2C — ${lbl(periodoId)}.</strong>
+    Revisar detalles abajo.</div>
+    <div class="table-section" style="margin-bottom:1rem">
+      <div class="chart-title" style="margin-bottom:.75rem">Tardías B2B + B2C — ${lbl(periodoId)}</div>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>#</th><th>Fecha</th><th>Comprobante</th><th>Proceso</th>
+            <th>Transportadora</th><th>Ciudad</th><th>ON-TIME (días)</th><th>Estado</th>
+          </tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// ── HTML para otros procesos (informativos, sin semáforo de gestión) ───────
+function buildOtroProcesoHTML(r, label) {
+  const otd   = Number(r.otd_pct||0);
+  const color = otdColor(otd);
+  return `
+    <div class="info-banner">📋 <div><b>${r.proceso} — ${label}:</b>
+    Canal informativo. Sin semáforo de gestión.
+    ${r.total_pedidos} pedidos · ${r.pedidos_atime} a tiempo · ${r.pedidos_tarde} tardías.
+    </div></div>
+    <div class="hero">
+      <div class="semaforo-card">
+        <div class="sem-label">OTD ${r.proceso} — ${label}</div>
+        <div><span class="sem-value" style="color:${color}">${otd.toFixed(1)}</span><span class="sem-unit">%</span></div>
+        <div class="sem-pbar-wrap"><div class="sem-pbar" style="width:${Math.min(otd,100)}%;background:${color}"></div></div>
+        <div class="sem-note">Solo datos · Sin semáforo de gestión</div>
+        <div class="sem-formula">${r.pedidos_atime} / ${r.total_pedidos} × 100 = <strong>${otd.toFixed(1)}%</strong></div>
+      </div>
+      <div class="metrics-grid">
+        <div class="mc"><div class="ml">Total Pedidos</div>
+          <div class="mv c-acc">${r.total_pedidos||0}</div></div>
+        <div class="mc"><div class="ml">A Tiempo</div>
+          <div class="mv c-ok">${r.pedidos_atime||0}</div></div>
+        <div class="mc"><div class="ml">Tardías</div>
+          <div class="mv" style="color:${(r.pedidos_tarde||0)>0?'#D97706':'#1A8754'}">${r.pedidos_tarde||0}</div></div>
+        <div class="mc"><div class="ml">OTD %</div>
+          <div class="mv" style="color:${color}">${otd.toFixed(1)}%</div></div>
+      </div>
+    </div>`;
+}
+
+// ── Chart B2B vs B2C ──────────────────────────────────────────────────────
+function buildChartB2B2C(periodoId, b2b, b2c) {
+  const barId   = `chart-${periodoId}-b2b2c-bar`;
+  const donutId = `chart-${periodoId}-b2b2c-donut`;
+  destroyChart(barId); destroyChart(donutId);
+
+  charts[barId] = new Chart(document.getElementById(barId), {
+    type:'bar',
+    data:{
+      labels:['B2B','B2C'],
+      datasets:[
+        {label:'A Tiempo', data:[b2b.pedidos_atime||0, b2c.pedidos_atime||0],
+          backgroundColor:['rgba(26,135,84,.75)','rgba(26,135,84,.6)'],borderRadius:4},
+        {label:'Tardías',  data:[b2b.pedidos_tarde||0,  b2c.pedidos_tarde||0],
+          backgroundColor:['rgba(192,57,43,.65)','rgba(192,57,43,.5)'],borderRadius:4},
+      ]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{
-        y:{min:0,max:110,ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
-        x:{grid:{display:false},ticks:{font:{size:9},maxTicksLimit:12}},
-      }}});
+      plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:12}}},
+      scales:{x:{grid:{display:false}},y:{stacked:false,grid:{color:'rgba(128,128,128,.08)'},
+        ticks:{font:{size:10}}}}}
+  });
 
-  // Donut estado días
-  const nB=otdVals.filter(v=>v>=90).length, nA=otdVals.filter(v=>v>=70&&v<90).length, nC=otdVals.filter(v=>v<70).length;
-  destroyChart('cDonut');
-  charts.cDonut = new Chart(document.getElementById('cDonut'),{type:'doughnut',
-    data:{labels:[`🟢 BIEN (${nB})`,`🟡 ALERTA (${nA})`,`🔴 CRÍTICO (${nC})`],
-      datasets:[{data:[nB,nA,nC],
-        backgroundColor:['rgba(0,255,136,.8)','rgba(255,176,32,.8)','rgba(255,77,109,.8)'],
-        borderWidth:2,borderColor:'var(--surface)'}]},
+  charts[donutId] = new Chart(document.getElementById(donutId), {
+    type:'doughnut',
+    data:{
+      labels:[`B2B (${b2b.total_pedidos||0})`,`B2C (${b2c.total_pedidos||0})`],
+      datasets:[{data:[b2b.total_pedidos||0, b2c.total_pedidos||0],
+        backgroundColor:['rgba(27,58,107,.75)','rgba(13,122,95,.7)'],
+        borderWidth:2, borderColor:'var(--surface)'}]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}}}});
+      plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}}}
+  });
+}
 
-  // Barras apiladas a tiempo vs tarde
-  destroyChart('cBarras');
-  charts.cBarras = new Chart(document.getElementById('cBarras'),{type:'bar',
-    data:{labels:fechas,datasets:[
-      {label:'A Tiempo',data:aTime,backgroundColor:'rgba(0,255,136,.7)',borderRadius:3,stack:'s'},
-      {label:'Tarde',   data:tarde,backgroundColor:'rgba(255,77,109,.65)',borderRadius:3,stack:'s'},
+// ── Chart OTD diario ──────────────────────────────────────────────────────
+function buildDailyChart(periodoId, diario) {
+  if (!diario || !diario.length) return;
+
+  // Insertar canvas para chart diario en el subtab b2b2c
+  const sp = document.getElementById(`${periodoId}-sp-b2b2c`);
+  if (!sp) return;
+
+  // Buscar o crear contenedor
+  let dailyWrap = document.getElementById(`daily-wrap-${periodoId}`);
+  if (!dailyWrap) {
+    const chartsRow = sp.querySelector('.charts-row');
+    if (!chartsRow) return;
+    dailyWrap = document.createElement('div');
+    dailyWrap.id = `daily-wrap-${periodoId}`;
+    dailyWrap.className = 'charts-row';
+    dailyWrap.style.marginBottom = '1rem';
+    dailyWrap.innerHTML = `
+      <div class="chart-card" style="grid-column:1/-1">
+        <div class="chart-title">OTD % Diario B2B+B2C — ${lbl(periodoId)} vs Meta ${META}%</div>
+        <canvas id="chart-${periodoId}-daily" height="130"></canvas>
+      </div>`;
+    chartsRow.after(dailyWrap);
+  }
+
+  const id = `chart-${periodoId}-daily`;
+  destroyChart(id);
+  const labels = diario.map(d => d.fecha?.slice(5) || '');
+  const vals   = diario.map(d => Number(d.otd_pct||0));
+
+  charts[id] = new Chart(document.getElementById(id), {
+    type:'line',
+    data:{labels, datasets:[
+      {label:'OTD%', data:vals, borderColor:'#00D4FF',
+        backgroundColor:'rgba(0,212,255,.07)', fill:true, tension:.35,
+        pointRadius:5, spanGaps:false,
+        pointBackgroundColor: vals.map(v => v >= META ? '#1A8754' : v >= 90 ? '#D97706' : '#C0392B')},
+      {label:`Meta ${META}%`, data:labels.map(()=>META),
+        borderColor:'rgba(255,176,32,.6)', borderDash:[5,3], pointRadius:0, fill:false},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12}}},
       scales:{
-        x:{grid:{display:false},ticks:{font:{size:9},maxTicksLimit:12}},
-        y:{stacked:true,ticks:{font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
-      }}});
-
-  // Lead time línea
-  destroyChart('cLead');
-  charts.cLead = new Chart(document.getElementById('cLead'),{type:'line',
-    data:{labels:fechas,datasets:[{
-      label:'Lead Time (días)',data:lts,
-      borderColor:'#FFB020',backgroundColor:'rgba(255,176,32,.08)',fill:true,
-      tension:.35,pointRadius:4,pointBackgroundColor:'#FFB020',spanGaps:true,
-    }]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{
-        y:{min:0,ticks:{callback:v=>v+'d',font:{size:10}},grid:{color:'rgba(255,255,255,.04)'}},
-        x:{grid:{display:false},ticks:{font:{size:9},maxTicksLimit:12}},
-      }}});
+        y:{min:0, max:110, ticks:{callback:v=>v+'%',font:{size:10}},
+          grid:{color:'rgba(128,128,128,.07)'}},
+        x:{grid:{display:false},ticks:{font:{size:9},maxTicksLimit:14}}}}
+  });
 }
 
-// ── Comparativo ──────────────────────────────────────────────────────────
-function renderComparativo() {
-  const idA  = document.getElementById('selA').value;
-  const idB  = document.getElementById('selB').value;
-  const gA   = (allResumen[idA]||[]).find(r=>!r.semana);
-  const gB   = (allResumen[idB]||[]).find(r=>!r.semana);
-  const lblA = CONFIG.meses.find(m=>m.id===idA)?.label||idA;
-  const lblB = CONFIG.meses.find(m=>m.id===idB)?.label||idB;
-  const wrap = document.getElementById('compWrap');
+// ── Grid de transportadoras ───────────────────────────────────────────────
+function buildTransGrid(periodoId) {
+  const d = DATA[periodoId];
+  if (!d) return;
+  const el = document.getElementById(`trans-grid-${periodoId}`);
+  if (!el) return;
 
-  if (!gA||!gB) {
-    wrap.innerHTML=`<div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses con datos cargados</p></div>`;
-    return;
-  }
+  if (!d.trans.length) { el.innerHTML = '<p style="color:var(--muted);font-size:.78rem">Sin datos de transportadoras.</p>'; return; }
 
-  const dA = allDiario[idA]||[], dB = allDiario[idB]||[];
-  const nBienA=dA.filter(d=>Number(d.otd_pct)>=META).length;
-  const nBienB=dB.filter(d=>Number(d.otd_pct)>=META).length;
-
-  const dif=(a,b,fmt=v=>v.toFixed(1),inv=false)=>{
-    const diff=b-a;const up=inv?diff<0:diff>0;
-    return `<span class="${up?'delta-up':diff<0?'delta-dn':''}">${diff>0?'+':''}${fmt(diff)}</span>`;
-  };
-
-  const rows=[
-    ['OTD %',              `${Number(gA.otd_pct||0).toFixed(1)}%`,  `${Number(gB.otd_pct||0).toFixed(1)}%`,  dif(Number(gA.otd_pct||0),Number(gB.otd_pct||0),v=>v.toFixed(1)+'%')],
-    ['Total Pedidos',      gA.total_pedidos||0,                     gB.total_pedidos||0,                     dif(gA.total_pedidos||0,gB.total_pedidos||0,v=>Math.round(v)+'')],
-    ['Pedidos A Tiempo',   gA.pedidos_atime||0,                     gB.pedidos_atime||0,                     dif(gA.pedidos_atime||0,gB.pedidos_atime||0,v=>Math.round(v)+'')],
-    ['Pedidos Tarde',      gA.pedidos_tarde||0,                     gB.pedidos_tarde||0,                     dif(gA.pedidos_tarde||0,gB.pedidos_tarde||0,v=>Math.round(v)+'',true)],
-    ['Lead Time Prom.',    gA.lead_time_prom!=null?Number(gA.lead_time_prom).toFixed(1)+'d':'—', gB.lead_time_prom!=null?Number(gB.lead_time_prom).toFixed(1)+'d':'—',''],
-    ['Mejor Día OTD',      gA.mejor_dia_otd!=null?Number(gA.mejor_dia_otd).toFixed(1)+'%':'—', gB.mejor_dia_otd!=null?Number(gB.mejor_dia_otd).toFixed(1)+'%':'—',''],
-    ['Peor Día OTD',       gA.peor_dia_otd!=null?Number(gA.peor_dia_otd).toFixed(1)+'%':'—',  gB.peor_dia_otd!=null?Number(gB.peor_dia_otd).toFixed(1)+'%':'—',''],
-    ['Días en Meta (≥90%)',`${nBienA}/${dA.length}`,                `${nBienB}/${dB.length}`,                ''],
-  ];
-
-  wrap.innerHTML=`
-    <div class="comp-card">
-      <h3>${lblA} vs ${lblB}</h3>
-      <div class="comp-row" style="font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.07em">
-        <span class="comp-metric">Indicador</span>
-        <div class="comp-vals"><span class="v-a">${lblA.split(' ')[0]}</span><span class="v-b">${lblB.split(' ')[0]}</span></div>
-        <span style="width:55px;text-align:right;font-size:.66rem;color:var(--muted)">Var.</span>
-      </div>
-      ${rows.map(([m,a,b,dv])=>`<div class="comp-row">
-        <span class="comp-metric">${m}</span>
-        <div class="comp-vals"><span class="v-a">${a}</span><span class="v-b">${b}</span></div>
-        <span style="width:55px;text-align:right">${dv}</span>
-      </div>`).join('')}
-    </div>
-    <div class="comp-card">
-      <h3>Visual Comparativo</h3>
-      <div class="chart-wrap" style="height:280px"><canvas id="cComp"></canvas></div>
+  el.innerHTML = d.trans.map(t => {
+    const otd   = Number(t.otd_pct||0);
+    const color = otdColor(otd);
+    return `<div class="trans-item">
+      <div class="trans-name">${t.transportador}</div>
+      <div class="trans-otd" style="color:${color}">${otd.toFixed(1)}%</div>
+      <div class="trans-detail">${t.pedidos_atime||0} / ${t.total_pedidos||0} pedidos · ${t.pedidos_tarde||0} tardías</div>
+      <div class="trans-bar-wrap"><div class="trans-bar" style="width:${Math.min(otd,100)}%;background:${color}"></div></div>
     </div>`;
+  }).join('');
+}
 
-  new Chart(document.getElementById('cComp'),{type:'bar',
-    data:{labels:['OTD %','Mejor Día','Meta 90%'],datasets:[
-      {label:lblA.split(' ')[0],data:[Number(gA.otd_pct||0),Number(gA.mejor_dia_otd||0),META],backgroundColor:'rgba(0,212,255,.7)',borderRadius:5},
-      {label:lblB.split(' ')[0],data:[Number(gB.otd_pct||0),Number(gB.mejor_dia_otd||0),META],backgroundColor:'rgba(123,47,255,.7)',borderRadius:5},
-      {label:'Meta',data:[META,META,META],type:'line',borderColor:'rgba(255,176,32,.7)',borderDash:[5,3],pointRadius:0,fill:false},
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},
-      scales:{y:{min:0,max:110,ticks:{callback:v=>v+'%',font:{size:10}}}}}});
+// ── Tabla detalle pedidos ─────────────────────────────────────────────────
+function buildTablaDetalle(periodoId) {
+  const d = DATA[periodoId];
+  if (!d) return;
+  const tbody = document.getElementById(`tbody-${periodoId}`);
+  if (!tbody) return;
+
+  tbody.innerHTML = d.detalle.map((r,i) => `<tr>
+    <td style="color:var(--muted)">${i+1}</td>
+    <td>${r.fecha||'—'}</td>
+    <td><strong>${r.comprobante||'—'}</strong></td>
+    <td>${r.proceso||'—'}</td>
+    <td>${r.transportador||'—'}</td>
+    <td>${r.ciudad||'—'}</td>
+    <td style="color:${r.ontime_dias>0?'#D97706':r.ontime_dias===0?'inherit':'#1A8754'}">${r.ontime_dias!=null?r.ontime_dias:'—'}</td>
+    <td>${r.ontime
+      ? '<span class="badge-ok">A TIEMPO</span>'
+      : '<span class="badge-late">TARDÍA</span>'}</td>
+  </tr>`).join('');
+}
+
+// ── Sub-tab switch ────────────────────────────────────────────────────────
+function switchSubTab(periodoId, st, btn) {
+  const panel = document.getElementById(`panel-${periodoId}`);
+  if (!panel) return;
+  panel.querySelectorAll('.subtab-panel').forEach(p => p.classList.remove('active'));
+  panel.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
+  const sp = document.getElementById(`${periodoId}-sp-${st}`);
+  if (sp) sp.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+// ── Toggle tabla ──────────────────────────────────────────────────────────
+function toggleTabla(tblId, iconId) {
+  const el   = document.getElementById(tblId);
+  const icon = document.getElementById(iconId);
+  if (el.classList.toggle('tbl-hidden')) {
+    icon.textContent = '▼';
+  } else {
+    icon.textContent = '▲';
+  }
+}
+
+// ── Filtrar tabla ─────────────────────────────────────────────────────────
+function filtrarTabla(tbodyId, q) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  const term = q.toLowerCase();
+  Array.from(tbody.rows).forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+  });
+}
+
+// ── Comparativo ───────────────────────────────────────────────────────────
+function renderComp(container) {
+  if (periodos.length < 2) return;
+
+  const pA   = periodos[periodos.length-2];
+  const pB   = periodos[periodos.length-1];
+  const dA   = DATA[pA] || {};
+  const dB   = DATA[pB] || {};
+  const gA   = (dA.proceso||[]).find(r=>r.proceso==='B2B+B2C') || {};
+  const gB   = (dB.proceso||[]).find(r=>r.proceso==='B2B+B2C') || {};
+  const otdA = Number(gA.otd_pct||0);
+  const otdB = Number(gB.otd_pct||0);
+  const diff = otdB - otdA;
+  const diffStr = (diff>=0?'+':'')+diff.toFixed(1)+' pp';
+  const diffCol = diff>=0?'#1A8754':'#C0392B';
+
+  // Tabla por proceso
+  const procLabels = ['B2B+B2C','B2B','B2C','TRASLADO','RETAIL','CLICK','MARKETPLACE'];
+  const procRows   = procLabels.map(pr => {
+    const rA = (dA.proceso||[]).find(r=>(r.proceso||'GLOBAL')===pr)||{};
+    const rB = (dB.proceso||[]).find(r=>(r.proceso||'GLOBAL')===pr)||{};
+    const vA = rA.total_pedidos ? Number(rA.otd_pct||0) : null;
+    const vB = rB.total_pedidos ? Number(rB.otd_pct||0) : null;
+    const dv = (vA!=null && vB!=null) ? vB-vA : null;
+    return `<tr>
+      <td><strong>${pr==='B2B+B2C'?'<b>B2B + B2C ⭐</b>':pr}</strong></td>
+      <td>${vA!=null?vA.toFixed(1)+'%':'—'}</td><td>${rA.total_pedidos||'—'}</td>
+      <td style="color:#C0392B">${rA.pedidos_tarde||'—'}</td>
+      <td>${vB!=null?vB.toFixed(1)+'%':'—'}</td><td>${rB.total_pedidos||'—'}</td>
+      <td style="color:#C0392B">${rB.pedidos_tarde||'—'}</td>
+      <td style="color:${dv==null?'inherit':dv>=0?'#1A8754':'#C0392B'}">${dv!=null?(dv>=0?'+':'')+dv.toFixed(1)+' pp':'—'}</td>
+    </tr>`;
+  }).join('');
+
+  container.innerHTML = `<div class="tab-panel-main active">
+    <div class="info-banner">📊 <div><b>Comparativo ${lbl(pA)} vs ${lbl(pB)}:</b>
+    OTD por proceso. Indicador principal: B2B + B2C.</div></div>
+
+    <div class="comp-summary">
+      <div class="comp-card">
+        <div class="comp-lbl">OTD B2B+B2C ${lbl(pA).split(' ')[0]}</div>
+        <div class="comp-val" style="color:${otdColor(otdA)}">${otdA.toFixed(1)}%</div>
+        <div class="comp-sub">${gA.pedidos_atime||0} / ${gA.total_pedidos||0} · ${gA.pedidos_tarde||0} tardías</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-lbl">OTD B2B+B2C ${lbl(pB).split(' ')[0]}</div>
+        <div class="comp-val" style="color:${otdColor(otdB)}">${otdB.toFixed(1)}%</div>
+        <div class="comp-sub">${gB.pedidos_atime||0} / ${gB.total_pedidos||0} · ${gB.pedidos_tarde||0} tardías</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-lbl">Variación</div>
+        <div class="comp-val" style="color:${diffCol}">${diffStr}</div>
+        <div class="comp-sub">${diff>=0?'Mejora':'Caída'} vs mes anterior</div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">OTD B2B+B2C — ${lbl(pA)} vs ${lbl(pB)}</div>
+        <canvas id="chart-comp-bar" height="220"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">OTD por Proceso</div>
+        <canvas id="chart-comp-proc" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="comp-table-wrap">
+      <div class="chart-title" style="margin-bottom:.75rem">Detalle por Proceso — ${lbl(pA)} vs ${lbl(pB)}</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th>Proceso</th>
+            <th>${lbl(pA).split(' ')[0]} OTD%</th><th>Pedidos</th><th>Tardías</th>
+            <th>${lbl(pB).split(' ')[0]} OTD%</th><th>Pedidos</th><th>Tardías</th>
+            <th>Variación</th>
+          </tr></thead>
+          <tbody>${procRows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Comparativo transportadoras -->
+    <div class="comp-table-wrap">
+      <div class="chart-title" style="margin-bottom:.75rem">OTD por Transportadora — ${lbl(pA)} vs ${lbl(pB)}</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th>Transportadora</th>
+            <th>${lbl(pA).split(' ')[0]} — Pedidos</th><th>OTD%</th><th>Tardías</th>
+            <th>${lbl(pB).split(' ')[0]} — Pedidos</th><th>OTD%</th><th>Tardías</th>
+            <th>Variación</th>
+          </tr></thead>
+          <tbody id="comp-trans-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+
+  requestAnimationFrame(() => {
+    // Chart bar comparativo
+    destroyChart('chart-comp-bar');
+    charts['chart-comp-bar'] = new Chart(document.getElementById('chart-comp-bar'), {
+      type:'bar',
+      data:{
+        labels:[`OTD B2B+B2C`,`Meta ${META}%`],
+        datasets:[
+          {label:lbl(pA).split(' ')[0], data:[otdA, META],
+            backgroundColor:'rgba(27,58,107,.7)', borderRadius:5},
+          {label:lbl(pB).split(' ')[0], data:[otdB, META],
+            backgroundColor:'rgba(13,122,95,.7)', borderRadius:5},
+        ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:11}}}},
+        scales:{y:{min:0,max:110,ticks:{callback:v=>v+'%',font:{size:10}}}}}
+    });
+
+    // Chart procesos
+    const procValsA = procLabels.map(pr => {
+      const r = (dA.proceso||[]).find(x=>(x.proceso||'')===pr);
+      return r ? Number(r.otd_pct||0) : 0;
+    });
+    const procValsB = procLabels.map(pr => {
+      const r = (dB.proceso||[]).find(x=>(x.proceso||'')===pr);
+      return r ? Number(r.otd_pct||0) : 0;
+    });
+    destroyChart('chart-comp-proc');
+    charts['chart-comp-proc'] = new Chart(document.getElementById('chart-comp-proc'), {
+      type:'bar',
+      data:{labels:procLabels,datasets:[
+        {label:lbl(pA).split(' ')[0], data:procValsA,
+          backgroundColor:'rgba(27,58,107,.65)', borderRadius:4},
+        {label:lbl(pB).split(' ')[0], data:procValsB,
+          backgroundColor:'rgba(13,122,95,.65)', borderRadius:4},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{font:{size:10},boxWidth:12}}},
+        scales:{y:{min:0,max:110,ticks:{callback:v=>v+'%',font:{size:10}}},
+          x:{ticks:{font:{size:9}}}}}
+    });
+
+    // Tabla comparativo transportadoras
+    const allTrans = new Set([
+      ...(dA.trans||[]).map(t=>t.transportador),
+      ...(dB.trans||[]).map(t=>t.transportador),
+    ]);
+    const tbody = document.getElementById('comp-trans-tbody');
+    if (tbody) {
+      tbody.innerHTML = [...allTrans].map(trans => {
+        const tA = (dA.trans||[]).find(t=>t.transportador===trans)||{};
+        const tB = (dB.trans||[]).find(t=>t.transportador===trans)||{};
+        const vA = tA.total_pedidos ? Number(tA.otd_pct||0) : null;
+        const vB = tB.total_pedidos ? Number(tB.otd_pct||0) : null;
+        const dv = (vA!=null && vB!=null) ? vB-vA : null;
+        return `<tr>
+          <td><strong>${trans}</strong></td>
+          <td>${tA.total_pedidos||'—'}</td>
+          <td>${vA!=null?vA.toFixed(1)+'%':'—'}</td>
+          <td style="color:#C0392B">${tA.pedidos_tarde||'—'}</td>
+          <td>${tB.total_pedidos||'—'}</td>
+          <td>${vB!=null?vB.toFixed(1)+'%':'—'}</td>
+          <td style="color:#C0392B">${tB.pedidos_tarde||'—'}</td>
+          <td style="color:${dv==null?'inherit':dv>=0?'#1A8754':'#C0392B'}">${dv!=null?(dv>=0?'+':'')+dv.toFixed(1)+' pp':'—'}</td>
+        </tr>`;
+      }).join('');
+    }
+  });
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────

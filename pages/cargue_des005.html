@@ -171,6 +171,8 @@ function addLog(msg,tipo='inf'){
   log.appendChild(d);log.scrollTop=log.scrollHeight;
 }
 
+const META = 95; // OTD meta B2B+B2C
+
 // ── Cargue ─────────────────────────────────────────────────────────────
 async function subirKpi(){
   const file=document.getElementById('fileKpi').files[0];
@@ -188,16 +190,15 @@ async function subirKpi(){
     };
     const r=await procesarOTD(file,periodoId,onProgress);
     showProg(100,'Completado');hideProg();
-    const sem=r.otdPct>=90?'🟢':r.otdPct>=70?'🟡':'🔴';
+    const sem=r.otdB2B2C>=META?'🟢':r.otdB2B2C>=90?'🟡':'🔴';
     showRes('resKpi','ok',
       `✅ <b>Cargue completado — ${r.label}</b><br>`+
-      `${sem} OTD: <b>${r.otdPct.toFixed(1)}%</b> · Meta ≥ 90%<br>`+
-      `📦 Pedidos despachados: <b>${r.totalPedidos.toLocaleString('es-CO')}</b>`+
-      ` · ✅ A tiempo: <b>${r.pedidosATime}</b> · ❌ Tarde: <b>${r.pedidosTarde}</b><br>`+
-      `📅 Días: <b>${r.dias}</b>`+
-      (r.leadTimeProm!=null?` · ⏱️ Lead time prom.: <b>${r.leadTimeProm.toFixed(1)} días</b>`:'')
+      `${sem} OTD B2B+B2C: <b>${r.otdB2B2C.toFixed(1)}%</b> · Meta ≥ 95%<br>`+
+      `📦 Total pedidos (todos los procesos): <b>${r.totalPedidos.toLocaleString('es-CO')}</b><br>`+
+      `B2B+B2C: <b>${r.b2b2cTotal}</b> pedidos · ✅ A tiempo: <b>${r.b2b2cAtime}</b> · ❌ Tarde: <b>${r.b2b2cTarde}</b><br>`+
+      `📅 Días B2B+B2C: <b>${r.dias}</b>`
     );
-    addLog(`✓ ${r.label}: OTD ${r.otdPct.toFixed(1)}% · ${r.pedidosATime}/${r.totalPedidos} a tiempo`,'ok');
+    addLog(`✓ ${r.label}: OTD B2B+B2C ${r.otdB2B2C.toFixed(1)}% · ${r.b2b2cAtime}/${r.b2b2cTotal}`,'ok');
     cargarPeriodos();
   }catch(e){
     hideProg();
@@ -211,7 +212,8 @@ async function subirKpi(){
 async function cargarPeriodos(){
   const lista=document.getElementById('reproList');
   try{
-    const res=await sb.rest('GET','kpi_otd_resumen?semana=is.null&order=periodo_id.asc');
+    // Tomar la fila B2B+B2C por periodo (indicador principal)
+    const res=await sb.rest('GET','kpi_otd_proceso?proceso=eq.B2B+B2C&order=periodo_id.asc');
     if(!res||!res.length){
       lista.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">No hay períodos cargados aún.</div>`;
       return;
@@ -222,9 +224,9 @@ async function cargarPeriodos(){
         <div class="repro-item-info">
           <span class="repro-label">${lbl(r.periodo_id)}</span>
           <span class="repro-stats">
-            OTD <b>${parseFloat(r.otd_pct||0).toFixed(1)}%</b> ·
-            <b>${(r.pedidos_atime||0)}</b>/<b>${(r.total_pedidos||0)}</b> pedidos a tiempo
-            ${r.lead_time_prom!=null?` · LT prom. <b>${parseFloat(r.lead_time_prom).toFixed(1)}d</b>`:''}
+            OTD B2B+B2C <b>${parseFloat(r.otd_pct||0).toFixed(1)}%</b> ·
+            <b>${(r.pedidos_atime||0)}</b>/<b>${(r.total_pedidos||0)}</b> a tiempo ·
+            <b>${(r.pedidos_tarde||0)}</b> tardías
           </span>
         </div>
         <button class="btn btn-sm btn-danger" style="touch-action:manipulation"
@@ -239,7 +241,7 @@ async function eliminarPeriodo(periodoId,label){
   if(!confirm(`⚠️ ¿Eliminar TODOS los datos OTD de "${label}"?\n\nEsta acción es irreversible.`))return;
   try{
     addLog(`Eliminando ${label}…`,'warn');
-    for(const t of['kpi_otd_resumen','kpi_otd_diario']){
+    for(const t of['kpi_otd_proceso','kpi_otd_trans','kpi_otd_diario','kpi_otd_detalle']){
       await sb.rest('DELETE',`${t}?periodo_id=eq.${periodoId}`,null,{'Prefer':'return=minimal'});
     }
     addLog(`✓ ${label} eliminado`,'warn');
