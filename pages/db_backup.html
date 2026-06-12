@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Base de Datos & Backup</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <style>
+    /* ── Encabezado de sección ── */
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--warn);font-weight:600;margin-bottom:.3rem}
+    .db-hdr h1{font-size:clamp(1.2rem,4vw,1.55rem);font-weight:800}
+    .db-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem;margin-bottom:1.75rem}
+
+    /* ── Grid de submenú ── */
+    .db-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem}
+    @media(max-width:799px){.db-grid{grid-template-columns:1fr}}
+    @media(min-width:1920px){.db-grid{grid-template-columns:1fr 1fr 1fr}}
+
+    /* ── Tarjeta de submenú (misma estética que kpi-link-card en admin) ── */
+    .db-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r-lg);padding:1.4rem;
+      animation:fadeUp .4s ease both;position:relative;overflow:hidden;
+    }
+    .db-card::before{
+      content:'';position:absolute;inset:0;
+      pointer-events:none;
+    }
+    .db-card-title{
+      font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800;
+      display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;
+    }
+    .db-card-desc{font-size:.77rem;color:var(--muted);margin-bottom:1.1rem;line-height:1.55}
+
+    /* ── Tarjeta 1: Almacenamiento ── */
+    #cardStorage{border-color:rgba(0,212,255,.3)}
+    #cardStorage::before{background:radial-gradient(ellipse 70% 60% at 90% 10%,rgba(0,212,255,.05),transparent 70%)}
+    .storage-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+    .storage-stats{flex:1;min-width:160px}
+    .storage-stat{display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--border)}
+    .storage-stat:last-child{border-bottom:none}
+    .storage-stat-label{font-size:.76rem;color:var(--muted)}
+    .storage-stat-val{font-size:.82rem;font-weight:700;color:var(--text)}
+    .storage-stat-val.ok{color:var(--ok)}
+    .storage-stat-val.warn{color:var(--warn)}
+    .storage-stat-val.err{color:var(--error)}
+    /* mini donut */
+    .donut-wrap{display:flex;flex-direction:column;align-items:center;gap:.4rem;flex-shrink:0}
+    .donut-pct{font-family:'Syne',sans-serif;font-size:1.15rem;font-weight:800}
+    .donut-lbl{font-size:.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+    /* progress bar */
+    .storage-bar-wrap{margin-top:.85rem}
+    .storage-bar-lbl{font-size:.67rem;color:var(--muted);margin-bottom:.3rem;display:flex;justify-content:space-between}
+    .storage-bar-track{height:7px;background:var(--surface2);border-radius:10px;overflow:hidden;border:1px solid var(--border)}
+    .storage-bar-fill{height:100%;border-radius:10px;transition:width .6s ease}
+
+    /* ── Tarjeta 2: Backup ── */
+    #cardBackup{border-color:rgba(0,255,136,.2);animation-delay:.07s}
+    #cardBackup::before{background:radial-gradient(ellipse 70% 60% at 90% 10%,rgba(0,255,136,.04),transparent 70%)}
+    .bk-filters{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.85rem}
+    @media(max-width:479px){.bk-filters{grid-template-columns:1fr}}
+    .bk-field label{display:block;font-size:.66rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:.28rem}
+    .bk-field select,.bk-field input{
+      width:100%;background:var(--surface);border:1px solid var(--border2);
+      border-radius:var(--r-sm);color:var(--text);
+      font-family:'DM Sans',sans-serif;font-size:16px;padding:.42rem .65rem;outline:none;
+    }
+    .bk-field select:focus,.bk-field input:focus{border-color:var(--ok)}
+    .bk-format-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.85rem}
+    .bk-fmt-btn{
+      flex:1;min-width:80px;padding:.55rem .5rem;border-radius:var(--r-sm);
+      background:var(--surface2);border:1px solid var(--border2);
+      color:var(--muted);font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;
+      cursor:pointer;transition:all .18s;text-align:center;
+    }
+    .bk-fmt-btn:hover{border-color:var(--ok);color:var(--ok)}
+    .bk-fmt-btn.active{background:rgba(0,255,136,.08);border-color:var(--ok);color:var(--ok)}
+    .bk-btn-row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+    .bk-status{font-size:.74rem;color:var(--muted);margin-left:.25rem}
+    .bk-status.running{color:var(--warn)}
+    .bk-status.done{color:var(--ok)}
+    .bk-status.err{color:var(--error)}
+    /* Próximamente banner dentro de backup */
+    .bk-soon-note{
+      background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);
+      border-left:3px solid var(--accent);border-radius:var(--r-sm);
+      padding:.65rem .9rem;font-size:.73rem;color:var(--muted);line-height:1.6;
+      margin-top:.85rem;
+    }
+
+    @media(max-width:479px){
+      .db-card{padding:1rem}
+      .db-card-title{font-size:.85rem}
+    }
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+
+  <header class="topbar">
+    <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-title" style="color:var(--warn)">🗄️ BD & Backup</span>
+    <div class="topbar-spacer"></div>
+    <a href="admin.html" class="btn btn-sm" style="touch-action:manipulation">⚙️ Admin</a>
+    <a href="menu.html" class="btn btn-sm" style="touch-action:manipulation">🏠 Menú</a>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+      <button class="theme-btn" onclick="setTheme('sepia')" title="Sepia">📜</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="db-hdr">
+      <div class="eyebrow">🗄️ Administración Sistema</div>
+      <h1>Base de Datos &amp; Backup</h1>
+      <p>Monitoreo de almacenamiento Supabase · Exportación y respaldo de datos operativos</p>
+    </div>
+
+    <div class="db-grid">
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           TARJETA 1 — CAPACIDAD DE ALMACENAMIENTO SUPABASE
+      ════════════════════════════════════════════════════════════════════ -->
+      <div class="db-card" id="cardStorage" style="animation-delay:.04s">
+        <div class="db-card-title">💾 Capacidad de Almacenamiento Supabase</div>
+        <p class="db-card-desc">Estado actual del plan Free Tier · 500 MB asignados por Supabase para datos y archivos del proyecto.</p>
+
+        <div class="storage-row">
+          <!-- Stats -->
+          <div class="storage-stats">
+            <div class="storage-stat">
+              <span class="storage-stat-label">Capacidad total</span>
+              <span class="storage-stat-val">500 MB</span>
+            </div>
+            <div class="storage-stat">
+              <span class="storage-stat-label">Memoria usada</span>
+              <span class="storage-stat-val ok" id="storUsed">30 MB</span>
+            </div>
+            <div class="storage-stat">
+              <span class="storage-stat-label">Disponible</span>
+              <span class="storage-stat-val" id="storFree">470 MB</span>
+            </div>
+            <div class="storage-stat">
+              <span class="storage-stat-label">Estado</span>
+              <span class="storage-stat-val ok" id="storStatus">✓ Óptimo</span>
+            </div>
+          </div>
+
+          <!-- Mini donut SVG -->
+          <div class="donut-wrap">
+            <svg width="88" height="88" viewBox="0 0 88 88" id="donutSvg">
+              <circle cx="44" cy="44" r="34" fill="none" stroke="var(--surface2)" stroke-width="10"/>
+              <circle cx="44" cy="44" r="34" fill="none"
+                stroke="var(--ok)" stroke-width="10"
+                stroke-dasharray="213.6" stroke-dashoffset="193.4"
+                stroke-linecap="round"
+                transform="rotate(-90 44 44)"
+                id="donutFill"/>
+            </svg>
+            <div class="donut-pct" id="donutPct" style="color:var(--ok)">6%</div>
+            <div class="donut-lbl">utilizado</div>
+          </div>
+        </div>
+
+        <!-- Barra de progreso -->
+        <div class="storage-bar-wrap">
+          <div class="storage-bar-lbl">
+            <span>Uso de almacenamiento</span>
+            <span id="barPctLbl">6% de 500 MB</span>
+          </div>
+          <div class="storage-bar-track">
+            <div class="storage-bar-fill" id="storBar" style="width:6%;background:var(--ok)"></div>
+          </div>
+        </div>
+
+        <div style="font-size:.68rem;color:var(--dim);margin-top:.75rem;line-height:1.5">
+          💡 Plan Free Tier Supabase · 500 MB base de datos + 1 GB Storage.
+          Valores actualizados manualmente — integración en tiempo real disponible próximamente.
+        </div>
+      </div><!-- /cardStorage -->
+
+      <!-- ═══════════════════════════════════════════════════════════════
+           TARJETA 2 — BACKUP DE BASE DE DATOS
+      ════════════════════════════════════════════════════════════════════ -->
+      <div class="db-card" id="cardBackup" style="animation-delay:.08s">
+        <div class="db-card-title">🗃️ Backup de Base de Datos</div>
+        <p class="db-card-desc">Exporta los datos operativos de NexusKPI por rango de fechas. Selecciona el mes, el rango y el formato de exportación.</p>
+
+        <!-- Filtros -->
+        <div class="bk-filters">
+          <div class="bk-field">
+            <label>Mes</label>
+            <select id="bkMes">
+              <option value="">— Seleccionar mes —</option>
+              <option value="2026-05">Mayo 2026</option>
+              <option value="2026-06">Junio 2026</option>
+              <option value="2026-07">Julio 2026</option>
+              <option value="2026-08">Agosto 2026</option>
+              <option value="2026-09">Septiembre 2026</option>
+              <option value="2026-10">Octubre 2026</option>
+              <option value="2026-11">Noviembre 2026</option>
+              <option value="2026-12">Diciembre 2026</option>
+            </select>
+          </div>
+          <div class="bk-field">
+            <!-- spacer en desktop, visible en mobile --></div>
+          <div class="bk-field">
+            <label>Fecha inicio</label>
+            <input type="date" id="bkFechaIni" min="2026-05-01" max="2026-12-31"/>
+          </div>
+          <div class="bk-field">
+            <label>Fecha fin</label>
+            <input type="date" id="bkFechaFin" min="2026-05-01" max="2026-12-31"/>
+          </div>
+        </div>
+
+        <!-- Selector de formato -->
+        <div style="font-size:.66rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:.45rem">Formato de exportación</div>
+        <div class="bk-format-row">
+          <button class="bk-fmt-btn active" id="fmtCsv"      onclick="selectFmt('csv')">📄 CSV</button>
+          <button class="bk-fmt-btn"        id="fmtTxt"      onclick="selectFmt('txt')">📝 Texto</button>
+          <button class="bk-fmt-btn"        id="fmtSql"      onclick="selectFmt('sql')">🗄️ SQL INSERTs</button>
+        </div>
+
+        <!-- Botón exportar -->
+        <div class="bk-btn-row">
+          <button class="btn btn-primary" onclick="iniciarBackup()" id="bkBtn">⬇️ Exportar Backup</button>
+          <span class="bk-status" id="bkStatus"></span>
+        </div>
+
+        <div class="bk-soon-note">
+          🔬 <strong>En construcción:</strong> La generación del backup está siendo evaluada para correr
+          directamente en el navegador vía PostgREST + Blob, o mediante una Edge Function de Supabase.
+          La estructura de filtros y formatos está lista — la lógica de exportación se conectará
+          en el próximo ciclo de desarrollo.
+        </div>
+      </div><!-- /cardBackup -->
+
+    </div><!-- /db-grid -->
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+  applyTheme();
+
+  /* ── Almacenamiento: valores hardcodeados (fase 1) ────────────────── */
+  const STOR_TOTAL_MB = 500;
+  const STOR_USED_MB  = 30;
+
+  (function initStorage(){
+    const pct     = Math.round((STOR_USED_MB / STOR_TOTAL_MB) * 100);
+    const free    = STOR_TOTAL_MB - STOR_USED_MB;
+    const color   = pct >= 85 ? 'var(--error)' : pct >= 60 ? 'var(--warn)' : 'var(--ok)';
+    const status  = pct >= 85 ? '🔴 Crítico'   : pct >= 60 ? '⚠️ Alerta'    : '✓ Óptimo';
+    const statusCls = pct >= 85 ? 'err' : pct >= 60 ? 'warn' : 'ok';
+
+    document.getElementById('storUsed').textContent    = STOR_USED_MB + ' MB';
+    document.getElementById('storFree').textContent    = free + ' MB';
+    document.getElementById('storStatus').textContent  = status;
+    document.getElementById('storStatus').className    = 'storage-stat-val ' + statusCls;
+    document.getElementById('barPctLbl').textContent   = pct + '% de ' + STOR_TOTAL_MB + ' MB';
+    document.getElementById('storBar').style.width     = pct + '%';
+    document.getElementById('storBar').style.background = color;
+    document.getElementById('donutPct').textContent    = pct + '%';
+    document.getElementById('donutPct').style.color    = color;
+
+    // Actualizar arco del donut: circunferencia = 2π×34 ≈ 213.6
+    const circ   = 2 * Math.PI * 34;
+    const offset = circ - (circ * pct / 100);
+    const fill   = document.getElementById('donutFill');
+    fill.setAttribute('stroke-dashoffset', offset.toFixed(1));
+    fill.setAttribute('stroke', color);
+  })();
+
+  /* ── Backup: selección de formato ────────────────────────────────── */
+  let bkFmt = 'csv';
+  function selectFmt(fmt){
+    bkFmt = fmt;
+    ['csv','txt','sql'].forEach(f=>{
+      document.getElementById('fmt'+f.charAt(0).toUpperCase()+f.slice(1))
+        .classList.toggle('active', f === fmt);
+    });
+  }
+
+  /* ── Backup: stub — lógica de exportación pendiente ─────────────── */
+  function iniciarBackup(){
+    const mes   = document.getElementById('bkMes').value;
+    const ini   = document.getElementById('bkFechaIni').value;
+    const fin   = document.getElementById('bkFechaFin').value;
+    const st    = document.getElementById('bkStatus');
+
+    if(!mes && (!ini || !fin)){
+      st.className = 'bk-status err';
+      st.textContent = '⚠️ Selecciona un mes o un rango de fechas.';
+      return;
+    }
+    if(ini && fin && ini > fin){
+      st.className = 'bk-status err';
+      st.textContent = '⚠️ La fecha inicio debe ser anterior a la fecha fin.';
+      return;
+    }
+
+    st.className = 'bk-status running';
+    st.textContent = '⏳ Preparando exportación en formato ' + bkFmt.toUpperCase() + '…';
+
+    // TODO: conectar lógica real de exportación (PostgREST + Blob o Edge Function)
+    setTimeout(()=>{
+      st.className = 'bk-status err';
+      st.textContent = '🔬 Exportación pendiente de implementación. Filtros capturados correctamente.';
+    }, 1400);
+  }
+
+  /* ── Auth ────────────────────────────────────────────────────────── */
+  window.addEventListener('load', async () => {
+    const user = await checkAuth('admin'); if(!user) return;
+    renderUser();
+    const ol = document.getElementById('overlay');
+    setTimeout(()=>ol.classList.add('out'), 200);
+    setTimeout(()=>ol.remove(), 600);
+  });
+</script>
+</body>
+</html>
