@@ -51,6 +51,11 @@
     .log-area{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:.7rem;font-family:'Courier New',monospace;font-size:.7rem;color:var(--muted);max-height:220px;overflow-y:auto;word-break:break-word}
     .lg-ok{color:var(--ok)}.lg-err{color:var(--error)}.lg-inf{color:var(--accent)}.lg-warn{color:var(--warn)}
     .log-btns{display:flex;gap:.45rem;margin-top:.6rem;flex-wrap:wrap}
+
+    /* ── Nav buttons (Ajuste 5) ── */
+    .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
+    .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
+    @media(max-width:479px){.nav-btn span{display:none}}
   </style>
 </head>
 <body>
@@ -61,7 +66,11 @@
     <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--warn)">⚙️ Admin</span>
     <span class="topbar-sep">/</span><span class="topbar-title">🔧 KPI-ALI-004</span>
     <div class="topbar-spacer"></div>
-    <a href="menu.html" class="btn btn-sm" style="touch-action:manipulation">← Volver</a>
+    <div class="nav-btns">
+      <a href="kpi004.html" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Ver Dashboard">📊 <span>Dashboard</span></a>
+      <a href="menu.html" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Volver al menú principal">🏠 <span>Menú</span></a>
+      <a href="admin.html#accesos-rapidos" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Panel de administración">⚙️ <span>Admin</span></a>
+    </div>
     <div class="theme-bar">
       <button class="theme-btn" onclick="setTheme('')" style="touch-action:manipulation">🌙</button>
       <button class="theme-btn" onclick="setTheme('light')" style="touch-action:manipulation">☀️</button>

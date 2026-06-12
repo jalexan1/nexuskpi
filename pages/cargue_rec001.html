@@ -91,6 +91,11 @@
     .btn-guardar-fila:hover{background:rgba(0,255,136,.2)}
     .btn-guardar-fila.guardando{opacity:.6;cursor:not-allowed}
     .saved-ok{color:var(--ok);font-size:.72rem}
+
+    /* ── Nav buttons (Ajuste 5) ── */
+    .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
+    .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
+    @media(max-width:479px){.nav-btn span{display:none}}
   </style>
 </head>
 <body>
@@ -101,7 +106,11 @@
     <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--warn)">⚙️ Admin</span>
     <span class="topbar-sep">/</span><span class="topbar-title">📦 KPI-REC-001</span>
     <div class="topbar-spacer"></div>
-    <a href="admin.html" class="btn btn-sm">← Volver</a>
+    <div class="nav-btns">
+      <a href="kpi001.html" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Ver Dashboard">📊 <span>Dashboard</span></a>
+      <a href="menu.html" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Volver al menú principal">🏠 <span>Menú</span></a>
+      <a href="admin.html#accesos-rapidos" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Panel de administración">⚙️ <span>Admin</span></a>
+    </div>
     <div class="theme-bar">
       <button class="theme-btn" onclick="setTheme('')">🌙</button>
       <button class="theme-btn" onclick="setTheme('light')">☀️</button>

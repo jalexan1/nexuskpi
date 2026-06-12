@@ -165,6 +165,11 @@
       .tab-panel-main{padding:.75rem .6rem}
       .trans-grid{grid-template-columns:1fr 1fr}
     }
+
+    /* ── Nav buttons (Ajuste 5/7) ── */
+    .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
+    .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
+    @media(max-width:479px){.nav-btn span{display:none}}
   </style>
 </head>
 <body>
@@ -176,6 +181,10 @@
     <span class="topbar-sep">/</span>
     <span class="topbar-title">KPI-DES-005 · OTD</span>
     <div class="topbar-spacer"></div>
+    <div class="nav-btns">
+      <a href="menu.html" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Volver al menú principal">🏠 <span>Menú</span></a>
+      <a href="admin.html#accesos-rapidos" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Panel de administración">⚙️ <span>Admin</span></a>
+    </div>
     <button class="btn btn-sm" onclick="cargarDatos()" id="btnRefresh">🔄</button>
     <span id="tsUpdate" style="font-size:.65rem;color:var(--dim)"></span>
     <div class="theme-bar">

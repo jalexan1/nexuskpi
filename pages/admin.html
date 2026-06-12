@@ -58,6 +58,16 @@
     .result-box.ok  {background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);color:var(--ok)}
     .result-box.warn{background:rgba(255,176,32,.08);border:1px solid rgba(255,176,32,.25);color:var(--warn)}
     .result-box.err {background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25);color:var(--error)}
+
+    /* ── Ajuste 4: Admin Responsive ── */
+    @media(max-width:767px){
+      .kpi-link-card{padding:.9rem 1rem}
+      .kpi-link-card h2{font-size:.85rem}
+    }
+    @media(max-width:479px){
+      .kpi-link-card{padding:.75rem .85rem}
+      .tab-btn{padding:.6rem .7rem;font-size:.76rem}
+    }
   </style>
 </head>
 <body>
@@ -68,7 +78,7 @@
     <span class="topbar-sep">/</span>
     <span class="topbar-title" style="color:var(--warn)">⚙️ Admin</span>
     <div class="topbar-spacer"></div>
-    <a href="menu.html" class="btn btn-sm">← Menú</a>
+    <a href="menu.html" class="btn btn-sm" style="touch-action:manipulation">🏠 Menú</a>
     <div class="theme-bar">
       <button class="theme-btn" onclick="setTheme('')">🌙</button>
       <button class="theme-btn" onclick="setTheme('light')">☀️</button>
@@ -86,7 +96,7 @@
     <div class="admin-hdr">
       <div class="eyebrow">⚙️ Panel de Administración</div>
       <h1>Gestión del Sistema</h1>
-      <p>Cada KPI tiene su pantalla dedicada de cargue — selecciona el módulo que necesitas.</p>
+      <p id="accesos-rapidos">Cada KPI tiene su pantalla dedicada de cargue — selecciona el módulo que necesitas.</p>
     </div>
 
     <!-- ══ CARGUE DE DATOS ══ -->

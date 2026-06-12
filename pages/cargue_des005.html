@@ -56,6 +56,11 @@
     body{min-height:100dvh}
     @media(max-width:768px){.pipeline-svg{display:none}}
     @media(min-width:1920px){html{font-size:18px}}
+
+    /* ── Nav buttons (Ajuste 5) ── */
+    .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
+    .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
+    @media(max-width:479px){.nav-btn span{display:none}}
   </style>
 </head>
 <body>
@@ -66,7 +71,11 @@
     <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--warn)">⚙️ Admin</span>
     <span class="topbar-sep">/</span><span class="topbar-title">🚚 KPI-DES-005</span>
     <div class="topbar-spacer"></div>
-    <a href="admin.html" class="btn btn-sm" style="touch-action:manipulation">← Admin</a>
+    <div class="nav-btns">
+      <a href="kpi005.html" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Ver Dashboard">📊 <span>Dashboard</span></a>
+      <a href="menu.html" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Volver al menú principal">🏠 <span>Menú</span></a>
+      <a href="admin.html#accesos-rapidos" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Panel de administración">⚙️ <span>Admin</span></a>
+    </div>
     <div class="theme-bar">
       <button class="theme-btn" onclick="setTheme('')" style="touch-action:manipulation">🌙</button>
       <button class="theme-btn" onclick="setTheme('light')" style="touch-action:manipulation">☀️</button>

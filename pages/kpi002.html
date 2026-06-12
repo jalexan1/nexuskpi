@@ -109,6 +109,24 @@
     /* ── Error / Loading ── */
     .err-box{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25);border-radius:var(--r);padding:1rem;color:var(--error);font-size:.82rem;display:none}
     .err-box.show{display:block}
+
+    /* ── Nav buttons (Ajuste 5/7) ── */
+    .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
+    .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
+    @media(max-width:479px){.nav-btn span{display:none}}
+
+    /* ── Ajuste 4: Responsive 768px tablet ── */
+    @media(max-width:767px){
+      .hero{grid-template-columns:1fr}
+      .charts-2col{grid-template-columns:1fr}
+      .comp-grid{grid-template-columns:1fr}
+      .detail-grid{grid-template-columns:1fr}
+      .kpi-hdr{flex-direction:column;gap:.5rem}
+      .kpi-actions{flex-wrap:wrap}
+      .mes-bar{flex-wrap:wrap;gap:.4rem}
+      .wt th,.wt td{font-size:.7rem;padding:.4rem .5rem}
+      .tbl-scroll{max-height:320px}
+    }
   </style>
 </head>
 <body>
@@ -121,7 +139,10 @@
     <span class="topbar-sep">/</span>
     <span class="topbar-title">KPI-INV-002</span>
     <div class="topbar-spacer"></div>
-    <a href="menu.html" class="btn btn-sm" style="font-size:.75rem">← Menú</a>
+    <div class="nav-btns">
+      <a href="menu.html" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Volver al menú principal">🏠 <span>Menú</span></a>
+      <a href="admin.html#accesos-rapidos" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Panel de administración">⚙️ <span>Admin</span></a>
+    </div>
     <div class="theme-bar">
       <button class="theme-btn" onclick="setTheme('')">🌙</button>
       <button class="theme-btn" onclick="setTheme('light')">☀️</button>
@@ -153,7 +174,7 @@
       <label for="sel-periodo">Período</label>
       <select class="mes-sel" id="sel-periodo"></select>
       <div style="flex:1"></div>
-      <a href="menu.html" class="btn btn-sm">← Menú</a>
+      
     </div>
 
     <!-- Error box -->

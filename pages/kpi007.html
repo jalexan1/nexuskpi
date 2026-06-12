@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — KPI-INV-007 · Utilización Capacidad CEDI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <style>
+    /* ── Nav buttons ── */
+    .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
+    .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
+    @media(max-width:479px){.nav-btn span{display:none}}
+
+    /* ── KPI header ── */
+    .kpi-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
+    .kpi-hdr h1{font-size:clamp(1rem,3vw,1.25rem);font-weight:800;display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+    .kpi-hdr-sub{font-size:.76rem;color:var(--muted);margin-top:.15rem}
+
+    /* ── Info card principal ── */
+    .info-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r-lg);padding:1.75rem 2rem;
+      margin-bottom:1.5rem;position:relative;overflow:hidden;
+    }
+    .info-card::before{
+      content:'';position:absolute;inset:0;
+      background:radial-gradient(ellipse 60% 80% at 90% 10%,rgba(0,212,255,.05),transparent 70%);
+      pointer-events:none;
+    }
+    .info-card-title{
+      font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:800;
+      color:var(--text);margin-bottom:.75rem;
+      display:flex;align-items:center;gap:.5rem;
+    }
+    .info-card-intro{
+      font-size:.85rem;color:var(--muted);line-height:1.7;margin-bottom:1.25rem;
+    }
+    .info-bullets{list-style:none;padding:0;margin:0 0 1.5rem;display:flex;flex-direction:column;gap:.6rem;}
+    .info-bullets li{
+      display:flex;align-items:flex-start;gap:.7rem;
+      font-size:.82rem;color:var(--text);line-height:1.6;
+    }
+    .bullet-dot{
+      width:22px;height:22px;border-radius:6px;flex-shrink:0;margin-top:1px;
+      background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.25);
+      display:flex;align-items:center;justify-content:center;font-size:.75rem;
+    }
+
+    /* ── Botón acceso portal ── */
+    .portal-btn{
+      display:inline-flex;align-items:center;gap:.65rem;
+      background:#1a7a5a;border:2px solid #00b87a;
+      color:#fff;border-radius:var(--r);padding:.85rem 1.5rem;
+      font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;
+      text-decoration:none;cursor:pointer;
+      transition:all .2s;margin-bottom:1.75rem;
+    }
+    .portal-btn:hover{background:#1e9068;border-color:#00ff88;transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,184,122,.25);}
+    .portal-btn:active{transform:translateY(0);}
+    .portal-btn-icon{font-size:1.2rem;flex-shrink:0;}
+    @media(max-width:479px){.portal-btn{width:100%;justify-content:center;}}
+
+    /* ── Sección visual / imagen ── */
+    .visual-section{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r-lg);padding:1.5rem;
+      text-align:center;
+    }
+    .visual-section-title{
+      font-size:.68rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+      color:var(--muted);margin-bottom:1.25rem;
+    }
+    /* SVG ilustrativo de CEDI */
+    .cedi-illustration{
+      width:100%;max-width:600px;margin:0 auto;display:block;
+      border-radius:var(--r);overflow:hidden;
+    }
+    .visual-caption{
+      font-size:.72rem;color:var(--dim);margin-top:.75rem;
+    }
+
+    /* ── Nota informativa ── */
+    .note-strip{
+      background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);
+      border-left:3px solid var(--accent);border-radius:var(--r);
+      padding:.75rem 1rem;font-size:.76rem;color:var(--muted);line-height:1.6;
+      margin-top:1.5rem;
+    }
+
+    /* Responsive */
+    @media(max-width:767px){.info-card{padding:1.25rem;}}
+    @media(min-width:1920px){.info-card{padding:2.5rem 3rem;}.info-card-intro{font-size:.95rem;}}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+
+  <header class="topbar">
+    <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-title">KPI-INV-007</span>
+    <div class="topbar-spacer"></div>
+    <div class="nav-btns">
+      <a href="menu.html" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Volver al menú principal">🏠 <span>Menú</span></a>
+      <a href="admin.html#accesos-rapidos" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Panel de administración">⚙️ <span>Admin</span></a>
+    </div>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+
+    <div class="kpi-hdr">
+      <div>
+        <h1>📊 KPI-INV-007 <span class="badge badge-ok">En vivo</span></h1>
+        <div class="kpi-hdr-sub">Utilización Capacidad CEDI · Monitoreo diario de posiciones ocupadas por pasillo</div>
+      </div>
+    </div>
+
+    <!-- Tarjeta principal informativa -->
+    <div class="info-card">
+      <div class="info-card-title">
+        🏭 Indicador de Capacidad del CEDI — Cosmetic CLICks
+      </div>
+      <p class="info-card-intro">
+        Este indicador mide en tiempo real el nivel de utilización del Centro de Distribución (CEDI),
+        evaluando la ocupación de posiciones de almacenamiento por pasillo frente a la capacidad total instalada.
+        El objetivo es mantener la ocupación dentro del umbral operativo recomendado (60%–85%), garantizando
+        eficiencia logística y disponibilidad de espacio para la operación de Cosmetic CLICks.
+      </p>
+
+      <ul class="info-bullets">
+        <li>
+          <div class="bullet-dot">📡</div>
+          <span>El indicador se actualiza <strong>en línea, en tiempo real</strong>, reflejando la ocupación
+          actual del CEDI por pasillo directamente desde el sistema WMS.</span>
+        </li>
+        <li>
+          <div class="bullet-dot">📊</div>
+          <span>Incluye el <strong>análisis completo de capacidad global</strong>: total de posiciones,
+          posiciones ocupadas, disponibles, porcentaje de ocupación y estado del KPI (Bien / Alerta / Crítico).</span>
+        </li>
+        <li>
+          <div class="bullet-dot">🔍</div>
+          <span>Permite visualizar el <strong>detalle por pasillo</strong> (IL, IR, JR, JL, etc.),
+          con el porcentaje de ocupación, posiciones vacantes y fecha/hora de última actualización.</span>
+        </li>
+        <li>
+          <div class="bullet-dot">📈</div>
+          <span>Para acceder al indicador, haz clic en el botón <strong>"Inventario de Pasillos"</strong>
+          y, una vez en la aplicación, desplázate hacia la parte inferior donde encontrarás la opción
+          <strong>"Mostrar / Ocultar"</strong> para visualizar el indicador con su análisis y estadísticas.</span>
+        </li>
+        <li>
+          <div class="bullet-dot">🎯</div>
+          <span>Umbral operativo recomendado: <strong>60%–85%</strong> de ocupación.
+          Por encima del 85% se activa alerta; por encima del 100% el estado es <strong>Crítico</strong>.</span>
+        </li>
+      </ul>
+
+      <!-- Botón acceso portal -->
+      <a href="https://logistic-portal-phi.vercel.app/" target="_blank" rel="noopener" class="portal-btn">
+        <span class="portal-btn-icon">📦</span>
+        <span>Inventario de Pasillos — Capacidad CEDI</span>
+        <span style="margin-left:auto;font-size:.85rem;opacity:.8">↗</span>
+      </a>
+
+      <!-- Ilustración CEDI -->
+      <div class="visual-section">
+        <div class="visual-section-title">📐 Distribución de pasillos — CEDI Cosmetic CLICks</div>
+        <svg class="cedi-illustration" viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bg-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="rgba(0,212,255,0.06)"/>
+              <stop offset="100%" stop-color="rgba(0,212,255,0.01)"/>
+            </linearGradient>
+            <linearGradient id="ok-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="rgba(0,255,136,0.7)"/>
+              <stop offset="100%" stop-color="rgba(0,200,100,0.5)"/>
+            </linearGradient>
+            <linearGradient id="warn-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="rgba(255,176,32,0.8)"/>
+              <stop offset="100%" stop-color="rgba(200,130,0,0.5)"/>
+            </linearGradient>
+            <linearGradient id="crit-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="rgba(255,77,109,0.8)"/>
+              <stop offset="100%" stop-color="rgba(200,40,70,0.5)"/>
+            </linearGradient>
+          </defs>
+          <!-- Fondo CEDI -->
+          <rect x="10" y="10" width="580" height="240" rx="12" fill="url(#bg-grad)" stroke="rgba(0,212,255,0.2)" stroke-width="1.5"/>
+          <!-- Título -->
+          <text x="300" y="34" text-anchor="middle" font-family="Syne,Arial" font-size="11" font-weight="700" fill="rgba(0,212,255,0.8)" letter-spacing="2">CEDI — PLANTA DE DISTRIBUCIÓN</text>
+          <!-- Pasillo IL: crítico (99%) -->
+          <rect x="40" y="52" width="100" height="140" rx="8" fill="url(#crit-grad)" stroke="rgba(255,77,109,0.6)" stroke-width="1.5"/>
+          <text x="90" y="110" text-anchor="middle" font-family="Syne,Arial" font-size="16" font-weight="900" fill="#fff">IL</text>
+          <text x="90" y="128" text-anchor="middle" font-family="DM Sans,Arial" font-size="10" fill="rgba(255,255,255,.85)">99% ocup.</text>
+          <text x="90" y="143" text-anchor="middle" font-family="DM Sans,Arial" font-size="9" fill="rgba(255,255,255,.6)">168 pos.</text>
+          <rect x="50" y="198" width="80" height="7" rx="4" fill="rgba(0,0,0,.3)"/>
+          <rect x="50" y="198" width="79" height="7" rx="4" fill="rgba(255,77,109,.8)"/>
+          <text x="90" y="218" text-anchor="middle" font-family="DM Sans,Arial" font-size="8.5" font-weight="700" fill="rgba(255,77,109,.9)">● CRÍTICO</text>
+          <!-- Pasillo IR: crítico (100%) -->
+          <rect x="160" y="52" width="100" height="140" rx="8" fill="url(#crit-grad)" stroke="rgba(255,77,109,0.6)" stroke-width="1.5"/>
+          <text x="210" y="110" text-anchor="middle" font-family="Syne,Arial" font-size="16" font-weight="900" fill="#fff">IR</text>
+          <text x="210" y="128" text-anchor="middle" font-family="DM Sans,Arial" font-size="10" fill="rgba(255,255,255,.85)">100% ocup.</text>
+          <text x="210" y="143" text-anchor="middle" font-family="DM Sans,Arial" font-size="9" fill="rgba(255,255,255,.6)">276 pos.</text>
+          <rect x="170" y="198" width="80" height="7" rx="4" fill="rgba(0,0,0,.3)"/>
+          <rect x="170" y="198" width="80" height="7" rx="4" fill="rgba(255,77,109,.8)"/>
+          <text x="210" y="218" text-anchor="middle" font-family="DM Sans,Arial" font-size="8.5" font-weight="700" fill="rgba(255,77,109,.9)">● CRÍTICO</text>
+          <!-- Pasillo JR: crítico (91%) -->
+          <rect x="280" y="52" width="100" height="140" rx="8" fill="url(#crit-grad)" stroke="rgba(255,77,109,0.5)" stroke-width="1.5"/>
+          <text x="330" y="110" text-anchor="middle" font-family="Syne,Arial" font-size="16" font-weight="900" fill="#fff">JR</text>
+          <text x="330" y="128" text-anchor="middle" font-family="DM Sans,Arial" font-size="10" fill="rgba(255,255,255,.85)">91% ocup.</text>
+          <text x="330" y="143" text-anchor="middle" font-family="DM Sans,Arial" font-size="9" fill="rgba(255,255,255,.6)">166 pos.</text>
+          <rect x="290" y="198" width="80" height="7" rx="4" fill="rgba(0,0,0,.3)"/>
+          <rect x="290" y="198" width="73" height="7" rx="4" fill="rgba(255,77,109,.7)"/>
+          <text x="330" y="218" text-anchor="middle" font-family="DM Sans,Arial" font-size="8.5" font-weight="700" fill="rgba(255,77,109,.9)">● CRÍTICO</text>
+          <!-- Pasillo JL: bien (79%) -->
+          <rect x="400" y="52" width="100" height="140" rx="8" fill="url(#ok-grad)" stroke="rgba(0,255,136,0.5)" stroke-width="1.5"/>
+          <text x="450" y="110" text-anchor="middle" font-family="Syne,Arial" font-size="16" font-weight="900" fill="#fff">JL</text>
+          <text x="450" y="128" text-anchor="middle" font-family="DM Sans,Arial" font-size="10" fill="rgba(255,255,255,.85)">79% ocup.</text>
+          <text x="450" y="143" text-anchor="middle" font-family="DM Sans,Arial" font-size="9" fill="rgba(255,255,255,.6)">230 pos.</text>
+          <rect x="410" y="198" width="80" height="7" rx="4" fill="rgba(0,0,0,.3)"/>
+          <rect x="410" y="198" width="63" height="7" rx="4" fill="rgba(0,255,136,.7)"/>
+          <text x="450" y="218" text-anchor="middle" font-family="DM Sans,Arial" font-size="8.5" font-weight="700" fill="rgba(0,255,136,.9)">✓ BIEN</text>
+          <!-- Leyenda -->
+          <circle cx="40" cy="242" r="4" fill="rgba(255,77,109,.8)"/>
+          <text x="50" y="246" font-family="DM Sans,Arial" font-size="8" fill="rgba(255,255,255,.5)">Crítico &gt;85%</text>
+          <circle cx="130" cy="242" r="4" fill="rgba(255,176,32,.8)"/>
+          <text x="140" y="246" font-family="DM Sans,Arial" font-size="8" fill="rgba(255,255,255,.5)">Alerta 60–85%</text>
+          <circle cx="225" cy="242" r="4" fill="rgba(0,255,136,.8)"/>
+          <text x="235" y="246" font-family="DM Sans,Arial" font-size="8" fill="rgba(255,255,255,.5)">Bien &lt;60%</text>
+          <!-- Total -->
+          <text x="560" y="242" text-anchor="end" font-family="Syne,Arial" font-size="8.5" font-weight="700" fill="rgba(0,212,255,.6)">600 POS. TOTALES</text>
+        </svg>
+        <p class="visual-caption">Representación de la distribución de pasillos del CEDI · Datos en tiempo real desde el WMS</p>
+      </div>
+
+      <div class="note-strip">
+        💡 <strong>¿Cómo acceder al indicador?</strong> Haz clic en el botón <strong>"Inventario de Pasillos"</strong> ubicado arriba.
+        Una vez en la aplicación, desplázate hasta la sección inferior y selecciona <strong>Mostrar / Ocultar</strong>
+        para visualizar el panel completo de <em>Resumen de Capacidad Global</em> con todas las métricas y el estado por pasillo.
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+  applyTheme();
+  window.addEventListener('load', async () => {
+    const user = await checkAuth(); if (!user) return;
+    renderUser();
+    const ol = document.getElementById('overlay');
+    setTimeout(() => ol.classList.add('out'), 150);
+    setTimeout(() => ol.remove(), 550);
+  });
+</script>
+</body>
+</html>

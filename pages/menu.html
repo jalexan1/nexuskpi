@@ -9,35 +9,32 @@
   <style>
     .eyebrow  { font-size:.68rem; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:.3rem; }
     .page-title{ font-size:clamp(1.4rem,4vw,1.9rem); font-weight:800; line-height:1.1; }
-    .page-sub  { color:var(--muted); font-size:.85rem; margin-top:.25rem; margin-bottom:1.75rem; }
+    .page-sub  { color:var(--muted); font-size:.85rem; margin-top:.25rem; }
 
-    /* ── Hero header with warehouse scene ── */
+    /* ── Hero header con Warehouse Scene ── */
     .hero-header {
       display:flex; align-items:center; justify-content:space-between;
       gap:1rem; margin-bottom:1.75rem;
       background:var(--surface); border:1px solid var(--border);
       border-radius:var(--r-lg); padding:1.25rem 1.5rem;
-      overflow:hidden; position:relative;
+      overflow:hidden; position:relative; min-height:130px;
     }
     .hero-header::before {
       content:''; position:absolute; inset:0;
       background:radial-gradient(ellipse 50% 80% at 80% 50%, rgba(0,212,255,.04), transparent 70%);
       pointer-events:none;
     }
-    .hero-text { flex-shrink:0; z-index:1; }
+    .hero-text { flex-shrink:0; z-index:1; max-width:260px; }
     .hero-text .eyebrow { margin-bottom:.3rem; }
     .hero-text .page-title { margin:0; }
     .hero-text .page-sub   { margin:.25rem 0 0; }
-    .hero-scene {
+    /* Ajuste 3: contenedor del warehouse ocupa el resto del hero */
+    #warehouseScene {
       flex:1; min-width:0; height:130px;
       border-radius:var(--r); overflow:visible;
     }
-    @media (max-width:767px)  { .hero-scene { display:none; } }
-    @media (max-width:1023px) { .hero-scene { height:110px; } }
-
-    /* Pipeline SVG — se adapta al ancho */
-
-    /* En móvil el pipeline desaparece (muy pequeño para 8 nodos) */
+    @media (max-width:767px)  { #warehouseScene { display:none; } }
+    @media (max-width:1023px) { #warehouseScene { height:110px; } }
 
     /* KPI Grid */
     .kpi-grid {
@@ -55,6 +52,7 @@
       display:flex; flex-direction:column; gap:.6rem;
       transition:transform .2s,border-color .2s,box-shadow .2s;
       animation:fadeUp .4s ease both; position:relative; overflow:hidden;
+      text-decoration:none; color:inherit;
     }
     .kpi-card.activo { border-color:rgba(0,212,255,.3); cursor:pointer; }
     .kpi-card.activo:hover { transform:translateY(-3px); box-shadow:0 8px 30px rgba(0,212,255,.15); border-color:var(--accent); }
@@ -72,28 +70,10 @@
     .card-arrow { font-size:.9rem; color:var(--accent); transition:transform .2s; }
     .kpi-card.activo:hover .card-arrow { transform:translateX(4px); }
 
-    /* En móvil hacer cards más compactas */
     @media (max-width:479px) {
       .kpi-card { padding:1rem; gap:.45rem; }
       .kpi-icon { width:34px; height:34px; font-size:1rem; }
       .kpi-name { font-size:.82rem; }
-    }
-
-    /* Admin link */
-    .admin-link {
-      display:flex; align-items:center; gap:1rem;
-      background:rgba(255,176,32,.05); border:1px solid rgba(255,176,32,.2);
-      border-radius:var(--r); padding:.9rem 1.1rem;
-      margin-top:1.25rem; cursor:pointer; transition:all .2s;
-      animation:fadeUp .4s .45s ease both;
-    }
-    .admin-link:hover  { background:rgba(255,176,32,.1); transform:translateY(-1px); }
-    .admin-link:active { transform:translateY(0); }
-    .admin-link h4 { font-family:'Syne',sans-serif; font-size:.88rem; font-weight:700; color:var(--warn); margin-bottom:.1rem; }
-    .admin-link p  { font-size:.76rem; color:var(--muted); }
-    @media (max-width:479px) {
-      .admin-link { flex-wrap:wrap; }
-      .admin-link p { display:none; }
     }
 
     /* ── Tabs nav ── */
@@ -106,7 +86,7 @@
     .tab-panel{display:none}.tab-panel.on{display:block}
 
     /* ── Admin panel ── */
-    .admin-panel-hdr{display:flex;align-items:center;gap:.75rem;background:rgba(255,176,32,.05);border:1px solid rgba(255,176,32,.15);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:1.5rem;}
+    .admin-panel-hdr{display:flex;align-items:center;gap:.75rem;background:rgba(255,176,32,.05);border:1px solid rgba(255,176,32,.15);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:1.5rem;flex-wrap:wrap;}
     .admin-panel-hdr h2{font-size:1rem;font-weight:800;color:var(--warn);margin:0;}
     .admin-panel-hdr p{font-size:.76rem;color:var(--muted);margin:0;}
     .admin-quick{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem;margin-bottom:1.5rem;}
@@ -128,6 +108,22 @@
     .ks-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
     .ks-dot.live{background:var(--ok);box-shadow:0 0 6px var(--ok);}
     .ks-dot.next{background:var(--dim);}
+
+    /* Ajuste 4: Responsive TV */
+    @media(min-width:1920px){
+      .kpi-grid{grid-template-columns:repeat(4,1fr);}
+      .hero-header{min-height:160px;}
+      #warehouseScene{height:150px;}
+    }
+    /* Ajuste 4: Responsive tablet */
+    @media(max-width:1023px){
+      .admin-quick{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));}
+    }
+    /* Ajuste 4: hero-header en móvil */
+    @media(max-width:767px){
+      .hero-header{min-height:auto;padding:1rem;}
+      .hero-text{max-width:100%;}
+    }
   </style>
 </head>
 <body>
@@ -150,18 +146,22 @@
   </nav>
 
   <main class="content">
+    <!-- ══ TAB: INDICADORES ══════════════════════════════════════════════ -->
     <div class="tab-panel on" id="tab-kpis">
-    <div class="hero-header">
-      <div class="hero-text">
-        <div class="eyebrow">Plataforma de Indicadores</div>
-        <h1 class="page-title">Cadena Logística</h1>
-        <p class="page-sub">Monitorea cada etapa del proceso · del recibo al despacho</p>
+
+      <!-- Ajuste 3: Hero con Warehouse Scene animado -->
+      <div class="hero-header">
+        <div class="hero-text">
+          <div class="eyebrow">Plataforma de Indicadores</div>
+          <h1 class="page-title">Cadena Logística</h1>
+          <p class="page-sub">Monitorea cada etapa del proceso · del recibo al despacho</p>
+        </div>
+        <!-- Ajuste 3: el warehouse scene ocupa el área derecha del hero -->
+        <div id="warehouseScene" aria-hidden="true"></div>
       </div>
-      <div id="warehouseLive" style="display:flex;gap:.5rem;flex:1;min-width:0;overflow-x:auto;align-items:stretch"></div>
-    </div>
 
-    <div class="kpi-grid" id="kpiGrid"></div>
-
+      <!-- Ajuste 1: buildGrid() filtra hidden:true → KPI-DEV-006 no aparece -->
+      <div class="kpi-grid" id="kpiGrid"></div>
 
     </div><!-- /tab-kpis -->
 
@@ -179,7 +179,8 @@
         </a>
       </div>
 
-      <div class="admin-sec-title">⚡ Accesos Rápidos</div>
+      <!-- Ajuste 5: anchor para que botón Admin llegue directo aquí -->
+      <div class="admin-sec-title" id="accesos-rapidos">⚡ Accesos Rápidos</div>
       <div class="admin-quick">
         <a href="cargue_rec001.html" class="aq-card" style="animation-delay:.05s">
           <div class="aq-icon">📦</div>
@@ -221,7 +222,6 @@
 
     </div><!-- /tab-admin -->
 
-
   </main>
 </div>
 
@@ -230,13 +230,10 @@
 <script>
   applyTheme();
 
-  function buildPipeline() {
-    const g = document.getElementById('pipeNodes');
-    if (!g) return; // Pipeline SVG removido — no-op seguro
-  }
-
+  /* Ajuste 1: filtra KPIs con hidden:true → KPI-DEV-006 no se renderiza */
   function buildGrid() {
-    document.getElementById('kpiGrid').innerHTML = CONFIG.kpis.map((k, i) => {
+    const visibles = CONFIG.kpis.filter(k => !k.hidden);
+    document.getElementById('kpiGrid').innerHTML = visibles.map((k, i) => {
       const cls  = k.activo ? 'activo' : 'bloqueado';
       const wrap = k.activo
         ? `<a href="${k.href}" class="kpi-card ${cls}" style="animation-delay:${.05*(i+1)}s">`
@@ -250,14 +247,14 @@
         <div class="kpi-code">${k.code}</div>
         <div class="kpi-name">${k.name}</div>
         <div class="kpi-card-footer">
-          <span class="card-paso">Paso ${i+1} de 8</span>
+          <span class="card-paso">Paso ${i+1} de 7</span>
           ${k.activo ? '<span class="card-arrow">→</span>' : '<span style="font-size:.75rem;color:var(--dim)">🔒</span>'}
         </div>
       ${close}`;
     }).join('');
   }
 
-  // ── Tabs ─────────────────────────────────────────────────────────────
+  /* Tabs */
   function tab(id, btn) {
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
@@ -265,11 +262,10 @@
     btn.classList.add('on');
   }
 
-  // ── Admin tab: estado KPIs ────────────────────────────────────────────
   function buildKpiStatus() {
     const el = document.getElementById('kpiStatusGrid');
     if (!el) return;
-    el.innerHTML = CONFIG.kpis.map((k, i) => `
+    el.innerHTML = CONFIG.kpis.filter(k => !k.hidden).map((k, i) => `
       <div class="ks-row" style="animation-delay:${.04*(i+1)}s">
         <div class="ks-icon">${k.icon}</div>
         <div class="ks-info">
@@ -281,57 +277,9 @@
     ).join('');
   }
 
-  async function buildWarehouseLive() {
-    const el = document.getElementById('warehouseLive');
-    if (!el) return;
-    try {
-      // Tomar el último mes cargado
-      const resumen = await sb.rest('GET','kpi_recibo_resumen?order=mes_id.desc&limit=1');
-      const r = resumen && resumen[0];
-      if (!r) { el.style.display='none'; return; }
-      const label = CONFIG.meses.find(m=>m.id===r.mes_id)?.label || r.mes_id;
-      const trt   = r.trt_12h != null ? r.trt_12h : '—';
-      const semTRT= trt >= 95 ? '#00FF88' : trt >= 80 ? '#FFB020' : '#FF4D6D';
-      const totalUnd = (r.total_oc||0) * 1; // unidades reales cuando estén disponibles
-
-      el.innerHTML = `
-        <div style="display:flex;gap:.45rem;align-items:stretch;flex-wrap:nowrap;min-width:0">
-          <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:8px;padding:.55rem .8rem;min-width:110px;flex-shrink:0">
-            <div style="font-size:.55rem;font-weight:700;letter-spacing:.1em;color:rgba(0,212,255,.7);text-transform:uppercase;margin-bottom:.2rem">🏭 Recibo</div>
-            <div style="font-size:1.1rem;font-weight:800;color:#00D4FF;line-height:1">${r.total_oc||0}</div>
-            <div style="font-size:.6rem;color:rgba(255,255,255,.4)">OC · ${label}</div>
-          </div>
-          <div style="background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.12);border-radius:8px;padding:.55rem .8rem;min-width:110px;flex-shrink:0">
-            <div style="font-size:.55rem;font-weight:700;letter-spacing:.1em;color:rgba(0,255,136,.7);text-transform:uppercase;margin-bottom:.2rem">📦 Inventario</div>
-            <div style="font-size:1.1rem;font-weight:800;color:#00FF88;line-height:1">${r.total_oc||0}</div>
-            <div style="font-size:.6rem;color:rgba(255,255,255,.4)">SKUs en stock</div>
-          </div>
-          <div style="background:rgba(123,47,255,.05);border:1px solid rgba(123,47,255,.15);border-radius:8px;padding:.55rem .8rem;min-width:110px;flex-shrink:0">
-            <div style="font-size:.55rem;font-weight:700;letter-spacing:.1em;color:rgba(123,47,255,.8);text-transform:uppercase;margin-bottom:.2rem">🛒 Picking</div>
-            <div style="font-size:1.1rem;font-weight:800;color:#7B2FFF;line-height:1">—</div>
-            <div style="font-size:.6rem;color:rgba(255,255,255,.4)">Uds preparadas</div>
-          </div>
-          <div style="background:rgba(255,176,32,.05);border:1px solid rgba(255,176,32,.12);border-radius:8px;padding:.55rem .8rem;min-width:110px;flex-shrink:0">
-            <div style="font-size:.55rem;font-weight:700;letter-spacing:.1em;color:rgba(255,176,32,.8);text-transform:uppercase;margin-bottom:.2rem">🚚 Despacho</div>
-            <div style="font-size:1.1rem;font-weight:800;color:#FFB020;line-height:1">—</div>
-            <div style="font-size:.6rem;color:rgba(255,255,255,.4)">Uds despachadas</div>
-          </div>
-          <div style="background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.12);border-radius:8px;padding:.55rem .8rem;min-width:100px;flex-shrink:0;text-align:center">
-            <div style="font-size:.55rem;font-weight:700;letter-spacing:.1em;color:rgba(0,212,255,.7);text-transform:uppercase;margin-bottom:.2rem">TRT</div>
-            <div style="font-size:1.3rem;font-weight:900;color:${semTRT};line-height:1">${trt}%</div>
-            <div style="font-size:.58rem;color:rgba(255,255,255,.4)">Meta ≥95%</div>
-          </div>
-        </div>`;
-      el.style.display = 'flex';
-    } catch(e) {
-      el.style.display = 'none';
-    }
-  }
-
   window.addEventListener('load', async () => {
     const user = await checkAuth(); if (!user) return;
     renderUser();
-    buildPipeline();
     buildGrid();
     if (getRole() === 'admin') {
       document.getElementById('tabsNav').style.display = 'flex';
@@ -340,9 +288,11 @@
     const ol = document.getElementById('overlay');
     setTimeout(() => ol.classList.add('out'), 150);
     setTimeout(() => ol.remove(), 550);
-    buildWarehouseLive();
+    /* Ajuste 3: iniciar warehouse scene animado */
+    if (typeof WarehouseScene !== 'undefined') WarehouseScene.init('warehouseScene');
   });
 </script>
+<!-- Ajuste 3: warehouse scene JS -->
 <script src="../components/warehouse-scene.js"></script>
 </body>
 </html>

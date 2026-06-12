@@ -84,6 +84,11 @@
     /* ── Info box ── */
     .info-box{background:rgba(0,255,136,.05);border:1px solid rgba(0,255,136,.2);border-radius:var(--r-sm);padding:.75rem 1rem;font-size:.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.6}
     .info-box strong{color:var(--ok)}
+
+    /* ── Nav buttons (Ajuste 5) ── */
+    .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
+    .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
+    @media(max-width:479px){.nav-btn span{display:none}}
   </style>
 </head>
 <body>
@@ -94,8 +99,11 @@
     <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--warn)">⚙️ Administración</span>
     <span class="topbar-sep">/</span><span class="topbar-title">🗃️ KPI-INV-002</span>
     <div class="topbar-spacer"></div>
-    <a href="kpi002.html" class="btn btn-sm" style="font-size:.75rem">📊 Ver Dashboard</a>
-    <a href="admin.html" class="btn btn-sm" style="font-size:.75rem">← Administración</a>
+    <div class="nav-btns">
+      <a href="kpi002.html" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Ver Dashboard">📊 <span>Dashboard</span></a>
+      <a href="menu.html" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Volver al menú principal">🏠 <span>Menú</span></a>
+      <a href="admin.html#accesos-rapidos" class="btn btn-sm nav-btn" style="touch-action:manipulation" title="Panel de administración">⚙️ <span>Admin</span></a>
+    </div>
     <div class="theme-bar">
       <button class="theme-btn" onclick="setTheme('')">🌙</button>
       <button class="theme-btn" onclick="setTheme('light')">☀️</button>

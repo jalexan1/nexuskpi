@@ -6,13 +6,12 @@ const CONFIG = Object.freeze({
 
   supabase: Object.freeze({
     url:     'https://husmzwfaaaelqsytajxw.supabase.co',
-    anonKey: 'sb_publishable_aBQJdx_ChbLDojt95lo36g_xrxOSoZB',  // Supabase → Settings → API → anon public
+    anonKey: 'sb_publishable_aBQJdx_ChbLDojt95lo36g_xrxOSoZB',
   }),
 
   jornada: Object.freeze({
-    inicioH: 8,   // 08:00
-    finH:    17,  // 17:00
-    // Festivos colombianos 2026
+    inicioH: 8,
+    finH:    17,
     festivos: new Set([
       '2026-01-01','2026-01-12','2026-03-23','2026-04-02','2026-04-03',
       '2026-05-01','2026-05-18','2026-06-08','2026-06-29','2026-07-20',
@@ -26,7 +25,6 @@ const CONFIG = Object.freeze({
     metaPct:  95,
     semaforo: Object.freeze({ verde: 95, amarillo: 80 }),
     excluirProveedores: ['click cosmetics s.a.s'],
-    // Campo hora TT varía por mes
     campoHoraTT: Object.freeze({
       '2026-03': 'HORA TT RECIBO2',
       'default': 'HORA TT RECIBO',
@@ -41,13 +39,13 @@ const CONFIG = Object.freeze({
   ],
 
   kpis: [
-    { code:'KPI-REC-001', name:'Tasa de Recepción a Tiempo', icon:'📦', href:'kpi001.html', activo:true  },
-    { code:'KPI-INV-002', name:'Exactitud de Inventario',    icon:'🗃️', href:'kpi002.html', activo:true },
-    { code:'KPI-DES-003', name:'Nivel de Servicio CEDI',     icon:'🏭', href:'kpi003.html', activo:true },
-    { code:'KPI-ALI-004', name:'Productividad Alistamiento', icon:'🔧', href:'kpi004.html', activo:true },
-    { code:'KPI-DES-005', name:'On-Time Delivery (OTD)',     icon:'🚚', href:'kpi005.html', activo:true  },
-    { code:'KPI-DEV-006', name:'Tasa de Devoluciones Pendiente Definir',       icon:'↩️', href:null,          activo:false },
-    { code:'KPI-INV-007', name:'Utilización Capacidad CEDI', icon:'📊', href:null,          activo:false },
-    { code:'KPI-DES-008', name:'Ciclo de Pedido (Lead Time)',icon:'⏱️', href:null,          activo:false },
+    { code:'KPI-REC-001', name:'Tasa de Recepción a Tiempo',  icon:'📦', href:'kpi001.html', activo:true  },
+    { code:'KPI-INV-002', name:'Exactitud de Inventario',     icon:'🗃️', href:'kpi002.html', activo:true  },
+    { code:'KPI-DES-003', name:'Nivel de Servicio CEDI',      icon:'🏭', href:'kpi003.html', activo:true  },
+    { code:'KPI-ALI-004', name:'Productividad Alistamiento',  icon:'🔧', href:'kpi004.html', activo:true  },
+    { code:'KPI-DES-005', name:'On-Time Delivery (OTD)',      icon:'🚚', href:'kpi005.html', activo:true  },
+    { code:'KPI-INV-007', name:'Utilización Capacidad CEDI',  icon:'📊', href:'kpi007.html', activo:true  },
+    { code:'KPI-DES-008', name:'Ciclo de Pedido (Lead Time)', icon:'⏱️', href:null,           activo:false },
+    { code:'KPI-DEV-006', name:'Tasa de Devoluciones',        icon:'↩️', href:null,           activo:false, hidden:true },
   ],
 });
