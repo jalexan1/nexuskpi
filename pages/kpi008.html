@@ -88,9 +88,12 @@
     .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
     @media(max-width:699px){.charts-row{grid-template-columns:1fr}}
     .chart-card{background:var(--surface);border:1px solid var(--border);
-      border-radius:var(--r);padding:1rem 1.1rem}
+      border-radius:var(--r);padding:1rem 1.1rem;
+      display:flex;flex-direction:column}
     .chart-title{font-size:.62rem;font-weight:700;letter-spacing:.1em;
       color:var(--muted);text-transform:uppercase;margin-bottom:.85rem}
+    .chart-canvas-wrap{position:relative;flex:1;min-height:220px;height:220px}
+    .chart-canvas-wrap canvas{position:absolute;top:0;left:0;width:100%!important;height:100%!important}
 
     /* ── Transportadoras ── */
     .trans-section{background:var(--surface);border:1px solid var(--border);
@@ -434,22 +437,22 @@ function renderMes(periodoId, container) {
       <div class="charts-row">
         <div class="chart-card">
           <div class="chart-title">LT Diario Promedio (h hábiles) vs. Meta ${META}h — ${label}</div>
-          <canvas id="chart-${periodoId}-daily" height="200"></canvas>
+          <div class="chart-canvas-wrap"><canvas id="chart-${periodoId}-daily"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Distribución por Rangos — B2B+B2C</div>
-          <canvas id="chart-${periodoId}-dist" height="200"></canvas>
+          <div class="chart-canvas-wrap"><canvas id="chart-${periodoId}-dist"></canvas></div>
         </div>
       </div>
 
       <div class="charts-row">
         <div class="chart-card">
           <div class="chart-title">% Pedidos ≤ 24h por Semana vs. Meta ${META_PCT}%</div>
-          <canvas id="chart-${periodoId}-weekly" height="200"></canvas>
+          <div class="chart-canvas-wrap"><canvas id="chart-${periodoId}-weekly"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">LT Promedio por Transportadora (h)</div>
-          <canvas id="chart-${periodoId}-transp" height="200"></canvas>
+          <div class="chart-canvas-wrap"><canvas id="chart-${periodoId}-transp"></canvas></div>
         </div>
       </div>
 
@@ -526,7 +529,7 @@ function buildOtroProcesoHTML(periodoId, r, label) {
     </div>
     <div class="chart-card" style="margin-bottom:1rem">
       <div class="chart-title">LT Diario — ${r.proceso} ${label}</div>
-      <canvas id="chart-${periodoId}-${r.proceso.toLowerCase()}-daily" height="180"></canvas>
+      <div class="chart-canvas-wrap"><canvas id="chart-${periodoId}-${r.proceso.toLowerCase()}-daily"></canvas></div>
     </div>`;
 }
 
@@ -782,11 +785,11 @@ function renderComp(container) {
     <div class="charts-row">
       <div class="chart-card">
         <div class="chart-title">CP Promedio B2B+B2C — ${lbl(pA)} vs ${lbl(pB)}</div>
-        <canvas id="chart-comp-bar" height="220"></canvas>
+        <div class="chart-canvas-wrap"><canvas id="chart-comp-bar"></canvas></div>
       </div>
       <div class="chart-card">
         <div class="chart-title">CP Promedio por Proceso</div>
-        <canvas id="chart-comp-proc" height="220"></canvas>
+        <div class="chart-canvas-wrap"><canvas id="chart-comp-proc"></canvas></div>
       </div>
     </div>
 
