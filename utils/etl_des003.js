@@ -1,7 +1,7 @@
 /**
  * etl_des003.js — ETL KPI-DES-003 Nivel de Servicio CEDI (NS %)
  * NexusKPI · Logistics & Service × Click Cosmetics
- * Versión 1.4 · Junio 2026
+ * Versión 1.5 · Junio 2026
  *
  * REGLAS PERMANENTES:
  *  ✅ Sin "export" — script clásico, funciones globales
@@ -11,17 +11,20 @@
  *       procesarNivelServicio(file, periodoId, onProgress) ← alias legacy
  *
  * LÓGICA ETL (validada contra datos reales Abril 2026 → NS 98.75%):
- *  JOIN: ALISTAMIENTO.Comprobante = PICKING_WMS.PedidoWMS  (match directo)
+ *  JOIN: ALISTAMIENTO.Comprobante = PICKING_WMS.PICKING  (col A, limpia)
+ *        Fallback: normalizar PedidoWMS quitando sufijos --, -, -R, (N)
  *  Filtro ALISTAMIENTO: PROCESO = B2B  +  DIA.mes == periodo detectado
  *  Filtro PICKING WMS:  cantidad > 0
  *  Capeo: despachadas = min(wms_qty, pedidas) por pedido
  *  Periodo: autodetectado desde campo DIA — no depende del selector del admin
  *
- * NOTA TÉCNICA — por qué NO se usa la columna 'PICKING' (col A de PICKING WMS):
- *  Esa columna contiene la fórmula =MID(Tabla12[PedidoWMS],1,10) como tabla
- *  estructurada. SheetJS en el browser NO evalúa referencias de tabla estructurada
- *  del tipo Tabla12[[#This Row],...] — devuelve null. PedidoWMS (col B) es siempre
- *  valor literal y hace match directo con Comprobante de ALISTAMIENTO.
+ * CORRECCIÓN v1.5 — fix bug JOIN sufijos PedidoWMS:
+ *  La columna PedidoWMS (col B) en PICKING WMS contiene sufijos como --, -R, (2)
+ *  que rompían el match exacto con Comprobante de ALISTAMIENTO.
+ *  La columna PICKING (col A) es =MID(PedidoWMS,1,10) guardada como valor calculado,
+ *  contiene el comprobante limpio y se usa ahora como clave JOIN principal.
+ *  Si PICKING viene null (SheetJS no evalúa fórmulas de tabla estructurada en algunos
+ *  archivos), se aplica normalización regex sobre PedidoWMS como fallback.
  */
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -157,13 +160,20 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
 
   // ── Paso 2: PICKING WMS ───────────────────────────────────────────────────
   log('🔍 Procesando hoja PICKING WMS…');
-  const rowsPicking = _leerHoja(wb, 'PICKING WMS', ['cantidad', 'PedidoWMS']);
+  const rowsPicking = _leerHoja(wb, 'PICKING WMS', ['cantidad', 'PedidoWMS', 'PICKING']);
 
-  // JOIN key: PedidoWMS (valor literal) = Comprobante de ALISTAMIENTO
-  // NO usar la columna 'PICKING' — es fórmula de tabla estructurada, SheetJS devuelve null
-  const pickingMap = new Map(); // PedidoWMS → { total, porSKU }
+  // JOIN key: columna PICKING (col A) contiene el comprobante limpio sin sufijos,
+  // coincide directamente con Comprobante de ALISTAMIENTO.
+  // Si PICKING viene null (fórmula no evaluada por SheetJS en archivos sin guardar cálculo),
+  // se normaliza PedidoWMS eliminando sufijos conocidos: --, -, -R, (N).
+  const pickingMap = new Map(); // clave limpia → { total, porSKU }
   for (const r of rowsPicking) {
-    const ped = String(r['PedidoWMS'] || '').trim();
+    const rawKey  = r['PICKING'] != null ? String(r['PICKING']).trim() : null;
+    const fallback = String(r['PedidoWMS'] || '').trim()
+      .replace(/[-\s]+$/, '')          // quita guiones/espacios al final: FV-3-123-- → FV-3-123
+      .replace(/\s*\(\d+\)\s*$/, '')   // quita sufijo (2), (3)…           FV-3-123 (2) → FV-3-123
+      .replace(/-[R\d]+$/, '');        // quita sufijo -R, -2, -3…         FV-3-123-R  → FV-3-123
+    const ped = (rawKey && rawKey.startsWith('FV-')) ? rawKey : fallback;
     if (!ped) continue;
     const qty = Number(r['cantidad']) || 0;
     if (qty <= 0) continue;
