@@ -2,23 +2,26 @@
  * etl_des005.js — NexusKPI · KPI-DES-005 · On-Time Delivery (OTD %)
  * Firma: procesarOTD(file, periodoId, onProgress)
  *
- * LÓGICA DEFINITIVA (verificada con openpyxl contra SEGUIMIENTO_CLICK_ABR):
+ * LÓGICA DEFINITIVA v2 (decision operativa confirmada Jun-2026):
  *   Fuente  : Hoja ALISTAMIENTO del archivo SEGUIMIENTO_CLICK_MES.xlsx
- *   ON-TIME L&S (col 42) — semántica correcta:
- *     <= 0  → A TIEMPO (negativo = adelantado respecto a fecha promesa)
- *     >  0  → TARDÍA
- *     null / '#VALUE!' → TARDÍA (sin dato)
- *   STATUS válidos: DESPACHADO · ENTREGADO · DEV TIEMPO · EN REPARTO
- *   Deduplicar por Comprobante (un pedido puede tener N filas de SKUs)
- *   Indicador principal c/ semáforo : B2B + B2C  (meta >= 95%)
- *   Otros procesos (TRASLADO, RETAIL, CLICK, MARKETPLACE): informativos sin semáforo
- *   Transportador (col 33): SERVIENTREGA / CLICK / L&S
- *   Ciudad (col 14)  ·  Novedad (col 45)
  *
- * RESULTADO VERIFICADO Abril 2026:
- *   B2B+B2C: 652 pedidos · 652 a tiempo · OTD 100.0%  ✓ (coincide con dashboard referencia)
- *   MARKETPLACE: 30 pedidos · 29 a tiempo · OTD 96.7%  ✓
- *   Tardía única: MARKETPLACE · SERVIENTREGA           ✓
+ *   FORMULA OTD:
+ *     diasDespacho = FECHA DESPACHO - DIA  (dias calendario)
+ *     ontime = diasDespacho <= 2
+ *     tardia  = diasDespacho > 2  |  sin FECHA DESPACHO
+ *
+ *   Razon del cambio: ON-TIME L&S almacenaba (DIA - SOLICITUD) donde SOLICITUD
+ *   se llenaba igual a FECHA DESPACHO, resultando siempre <= 0 (100% OTD ficticio).
+ *   La fuente correcta y disponible es DIA + FECHA DESPACHO directamente.
+ *
+ *   STATUS validos: DESPACHADO - ENTREGADO - DEV TIEMPO - EN REPARTO
+ *   Deduplicar por Comprobante (un pedido puede tener N filas de SKUs)
+ *   Indicador principal c/ semaforo : B2B + B2C  (meta >= 95%)
+ *   Otros procesos (TRASLADO, RETAIL, CLICK, MARKETPLACE): informativos sin semaforo
+ *   Transportador: SERVIENTREGA / CLICK / L&S
+ *   Ciudad - Novedad
+ *
+ *   ontime_dias en detalle = diasDespacho (FECHA_DESPACHO - DIA, entero >= 0)
  */
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -42,23 +45,18 @@ function _parseFechaOtd(val) {
 }
 
 /**
- * Interpreta ON-TIME L&S.
- * Semántica definitiva confirmada con datos reales:
- *   <= 0  → A tiempo (negativo = adelantado, 0 = exacto en fecha promesa)
- *   >  0  → Tardía
- *   null / '#VALUE!' → Tardía (sin dato)
+ * Calcula dias calendario entre DIA y FECHA DESPACHO.
+ * Retorna: { ontime: bool, dias: int|null }
+ *   ontime = diasDespacho <= 2
+ *   sin fecha despacho o fecha invalida → tardia (dias = null)
  */
-function _parseOnTimeOtd(val) {
-  if (val === null || val === undefined) return { ontime: false, dias: null };
-  if (typeof val === 'number') return { ontime: val <= 0, dias: val };
-  if (typeof val === 'boolean') return { ontime: !val, dias: null }; // raro pero posible
-  const s = String(val).trim();
-  if (s.startsWith('#') || s === '') return { ontime: false, dias: null };
-  if (/^-?\d+$/.test(s)) {
-    const n = parseInt(s, 10);
-    return { ontime: n <= 0, dias: n };
-  }
-  return { ontime: false, dias: null };
+function _calcOtdDespacho(fechaDia, fechaDespacho) {
+  if (!fechaDia || !fechaDespacho) return { ontime: false, dias: null };
+  const tDia      = new Date(fechaDia      + 'T12:00:00').getTime();
+  const tDespacho = new Date(fechaDespacho + 'T12:00:00').getTime();
+  if (isNaN(tDia) || isNaN(tDespacho)) return { ontime: false, dias: null };
+  const dias = Math.round((tDespacho - tDia) / 86400000);
+  return { ontime: dias <= 2, dias };
 }
 
 function _isoWeekOtd(dateStr) {
@@ -118,23 +116,23 @@ async function procesarOTD(file, periodoId, onProgress) {
   const headers = rows[0].map(h => h == null ? '' : String(h).trim());
   const col = name => headers.findIndex(h => h.toUpperCase() === name.toUpperCase());
 
-  const iDia    = col('DIA');
-  const iComp   = col('Comprobante');
-  const iStatus = col('STATUS');
-  const iOnTime = col('ON-TIME L&S');
-  const iProc   = col('PROCESO');
-  const iTrans  = col('TRANSPORTADOR');
-  const iCiudad = col('ciudad');
-  const iNov    = col('NOVEDAD');
+  const iDia        = col('DIA');
+  const iComp       = col('Comprobante');
+  const iStatus     = col('STATUS');
+  const iFechaDesp  = col('FECHA DESPACHO');
+  const iProc       = col('PROCESO');
+  const iTrans      = col('TRANSPORTADOR');
+  const iCiudad     = col('ciudad');
+  const iNov        = col('NOVEDAD');
 
   const missing = [];
-  if (iDia < 0)    missing.push('DIA');
-  if (iComp < 0)   missing.push('Comprobante');
-  if (iStatus < 0) missing.push('STATUS');
-  if (iOnTime < 0) missing.push('ON-TIME L&S');
-  if (iProc < 0)   missing.push('PROCESO');
+  if (iDia < 0)       missing.push('DIA');
+  if (iComp < 0)      missing.push('Comprobante');
+  if (iStatus < 0)    missing.push('STATUS');
+  if (iFechaDesp < 0) missing.push('FECHA DESPACHO');
+  if (iProc < 0)      missing.push('PROCESO');
   if (missing.length > 0) {
-    throw new Error(`Columnas críticas no encontradas en ALISTAMIENTO: ${missing.join(', ')}.`);
+    throw new Error(`Columnas criticas no encontradas en ALISTAMIENTO: ${missing.join(', ')}.`);
   }
 
   log(`✅ Columnas mapeadas · ${rows.length-1} filas en ALISTAMIENTO`);
@@ -183,13 +181,14 @@ async function procesarOTD(file, periodoId, onProgress) {
     const comp = r[iComp] ? String(r[iComp]).trim() : '';
     if (!comp || pedidoMap[comp]) continue;   // deduplicar por Comprobante
 
-    const { ontime, dias: diasOT } = _parseOnTimeOtd(r[iOnTime]);
+    const fechaDespacho = _parseFechaOtd(r[iFechaDesp]);
+    const { ontime, dias: diasOT } = _calcOtdDespacho(fecha, fechaDespacho);
     const proc   = r[iProc]   ? String(r[iProc]).trim().toUpperCase()   : 'OTRO';
     const trans  = iTrans >= 0 && r[iTrans] ? String(r[iTrans]).trim().toUpperCase() : 'N/A';
     const ciudad = iCiudad >= 0 && r[iCiudad] ? String(r[iCiudad]).trim() : '';
     const novedad= iNov >= 0 && r[iNov]    ? String(r[iNov]).trim()    : '';
 
-    pedidoMap[comp] = { fecha, proceso: proc, trans, ciudad, ontime, diasOT, novedad };
+    pedidoMap[comp] = { fecha, fechaDespacho, proceso: proc, trans, ciudad, ontime, diasOT, novedad };
   }
 
   const pedidos = Object.values(pedidoMap);
@@ -298,7 +297,7 @@ async function procesarOTD(file, periodoId, onProgress) {
     transportador: p.trans,
     ciudad:        p.ciudad,
     ontime:        p.ontime,
-    ontime_dias:   p.diasOT,
+    ontime_dias:   p.diasOT,   // dias calendario FECHA_DESPACHO - DIA
     novedad:       p.novedad || null,
   }));
 
