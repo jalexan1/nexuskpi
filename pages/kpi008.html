@@ -491,8 +491,8 @@ function renderMes(periodoId, container) {
   requestAnimationFrame(() => {
     buildDailyChart(periodoId, d.diario);
     buildTransChart(periodoId, d.trans);
-    otrosProcs.forEach(r => buildOtroProcesoChart(periodoId, r.proceso, d.detalle));
-    // Gráficos que dependen de detalle se renderizan dentro de loadDetalle
+    // buildDistChart, buildWeeklyChart, buildOtroProcesoChart y buildTablaDetalle
+    // se ejecutan dentro de loadDetalle() una vez que llegan los datos de detalle
     loadDetalle(periodoId);
   });
 }
@@ -641,6 +641,7 @@ function buildTransChart(periodoId, trans) {
 
 // ── Chart LT diario para otros procesos ────────────────────────────────────
 function buildOtroProcesoChart(periodoId, proceso, detalle) {
+  if (!proceso) return;   // guard: proceso null no tiene canvas
   const id = `chart-${periodoId}-${proceso.toLowerCase()}-daily`;
   destroyChart(id);
   const el = document.getElementById(id);
@@ -724,8 +725,10 @@ async function loadDetalle(periodoId) {
     requestAnimationFrame(() => {
       buildDistChart(periodoId, d.detalle);
       buildWeeklyChart(periodoId, d.detalle);
-      // Otros procesos informativos también usan detalle
-      const otrosProcs = (d.proceso || []).filter(r => !['B2B','B2C'].includes(r.proceso));
+      // Mismo filtro que renderMes: excluir null, B2B+B2C, B2B, B2C
+      const otrosProcs = (d.proceso || []).filter(r =>
+        r.proceso && r.proceso !== 'B2B+B2C' && r.proceso !== 'B2B' && r.proceso !== 'B2C'
+      );
       otrosProcs.forEach(r => buildOtroProcesoChart(periodoId, r.proceso, d.detalle));
       buildTablaDetalle(periodoId);
     });
