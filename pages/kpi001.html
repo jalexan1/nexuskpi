@@ -807,6 +807,29 @@ function cerrarModal(e){
 }
 
 // ── COMPARATIVO completo ──────────────────────────────────────────────────
+// ── Helper volumen para comparativo ──────────────────────────────────────
+function calcVolumen(rec) {
+  const cons = rec.filter(r => !r.is_inconsistente);
+  const porDia = {}, porSem = {};
+  cons.forEach(r => {
+    if (r.fecha) {
+      if (!porDia[r.fecha]) porDia[r.fecha] = { cajas: 0, oc: 0 };
+      porDia[r.fecha].cajas += (r.cajas || 0);
+      porDia[r.fecha].oc   += 1;
+    }
+    if (r.semana) {
+      if (!porSem[r.semana]) porSem[r.semana] = { cajas: 0, oc: 0 };
+      porSem[r.semana].cajas += (r.cajas || 0);
+      porSem[r.semana].oc   += 1;
+    }
+  });
+  return {
+    totalCajas: cons.reduce((s, r) => s + (r.cajas || 0), 0),
+    totalOC:    cons.length,
+    porDia, porSem,
+  };
+}
+
 function renderComparativo(){
   const idA=document.getElementById('selA').value;
   const idB=document.getElementById('selB').value;
@@ -830,11 +853,16 @@ function renderComparativo(){
     return `<span class="${cls}">${diff>0?'+':''}${fmt(diff)}</span>`;
   };
 
+  const vA = calcVolumen(allData[idA]||[]);
+  const vB = calcVolumen(allData[idB]||[]);
+
   const rows=[
     ['TRT 12h',         `${kA.trt??'—'}%`,      `${kB.trt??'—'}%`,      kA.trt!=null&&kB.trt!=null?d(kA.trt,kB.trt,v=>v.toFixed(1)+'%'):''],
     ['Total OC',        kA.total,                kB.total,                d(kA.total,kB.total,v=>Math.round(v)+'')],
     ['A tiempo',        kA.ok,                   kB.ok,                   d(kA.ok,kB.ok,v=>Math.round(v)+'')],
     ['Fuera SLA',       kA.late,                 kB.late,                 d(kA.late,kB.late,v=>Math.round(v)+'',true)],
+    ['📦 Total Cajas',  vA.totalCajas.toLocaleString('es-CO'), vB.totalCajas.toLocaleString('es-CO'), d(vA.totalCajas,vB.totalCajas,v=>Math.round(v).toLocaleString('es-CO'))],
+    ['📋 Recepciones (OC)', vA.totalOC,          vB.totalOC,              d(vA.totalOC,vB.totalOC,v=>Math.round(v)+'')],
     ['T. Promedio (h)', `${kA.avgH??'—'}h`,      `${kB.avgH??'—'}h`,     kA.avgH!=null&&kB.avgH!=null?d(kA.avgH,kB.avgH,v=>v.toFixed(2)+'h',true):''],
     ['T. Mediana (h)',  `${kA.medH??'—'}h`,      `${kB.medH??'—'}h`,     ''],
     ['T. Máximo (h)',   `${kA.maxH??'—'}h`,      `${kB.maxH??'—'}h`,     ''],
@@ -874,6 +902,29 @@ function renderComparativo(){
         <h3>Tiempo Promedio Efectivo (h)</h3>
         <div class="chart-wrap" style="height:200px"><canvas id="cCompAvg"></canvas></div>
       </div>
+    </div>
+    <!-- Nuevas gráficas: Volumen de Cajas y Recepciones -->
+    <div class="comp-charts" style="margin-top:.75rem">
+      <div class="comp-card">
+        <div class="vol-toolbar" style="margin-bottom:.75rem">
+          <div style="font-size:.75rem;font-weight:700;color:var(--text)">📦 Volumen de Cajas — ${lblA} vs ${lblB}</div>
+          <div class="vol-btns">
+            <button class="vol-btn active" id="btnCompCajasSem" onclick="switchCompVol('cajas','semana')">Semana</button>
+            <button class="vol-btn"        id="btnCompCajasDia"  onclick="switchCompVol('cajas','dia')">Día</button>
+          </div>
+        </div>
+        <div class="chart-wrap" style="height:210px"><canvas id="cCompCajas"></canvas></div>
+      </div>
+      <div class="comp-card">
+        <div class="vol-toolbar" style="margin-bottom:.75rem">
+          <div style="font-size:.75rem;font-weight:700;color:var(--text)">📋 Número de Recepciones (OC) — ${lblA} vs ${lblB}</div>
+          <div class="vol-btns">
+            <button class="vol-btn active" id="btnCompRecibSem" onclick="switchCompVol('recibos','semana')">Semana</button>
+            <button class="vol-btn"        id="btnCompRecibDia"  onclick="switchCompVol('recibos','dia')">Día</button>
+          </div>
+        </div>
+        <div class="chart-wrap" style="height:210px"><canvas id="cCompRecibos"></canvas></div>
+      </div>
     </div>`;
 
   // TRT por tipo
@@ -907,6 +958,99 @@ function renderComparativo(){
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},
       scales:{y:{ticks:{callback:v=>v+'h'}}}}});
+
+  // Guardar datos de volumen en estado global para switchCompVol
+  compVolData = { vA, vB, lblA, lblB };
+  // Render inicial de las gráficas de volumen (por semana por defecto)
+  compVolState = { cajas: 'semana', recibos: 'semana' };
+  renderCompVolCharts();
+}
+
+// ── Estado gráficas de volumen en comparativo ─────────────────────────────
+let compVolState = { cajas: 'semana', recibos: 'semana' };
+let compVolData  = null;
+
+function switchCompVol(tipo, modo) {
+  compVolState[tipo] = modo;
+  // Actualizar botones activos
+  if (tipo === 'cajas') {
+    document.getElementById('btnCompCajasSem')?.classList.toggle('active', modo === 'semana');
+    document.getElementById('btnCompCajasDia')?.classList.toggle('active', modo === 'dia');
+  } else {
+    document.getElementById('btnCompRecibSem')?.classList.toggle('active', modo === 'semana');
+    document.getElementById('btnCompRecibDia')?.classList.toggle('active', modo === 'dia');
+  }
+  renderCompVolCharts();
+}
+
+function renderCompVolCharts() {
+  if (!compVolData) return;
+  const { vA, vB, lblA, lblB } = compVolData;
+
+  // ── Volumen de Cajas ──────────────────────────────────────────────────
+  const cajasModo = compVolState.cajas;
+  const dA_c = cajasModo === 'dia' ? vA.porDia : vA.porSem;
+  const dB_c = cajasModo === 'dia' ? vB.porDia : vB.porSem;
+  // Unión de keys ordenados
+  const keysC = [...new Set([...Object.keys(dA_c), ...Object.keys(dB_c)])].sort();
+  const labC  = cajasModo === 'dia' ? keysC.map(k => k.slice(5)) : keysC;
+
+  if (charts['cCompCajas']) { charts['cCompCajas'].destroy(); delete charts['cCompCajas']; }
+  const ctxC = document.getElementById('cCompCajas');
+  if (ctxC) {
+    charts['cCompCajas'] = new Chart(ctxC, {
+      type: 'bar',
+      data: {
+        labels: labC,
+        datasets: [
+          { label: lblA.split(' ')[0], data: keysC.map(k => dA_c[k]?.cajas || 0), backgroundColor: 'rgba(0,212,255,.7)', borderRadius: 3 },
+          { label: lblB.split(' ')[0], data: keysC.map(k => dB_c[k]?.cajas || 0), backgroundColor: 'rgba(123,47,255,.7)', borderRadius: 3 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw.toLocaleString('es-CO')} cajas` } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 9 }, maxTicksLimit: 16 } },
+          y: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { font: { size: 10 }, callback: v => v.toLocaleString('es-CO') } }
+        }
+      }
+    });
+  }
+
+  // ── Número de Recepciones ─────────────────────────────────────────────
+  const recibModo = compVolState.recibos;
+  const dA_r = recibModo === 'dia' ? vA.porDia : vA.porSem;
+  const dB_r = recibModo === 'dia' ? vB.porDia : vB.porSem;
+  const keysR = [...new Set([...Object.keys(dA_r), ...Object.keys(dB_r)])].sort();
+  const labR  = recibModo === 'dia' ? keysR.map(k => k.slice(5)) : keysR;
+
+  if (charts['cCompRecibos']) { charts['cCompRecibos'].destroy(); delete charts['cCompRecibos']; }
+  const ctxR = document.getElementById('cCompRecibos');
+  if (ctxR) {
+    charts['cCompRecibos'] = new Chart(ctxR, {
+      type: 'bar',
+      data: {
+        labels: labR,
+        datasets: [
+          { label: lblA.split(' ')[0], data: keysR.map(k => dA_r[k]?.oc || 0), backgroundColor: 'rgba(0,212,255,.7)', borderRadius: 3 },
+          { label: lblB.split(' ')[0], data: keysR.map(k => dB_r[k]?.oc || 0), backgroundColor: 'rgba(123,47,255,.7)', borderRadius: 3 },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } },
+          tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw} recepciones` } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 9 }, maxTicksLimit: 16 } },
+          y: { grid: { color: 'rgba(255,255,255,.04)' }, ticks: { font: { size: 10 }, stepSize: 1 } }
+        }
+      }
+    });
+  }
 }
 
 // ── Detalle ───────────────────────────────────────────────────────────────
