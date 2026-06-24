@@ -106,6 +106,16 @@
     .tab-btn.on{color:var(--accent);border-bottom-color:var(--accent)}
     .tab-panel{display:none}.tab-panel.on{display:block}
 
+    /* ── Familia filter bar ── */
+    .fam-bar{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;padding:.6rem 1rem;
+      background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:1rem}
+    .fam-bar label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+    .fam-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);
+      color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:.3rem .6rem;
+      cursor:pointer;outline:none}
+    .fam-sel:focus{border-color:var(--accent)}
+    .fam-count{font-size:.7rem;color:var(--muted);margin-left:auto;white-space:nowrap}
+
     /* ── Error / Loading ── */
     .err-box{background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25);border-radius:var(--r);padding:1rem;color:var(--error);font-size:.82rem;display:none}
     .err-box.show{display:block}
@@ -175,6 +185,20 @@
       <select class="mes-sel" id="sel-periodo"></select>
       <div style="flex:1"></div>
       
+    </div>
+
+    <!-- Filtro Familia (afecta las 3 tabs) -->
+    <div class="fam-bar">
+      <label for="sel-familia">Familia</label>
+      <select class="fam-sel" id="sel-familia" onchange="onFamiliaChange()">
+        <option value="">Todas las familias</option>
+        <option value="CAPILAR">Capilar (PTC)</option>
+        <option value="BODY">Body (PTB)</option>
+        <option value="KIT">Kit (PTK)</option>
+        <option value="MATERIA_PRIMA">Materia Prima (MP)</option>
+        <option value="OTRO">Otro (PT)</option>
+      </select>
+      <span class="fam-count" id="fam-count"></span>
     </div>
 
     <!-- Error box -->
@@ -250,7 +274,7 @@
         <table class="wt">
           <thead>
             <tr>
-              <th>Fecha Conteo</th><th>Conteo ID</th><th>Semana</th>
+              <th>Fecha Conteo</th><th>Conteo ID</th><th>Semana</th><th>Familia</th>
               <th># SKUs Contados</th><th># SKUs Exactos</th><th>Con Error</th>
               <th>EI (%)</th><th>Meta</th><th>Δ pp</th><th>Estado</th>
             </tr>
@@ -349,14 +373,13 @@ function getSem(pct) {
   if (pct >= 97) return { cls: 'amarillo', emoji: '🟡', label: 'ALERTA',  col: 'var(--warn)'  };
   return               { cls: 'rojo',     emoji: '🔴', label: 'CRÍTICO', col: 'var(--error)' };
 }
-
 function getFamTag(fam) {
   const m = { CAPILAR:'tag-cap', BODY:'tag-body', KIT:'tag-kit', MATERIA_PRIMA:'tag-mp', OTRO:'tag-otro' };
   return m[fam?.toUpperCase()] || 'tag-otro';
 }
 function getFamLabel(fam) {
   const m = { CAPILAR:'Capilar', BODY:'Body', KIT:'Kit', MATERIA_PRIMA:'Mat.Prima', OTRO:'Otro' };
-  return m[fam?.toUpperCase()] || fam;
+  return m[fam?.toUpperCase()] || fam || '—';
 }
 function pctFamStr(total, exactos, difs) {
   if (!total) return '<span style="color:var(--muted)">— Sin datos</span>';
@@ -364,6 +387,10 @@ function pctFamStr(total, exactos, difs) {
   const col = difs === 0 ? 'var(--ok)' : p >= 97 ? 'var(--warn)' : 'var(--error)';
   return `<span style="color:${col};font-weight:700">${p}% (${difs} dif. / ${total} SKUs)</span>`;
 }
+
+// ── Estado global ─────────────────────────────────────────────────────────
+let _conteosRaw = [];   // datos completos de kpi_inventario_conteos
+let _detallesRaw = [];  // datos completos de kpi_inventario_detalle
 
 // ── Secciones visibles ────────────────────────────────────────────────────
 function mostrarSecciones() {
@@ -373,6 +400,22 @@ function mostrarSecciones() {
 function ocultarSecciones() {
   ['dashboard','sec-charts','sec-tabla','sec-ranks','sec-detail','sec-skus']
     .forEach(id => { const el=$(id); if(el) el.style.display='none'; });
+}
+
+// ── Filtro familia ────────────────────────────────────────────────────────
+function getFamiliaFiltro() {
+  return $('sel-familia')?.value || '';
+}
+
+function filtrarDetalles(detalles) {
+  const fam = getFamiliaFiltro();
+  if (!fam) return detalles;
+  return detalles.filter(d => (d.familia||'OTRO').toUpperCase() === fam.toUpperCase());
+}
+
+function onFamiliaChange() {
+  // Re-renderizar con los datos ya cargados, aplicando el nuevo filtro
+  renderConDatos(_conteosRaw, _detallesRaw);
 }
 
 // ── Cargar períodos ───────────────────────────────────────────────────────
@@ -397,10 +440,11 @@ async function cargarPeriodos() {
   }
 }
 
-// ── Render dashboard ──────────────────────────────────────────────────────
+// ── Render dashboard (fetch datos) ────────────────────────────────────────
 async function renderDashboard(periodoId) {
   ocultarSecciones();
   $('error-box').classList.remove('show');
+  $('fam-count').textContent = '';
 
   try {
     const [conteos, detalles] = await Promise.all([
@@ -412,192 +456,249 @@ async function renderDashboard(periodoId) {
       throw new Error(`No hay datos para el período ${periodoId}. Cargá el archivo WMS desde el Panel Admin.`);
     }
 
-    // ── Cálculos globales ──
-    const totalSKUs    = detalles.length;
-    const totalExactos = detalles.filter(d => d.es_exacto).length;
-    const totalDifs    = totalSKUs - totalExactos;
-    const eiPct        = totalSKUs > 0 ? parseFloat(((totalExactos / totalSKUs) * 100).toFixed(2)) : 0;
-    const sem          = getSem(eiPct);
-    const deltaVsMeta  = (eiPct - 99).toFixed(2);
-    const primerConteo = conteos[0];
+    // Guardar globalmente para re-usar al cambiar familia
+    _conteosRaw  = conteos;
+    _detallesRaw = detalles;
 
-    // ── KPI header ──
-    $('hdr-sub').textContent = `Exactitud de Inventario · Conteo ID ${primerConteo.id_conteo} · Bodega ${primerConteo.bodega || '021'}`;
-    $('hdr-meta').textContent = `${primerConteo.fecha_conteo} · ${primerConteo.operario || '—'}`;
-    $('lbl-periodo').textContent = periodoId;
+    // Poblar opciones de familia según los datos reales
+    poblarFamilias(detalles);
 
-    // ── Semáforo ──
-    $('ei-val').textContent  = eiPct.toFixed(2);
-    $('ei-val').className    = `sem-num sem-${sem.cls}`;
-    $('ei-bar').style.width  = Math.min(eiPct, 100) + '%';
-    $('ei-bar').style.background = sem.cls === 'verde' ? 'var(--ok)' : sem.cls === 'amarillo' ? 'var(--warn)' : 'var(--error)';
-    const pill = $('status-pill');
-    pill.className = `sem-pill ${sem.cls}`;
-    pill.textContent = `${sem.emoji} ${sem.label}`;
-    $('var-meta').textContent = (eiPct >= 99 ? '+' : '') + deltaVsMeta + ' pp vs meta';
-    $('var-meta').style.color = sem.col;
-    $('status-msg').textContent = eiPct >= 99
-      ? 'Mantener conteos cíclicos semanales.'
-      : eiPct >= 97 ? 'Plan de mejora. Ajuste en WMS en 24h.'
-      : 'Inventario general inmediato. Auditoría de procesos.';
-    $('formula-detalle').textContent = `${totalExactos} ÷ ${totalSKUs} × 100 = ${eiPct.toFixed(2)}%`;
-
-    // ── Métricas ──
-    $('met-total').textContent     = fmt(totalSKUs);
-    $('met-total-sub').textContent = `${new Set(detalles.map(d => d.id_conteo)).size} conteo(s) · ${primerConteo.bodega || '021'}`;
-    $('met-exactos').textContent   = fmt(totalExactos);
-    $('met-difs').textContent      = fmt(totalDifs);
-    $('met-conteo').textContent    = `ID ${primerConteo.id_conteo}`;
-    $('met-operario').textContent  = primerConteo.fecha_conteo + ' · ' + (primerConteo.operario || '—');
-
-    // ── Tabla conteos ──
-    const tb = $('tbody-conteos');
-    tb.innerHTML = '';
-    conteos.forEach(c => {
-      const s = getSem(c.ei_pct);
-      const delta = (c.ei_pct - 99).toFixed(2);
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${c.fecha_conteo}</td><td>${c.id_conteo}</td><td>${c.semana||'—'}</td>
-        <td>${fmt(c.total_skus)}</td><td>${fmt(c.skus_exactos)}</td>
-        <td style="color:${c.skus_diferencia>0?'var(--error)':'var(--ok)'}">${fmt(c.skus_diferencia)}</td>
-        <td style="font-weight:700;color:${s.col}">${parseFloat(c.ei_pct).toFixed(2)}%</td>
-        <td>99%</td>
-        <td style="color:${c.ei_pct>=99?'var(--ok)':'var(--error)'}">${c.ei_pct>=99?'+':''}${delta}</td>
-        <td><span class="tag ${c.ei_pct>=99?'tag-ok':c.ei_pct>=97?'tag-warn':'tag-crit'}">${s.emoji} ${s.label}</span></td>`;
-      tb.appendChild(tr);
-    });
-    const tf = $('tfoot-conteos');
-    const semG = getSem(eiPct);
-    tf.innerHTML = `<tr class="tr-tot">
-      <td colspan="3">ACUMULADO PERÍODO</td>
-      <td>${fmt(totalSKUs)}</td><td>${fmt(totalExactos)}</td>
-      <td style="color:${totalDifs>0?'var(--error)':'var(--ok)'}">${fmt(totalDifs)}</td>
-      <td style="font-weight:700;color:${semG.col}">${eiPct.toFixed(2)}%</td>
-      <td>99%</td>
-      <td style="color:${eiPct>=99?'var(--ok)':'var(--error)'}">${eiPct>=99?'+':''}${deltaVsMeta}</td>
-      <td><span class="tag ${eiPct>=99?'tag-ok':eiPct>=97?'tag-warn':'tag-crit'}">${semG.emoji} ${semG.label}</span></td>
-    </tr>`;
-
-    // ── Familias ──
-    const famMap = {};
-    detalles.forEach(d => {
-      const f = (d.familia||'OTRO').toUpperCase();
-      if (!famMap[f]) famMap[f] = {total:0,exactos:0,difs:0};
-      famMap[f].total++;
-      if (d.es_exacto) famMap[f].exactos++; else famMap[f].difs++;
-    });
-    ['CAPILAR','BODY','KIT','MATERIA_PRIMA','OTRO'].forEach(fam => {
-      const idMap = {CAPILAR:'fam-cap',BODY:'fam-body',KIT:'fam-kit',MATERIA_PRIMA:'fam-mp',OTRO:'fam-otro'};
-      const d = famMap[fam] || {total:0,exactos:0,difs:0};
-      $(idMap[fam]).innerHTML = pctFamStr(d.total, d.exactos, d.difs);
-    });
-
-    // ── Tipo diferencia ──
-    const difsList = detalles.filter(d => !d.es_exacto);
-    const sobre = difsList.filter(d => parseFloat(d.qty_fisica) > parseFloat(d.qty_wms)).length;
-    const falta = difsList.filter(d => parseFloat(d.qty_fisica) < parseFloat(d.qty_wms)).length;
-    $('tipo-sobre').innerHTML = `<span style="color:var(--warn)">${sobre} ref(s)</span>`;
-    $('tipo-falta').innerHTML = `<span style="color:var(--error)">${falta} ref(s)</span>`;
-    $('accion-rec').innerHTML = `<span style="color:${semG.col}">${eiPct>=99?'Mantener conteos cíclicos':eiPct>=97?'Ajuste WMS en 24h':'Auditoría + ajuste masivo Kardex'}</span>`;
-
-    // ── Detail card ──
-    $('det-resultado').textContent = eiPct.toFixed(2) + '%';
-    $('det-resultado').style.color = semG.col;
-    $('det-delta').textContent = (eiPct>=99?'+':'') + deltaVsMeta + ' pp';
-    $('det-delta').style.color = semG.col;
-    $('det-semaforo').textContent = `${semG.emoji} ${semG.label}`;
-
-    // ── Rankings ──
-    const bestDiv = $('skus-best');
-    bestDiv.innerHTML = '';
-    detalles.filter(d => d.es_exacto).slice(0,8).forEach((d,i) => {
-      const el = document.createElement('div');
-      el.className = 'rank-item';
-      el.innerHTML = `<div class="rank-num">${i+1}</div>
-        <div class="rank-sku">${d.referencia}<br><span style="font-weight:400;font-size:.65rem;color:var(--muted)">${(d.descripcion||'').substring(0,40)}</span></div>
-        <span class="tag tag-ok" style="font-size:.65rem">100%</span>`;
-      bestDiv.appendChild(el);
-    });
-    if (!bestDiv.children.length) bestDiv.innerHTML = '<p class="empty">Sin SKUs exactos.</p>';
-
-    const difsArr = detalles.filter(d=>!d.es_exacto)
-      .map(d=>({...d, absDif:Math.abs(parseFloat(d.qty_fisica)-parseFloat(d.qty_wms))}))
-      .sort((a,b)=>b.absDif-a.absDif);
-    const maxDif = difsArr[0]?.absDif || 1;
-    const worstDiv = $('skus-worst');
-    worstDiv.innerHTML = '';
-    difsArr.slice(0,8).forEach((d,i) => {
-      const diff = parseFloat(d.qty_fisica) - parseFloat(d.qty_wms);
-      const col  = d.absDif > 1000 ? 'var(--error)' : 'var(--warn)';
-      const barW = Math.min(Math.round(d.absDif/maxDif*100),100);
-      const el   = document.createElement('div');
-      el.className = 'rank-item';
-      el.innerHTML = `<div class="rank-num bad">${i+1}</div>
-        <div class="rank-sku">${d.referencia} — ${(d.descripcion||'').substring(0,26)}<br>
-          <span style="font-weight:400;font-size:.65rem;color:var(--muted)">${diff>0?'Sobrante':'Faltante'}</span></div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="color:${col};font-weight:700;font-size:.75rem">${(diff>0?'+':'')}${fmt(diff)} u.</div>
-          <div style="height:4px;width:60px;background:var(--surface3);border-radius:2px;margin-top:3px">
-            <div style="height:4px;width:${barW}%;background:${col};border-radius:2px"></div></div>
-        </div>`;
-      worstDiv.appendChild(el);
-    });
-    if (!worstDiv.children.length) worstDiv.innerHTML = '<p class="empty" style="color:var(--ok)">✅ Sin diferencias.</p>';
-
-    // ── Tabla detalle SKUs ──
-    const tbDet = $('tbody-detalle');
-    tbDet.innerHTML = '';
-    detalles.forEach(d => {
-      const qW = parseFloat(d.qty_wms), qF = parseFloat(d.qty_fisica), diff = qF - qW;
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><b>${d.referencia}</b></td>
-        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.descripcion||''}">${d.descripcion||'—'}</td>
-        <td><span class="tag ${getFamTag(d.familia)}">${getFamLabel(d.familia)}</span></td>
-        <td style="font-size:.7rem;color:var(--muted)">${d.ean||'—'}</td>
-        <td>${fmt(qW)}</td><td>${fmt(qF)}</td>
-        <td style="font-weight:700;color:${diff<0?'var(--error)':diff>0?'var(--warn)':'var(--ok)'}">
-          ${diff===0?'—':(diff>0?'+':'')+fmt(diff)}</td>
-        <td><span class="tag ${d.es_exacto?'tag-ok':'tag-crit'}">${d.es_exacto?'✅ EXACTO':'❌ DIF.'}</span></td>`;
-      tbDet.appendChild(tr);
-    });
-
-    // ── Charts ──
-    const famLabels = ['CAPILAR','BODY','KIT','MATERIA_PRIMA','OTRO'];
-    const famEI     = famLabels.map(f => { const d=famMap[f]; return d&&d.total?parseFloat(((d.exactos/d.total)*100).toFixed(1)):0; });
-    const famColors = famEI.map(v => v>=99?'#00FF88':v>=97?'#FFB020':'#FF4D6D');
-
-    const ctx1 = $('chart-familias');
-    if (ctx1._ci) ctx1._ci.destroy();
-    ctx1._ci = new Chart(ctx1, { type:'bar', data:{
-      labels:['Capilar','Body','Kit','Mat.Prima','Otro'],
-      datasets:[
-        {label:'EI (%)',data:famEI,backgroundColor:famColors,borderWidth:0,borderRadius:5},
-        {label:'Meta 99%',data:famLabels.map(()=>99),type:'line',borderColor:'#FFB020',borderDash:[5,4],borderWidth:2,pointRadius:0,fill:false}
-      ]},
-      options:{responsive:true,plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:12}}},
-        scales:{y:{min:0,max:105,grid:{color:'rgba(255,255,255,.05)'},ticks:{font:{size:10},color:'#7A8BA6',callback:v=>v+'%'}},
-                x:{grid:{display:false},ticks:{font:{size:11},color:'#7A8BA6'}}}}
-    });
-
-    const difFams = famLabels.filter(f=>famMap[f]&&famMap[f].difs>0);
-    const okFams  = famLabels.filter(f=>!famMap[f]||famMap[f].difs===0);
-    const ctx2 = $('chart-doughnut');
-    if (ctx2._ci) ctx2._ci.destroy();
-    const doughnutData = difFams.length === 0
-      ? {labels:['Sin diferencias ✅'],datasets:[{data:[1],backgroundColor:['#00FF88'],borderWidth:0}]}
-      : {labels:[...difFams.map(f=>getFamLabel(f)+' ('+famMap[f].difs+' dif.)'),...okFams.map(f=>getFamLabel(f)+' OK')],
-         datasets:[{data:[...difFams.map(f=>famMap[f].difs),...okFams.map(()=>0.1)],backgroundColor:['#FF4D6D','#FFB020','#7B2FFF','#00FF88','#00D4FF'],borderWidth:2,borderColor:'rgba(0,0,0,0)'}]};
-    ctx2._ci = new Chart(ctx2, {type:'doughnut',data:doughnutData,
-      options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:10,padding:8,color:'#7A8BA6'}}}}
-    });
-
-    mostrarSecciones();
+    // Renderizar con datos
+    renderConDatos(conteos, detalles);
 
   } catch(e) {
     mostrarError(e.message);
   }
+}
+
+// ── Poblar selector de familias con las existentes en el período ──────────
+function poblarFamilias(detalles) {
+  const sel = $('sel-familia');
+  const cur = sel.value;
+  const fams = [...new Set(detalles.map(d => (d.familia||'OTRO').toUpperCase()))].sort();
+  const labMap = { CAPILAR:'Capilar (PTC)', BODY:'Body (PTB)', KIT:'Kit (PTK)', MATERIA_PRIMA:'Materia Prima (MP)', OTRO:'Otro (PT)' };
+  sel.innerHTML = '<option value="">Todas las familias</option>' +
+    fams.map(f => `<option value="${f}" ${f===cur?'selected':''}>${labMap[f]||f}</option>`).join('');
+}
+
+// ── Render con datos (acepta filtro de familia) ───────────────────────────
+function renderConDatos(conteos, detallesAll) {
+  const fam      = getFamiliaFiltro();
+  const detalles = filtrarDetalles(detallesAll);
+  const periodoId = $('sel-periodo').value;
+  const primerConteo = conteos[0];
+
+  // Actualizar contador
+  $('fam-count').textContent = fam
+    ? `${detalles.length} SKUs · ${fam}`
+    : `${detallesAll.length} SKUs totales`;
+
+  // ── Cálculos globales ──
+  const totalSKUs    = detalles.length;
+  const totalExactos = detalles.filter(d => d.es_exacto).length;
+  const totalDifs    = totalSKUs - totalExactos;
+  const eiPct        = totalSKUs > 0 ? parseFloat(((totalExactos / totalSKUs) * 100).toFixed(2)) : 0;
+  const sem          = getSem(eiPct);
+  const deltaVsMeta  = (eiPct - 99).toFixed(2);
+  const semG         = sem;
+
+  // ── KPI header ──
+  const famSuffix = fam ? ` · Familia: ${getFamLabel(fam)}` : '';
+  $('hdr-sub').textContent = `Exactitud de Inventario · Conteo ID ${primerConteo.id_conteo} · Bodega ${primerConteo.bodega || '021'}${famSuffix}`;
+  $('hdr-meta').textContent = `${primerConteo.fecha_conteo} · ${primerConteo.operario || '—'}`;
+  $('lbl-periodo').textContent = periodoId + famSuffix;
+
+  // ── Semáforo ──
+  $('ei-val').textContent  = totalSKUs > 0 ? eiPct.toFixed(2) : '—';
+  $('ei-val').className    = `sem-num sem-${sem.cls}`;
+  $('ei-bar').style.width  = Math.min(eiPct, 100) + '%';
+  $('ei-bar').style.background = sem.cls === 'verde' ? 'var(--ok)' : sem.cls === 'amarillo' ? 'var(--warn)' : 'var(--error)';
+  const pill = $('status-pill');
+  pill.className = `sem-pill ${sem.cls}`;
+  pill.textContent = `${sem.emoji} ${sem.label}`;
+  $('var-meta').textContent = (eiPct >= 99 ? '+' : '') + deltaVsMeta + ' pp vs meta';
+  $('var-meta').style.color = sem.col;
+  $('status-msg').textContent = eiPct >= 99
+    ? 'Mantener conteos cíclicos semanales.'
+    : eiPct >= 97 ? 'Plan de mejora. Ajuste en WMS en 24h.'
+    : 'Inventario general inmediato. Auditoría de procesos.';
+  $('formula-detalle').textContent = `${totalExactos} ÷ ${totalSKUs} × 100 = ${eiPct.toFixed(2)}%`;
+
+  // ── Métricas ──
+  $('met-total').textContent     = fmt(totalSKUs);
+  $('met-total-sub').textContent = `${new Set(detalles.map(d => d.id_conteo)).size} conteo(s) · ${primerConteo.bodega || '021'}`;
+  $('met-exactos').textContent   = fmt(totalExactos);
+  $('met-difs').textContent      = fmt(totalDifs);
+  $('met-conteo').textContent    = `ID ${primerConteo.id_conteo}`;
+  $('met-operario').textContent  = primerConteo.fecha_conteo + ' · ' + (primerConteo.operario || '—');
+
+  // ── Tabla conteos: agrupar detalles filtrados por conteo ──
+  const tb = $('tbody-conteos');
+  tb.innerHTML = '';
+  // Para la tabla de conteos, agrupamos detalles filtrados por id_conteo
+  const conteoPorId = {};
+  detalles.forEach(d => {
+    const cid = d.id_conteo;
+    if (!conteoPorId[cid]) conteoPorId[cid] = { exactos: 0, total: 0 };
+    conteoPorId[cid].total++;
+    if (d.es_exacto) conteoPorId[cid].exactos++;
+  });
+  conteos.forEach(c => {
+    const stats   = conteoPorId[c.id_conteo] || { total: 0, exactos: 0 };
+    const totC    = stats.total;
+    const exactC  = stats.exactos;
+    const difC    = totC - exactC;
+    const eiC     = totC > 0 ? parseFloat(((exactC/totC)*100).toFixed(2)) : 0;
+    const s       = getSem(eiC);
+    const delta   = (eiC - 99).toFixed(2);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${c.fecha_conteo}</td><td>${c.id_conteo}</td><td>${c.semana||'—'}</td>
+      <td><span class="tag ${getFamTag(fam||'OTRO')}">${fam ? getFamLabel(fam) : 'Todas'}</span></td>
+      <td>${fmt(totC)}</td><td>${fmt(exactC)}</td>
+      <td style="color:${difC>0?'var(--error)':'var(--ok)'}">${fmt(difC)}</td>
+      <td style="font-weight:700;color:${s.col}">${eiC.toFixed(2)}%</td>
+      <td>99%</td>
+      <td style="color:${eiC>=99?'var(--ok)':'var(--error)'}">${eiC>=99?'+':''}${delta}</td>
+      <td><span class="tag ${eiC>=99?'tag-ok':eiC>=97?'tag-warn':'tag-crit'}">${s.emoji} ${s.label}</span></td>`;
+    tb.appendChild(tr);
+  });
+  const tf = $('tfoot-conteos');
+  tf.innerHTML = `<tr class="tr-tot">
+    <td colspan="3">ACUMULADO PERÍODO</td>
+    <td><span class="tag ${getFamTag(fam||'OTRO')}">${fam ? getFamLabel(fam) : 'Todas'}</span></td>
+    <td>${fmt(totalSKUs)}</td><td>${fmt(totalExactos)}</td>
+    <td style="color:${totalDifs>0?'var(--error)':'var(--ok)'}">${fmt(totalDifs)}</td>
+    <td style="font-weight:700;color:${semG.col}">${eiPct.toFixed(2)}%</td>
+    <td>99%</td>
+    <td style="color:${eiPct>=99?'var(--ok)':'var(--error)'}">${eiPct>=99?'+':''}${deltaVsMeta}</td>
+    <td><span class="tag ${eiPct>=99?'tag-ok':eiPct>=97?'tag-warn':'tag-crit'}">${semG.emoji} ${semG.label}</span></td>
+  </tr>`;
+
+  // ── Familias (siempre sobre todos los datos para la vista de detalle) ──
+  const famMap = {};
+  detallesAll.forEach(d => {
+    const f = (d.familia||'OTRO').toUpperCase();
+    if (!famMap[f]) famMap[f] = {total:0,exactos:0,difs:0};
+    famMap[f].total++;
+    if (d.es_exacto) famMap[f].exactos++; else famMap[f].difs++;
+  });
+  ['CAPILAR','BODY','KIT','MATERIA_PRIMA','OTRO'].forEach(f => {
+    const idMap = {CAPILAR:'fam-cap',BODY:'fam-body',KIT:'fam-kit',MATERIA_PRIMA:'fam-mp',OTRO:'fam-otro'};
+    const d = famMap[f] || {total:0,exactos:0,difs:0};
+    $(idMap[f]).innerHTML = pctFamStr(d.total, d.exactos, d.difs);
+  });
+
+  // ── Tipo diferencia (sobre detalles filtrados) ──
+  const difsList = detalles.filter(d => !d.es_exacto);
+  const sobre = difsList.filter(d => parseFloat(d.qty_fisica) > parseFloat(d.qty_wms)).length;
+  const falta = difsList.filter(d => parseFloat(d.qty_fisica) < parseFloat(d.qty_wms)).length;
+  $('tipo-sobre').innerHTML = `<span style="color:var(--warn)">${sobre} ref(s)</span>`;
+  $('tipo-falta').innerHTML = `<span style="color:var(--error)">${falta} ref(s)</span>`;
+  $('accion-rec').innerHTML = `<span style="color:${semG.col}">${eiPct>=99?'Mantener conteos cíclicos':eiPct>=97?'Ajuste WMS en 24h':'Auditoría + ajuste masivo Kardex'}</span>`;
+
+  // ── Detail card ──
+  $('det-resultado').textContent = eiPct.toFixed(2) + '%';
+  $('det-resultado').style.color = semG.col;
+  $('det-delta').textContent = (eiPct>=99?'+':'') + deltaVsMeta + ' pp';
+  $('det-delta').style.color = semG.col;
+  $('det-semaforo').textContent = `${semG.emoji} ${semG.label}`;
+
+  // ── Rankings (sobre detalles filtrados) ──
+  const bestDiv = $('skus-best');
+  bestDiv.innerHTML = '';
+  detalles.filter(d => d.es_exacto).slice(0,8).forEach((d,i) => {
+    const el = document.createElement('div');
+    el.className = 'rank-item';
+    el.innerHTML = `<div class="rank-num">${i+1}</div>
+      <div class="rank-sku">${d.referencia}<br>
+        <span style="font-weight:400;font-size:.65rem;color:var(--muted)">${(d.descripcion||'').substring(0,40)}</span></div>
+      <span class="tag tag-ok" style="font-size:.65rem">100%</span>`;
+    bestDiv.appendChild(el);
+  });
+  if (!bestDiv.children.length) bestDiv.innerHTML = '<p class="empty">Sin SKUs exactos.</p>';
+
+  const difsArr = detalles.filter(d=>!d.es_exacto)
+    .map(d=>({...d, absDif:Math.abs(parseFloat(d.qty_fisica)-parseFloat(d.qty_wms))}))
+    .sort((a,b)=>b.absDif-a.absDif);
+  const maxDif = difsArr[0]?.absDif || 1;
+  const worstDiv = $('skus-worst');
+  worstDiv.innerHTML = '';
+  difsArr.slice(0,8).forEach((d,i) => {
+    const diff = parseFloat(d.qty_fisica) - parseFloat(d.qty_wms);
+    const col  = d.absDif > 1000 ? 'var(--error)' : 'var(--warn)';
+    const barW = Math.min(Math.round(d.absDif/maxDif*100),100);
+    const el   = document.createElement('div');
+    el.className = 'rank-item';
+    el.innerHTML = `<div class="rank-num bad">${i+1}</div>
+      <div class="rank-sku">${d.referencia} — ${(d.descripcion||'').substring(0,26)}<br>
+        <span style="font-weight:400;font-size:.65rem;color:var(--muted)">${diff>0?'Sobrante':'Faltante'}</span></div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="color:${col};font-weight:700;font-size:.75rem">${(diff>0?'+':'')}${fmt(diff)} u.</div>
+        <div style="height:4px;width:60px;background:var(--surface3);border-radius:2px;margin-top:3px">
+          <div style="height:4px;width:${barW}%;background:${col};border-radius:2px"></div></div>
+      </div>`;
+    worstDiv.appendChild(el);
+  });
+  if (!worstDiv.children.length) worstDiv.innerHTML = '<p class="empty" style="color:var(--ok)">✅ Sin diferencias.</p>';
+
+  // ── Tabla detalle SKUs (filtrada) ──
+  const tbDet = $('tbody-detalle');
+  tbDet.innerHTML = '';
+  detalles.forEach(d => {
+    const qW = parseFloat(d.qty_wms), qF = parseFloat(d.qty_fisica), diff = qF - qW;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><b>${d.referencia}</b></td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.descripcion||''}">${d.descripcion||'—'}</td>
+      <td><span class="tag ${getFamTag(d.familia)}">${getFamLabel(d.familia)}</span></td>
+      <td style="font-size:.7rem;color:var(--muted)">${d.ean||'—'}</td>
+      <td>${fmt(qW)}</td><td>${fmt(qF)}</td>
+      <td style="font-weight:700;color:${diff<0?'var(--error)':diff>0?'var(--warn)':'var(--ok)'}">
+        ${diff===0?'—':(diff>0?'+':'')+fmt(diff)}</td>
+      <td><span class="tag ${d.es_exacto?'tag-ok':'tag-crit'}">${d.es_exacto?'✅ EXACTO':'❌ DIF.'}</span></td>`;
+    tbDet.appendChild(tr);
+  });
+
+  // ── Charts (sobre detalles filtrados) ──
+  const famLabels = ['CAPILAR','BODY','KIT','MATERIA_PRIMA','OTRO'];
+  // Para los charts usamos famMap filtrado
+  const famMapFilt = {};
+  detalles.forEach(d => {
+    const f = (d.familia||'OTRO').toUpperCase();
+    if (!famMapFilt[f]) famMapFilt[f] = {total:0,exactos:0,difs:0};
+    famMapFilt[f].total++;
+    if (d.es_exacto) famMapFilt[f].exactos++; else famMapFilt[f].difs++;
+  });
+  const famEI     = famLabels.map(f => { const d=famMapFilt[f]; return d&&d.total?parseFloat(((d.exactos/d.total)*100).toFixed(1)):0; });
+  const famColors = famEI.map(v => v>=99?'#00FF88':v>=97?'#FFB020':'#FF4D6D');
+
+  const ctx1 = $('chart-familias');
+  if (ctx1._ci) ctx1._ci.destroy();
+  ctx1._ci = new Chart(ctx1, { type:'bar', data:{
+    labels:['Capilar','Body','Kit','Mat.Prima','Otro'],
+    datasets:[
+      {label:'EI (%)',data:famEI,backgroundColor:famColors,borderWidth:0,borderRadius:5},
+      {label:'Meta 99%',data:famLabels.map(()=>99),type:'line',borderColor:'#FFB020',borderDash:[5,4],borderWidth:2,pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:12}}},
+      scales:{y:{min:0,max:105,grid:{color:'rgba(255,255,255,.05)'},ticks:{font:{size:10},color:'#7A8BA6',callback:v=>v+'%'}},
+              x:{grid:{display:false},ticks:{font:{size:11},color:'#7A8BA6'}}}}
+  });
+
+  const difFams = famLabels.filter(f=>famMapFilt[f]&&famMapFilt[f].difs>0);
+  const okFams  = famLabels.filter(f=>!famMapFilt[f]||famMapFilt[f].difs===0);
+  const ctx2 = $('chart-doughnut');
+  if (ctx2._ci) ctx2._ci.destroy();
+  const doughnutData = difFams.length === 0
+    ? {labels:['Sin diferencias ✅'],datasets:[{data:[1],backgroundColor:['#00FF88'],borderWidth:0}]}
+    : {labels:[...difFams.map(f=>getFamLabel(f)+' ('+famMapFilt[f].difs+' dif.)'),...okFams.map(f=>getFamLabel(f)+' OK')],
+       datasets:[{data:[...difFams.map(f=>famMapFilt[f].difs),...okFams.map(()=>0.1)],backgroundColor:['#FF4D6D','#FFB020','#7B2FFF','#00FF88','#00D4FF'],borderWidth:2,borderColor:'rgba(0,0,0,0)'}]};
+  ctx2._ci = new Chart(ctx2, {type:'doughnut',data:doughnutData,
+    options:{responsive:true,cutout:'60%',plugins:{legend:{position:'bottom',labels:{font:{size:9},boxWidth:10,padding:8,color:'#7A8BA6'}}}}
+  });
+
+  mostrarSecciones();
 }
 
 function mostrarError(msg) {
