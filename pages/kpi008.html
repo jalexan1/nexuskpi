@@ -490,11 +490,10 @@ function renderMes(periodoId, container) {
   // Render asíncrono de charts y datos
   requestAnimationFrame(() => {
     buildDailyChart(periodoId, d.diario);
-    buildDistChart(periodoId, d.detalle);
-    buildWeeklyChart(periodoId, d.detalle);
     buildTransChart(periodoId, d.trans);
-    buildTablaDetalle(periodoId);
     otrosProcs.forEach(r => buildOtroProcesoChart(periodoId, r.proceso, d.detalle));
+    // Gráficos que dependen de detalle se renderizan dentro de loadDetalle
+    loadDetalle(periodoId);
   });
 }
 
@@ -718,7 +717,16 @@ async function loadDetalle(periodoId) {
     );
     d.detalle = rows || [];
     d.detalleLoaded = true;
-    buildTablaDetalle(periodoId);
+
+    // Redibujar gráficos que dependen de detalle (estaban vacíos en el primer render)
+    requestAnimationFrame(() => {
+      buildDistChart(periodoId, d.detalle);
+      buildWeeklyChart(periodoId, d.detalle);
+      // Otros procesos informativos también usan detalle
+      const otrosProcs = (d.proceso || []).filter(r => !['B2B','B2C'].includes(r.proceso));
+      otrosProcs.forEach(r => buildOtroProcesoChart(periodoId, r.proceso, d.detalle));
+      buildTablaDetalle(periodoId);
+    });
   } catch(e) {
     if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1rem;color:#C0392B">⚠️ Error: ${e.message}</td></tr>`;
   }
