@@ -172,18 +172,15 @@
       </div>
     </div>
 
-    <!-- Selector de meses -->
-    <div class="mes-bar">
-      <label>Mes A</label>
-      <select class="mes-sel" id="selA" onchange="onMesChange()"></select>
-      <span style="color:var(--dim);font-size:.8rem">vs</span>
-      <label>Mes B</label>
-      <select class="mes-sel" id="selB" onchange="onMesChange()"></select>
-      <div style="margin-left:auto;font-size:.7rem;color:var(--dim)" id="statusDatos">—</div>
-    </div>
-
     <!-- ══ RESUMEN ══════════════════════════════════════════════════════ -->
     <div class="tab-panel on" id="tab-resumen">
+
+      <!-- Selector de mes — solo Resumen -->
+      <div class="mes-bar">
+        <label>Mes</label>
+        <select class="mes-sel" id="selResumen" onchange="renderResumen()"></select>
+        <div style="margin-left:auto;font-size:.7rem;color:var(--dim)" id="statusDatos">—</div>
+      </div>
 
       <!-- Banner estado -->
       <div id="bannerEstado" class="b-strip b-ok" style="display:none"></div>
@@ -284,6 +281,16 @@
 
     <!-- ══ COMPARATIVO ══════════════════════════════════════════════════ -->
     <div class="tab-panel" id="tab-comparativo">
+
+      <!-- Selector de meses — solo Comparativo -->
+      <div class="mes-bar">
+        <label>Mes A</label>
+        <select class="mes-sel" id="selA" onchange="renderComparativo()"></select>
+        <span style="color:var(--dim);font-size:.8rem">vs</span>
+        <label>Mes B</label>
+        <select class="mes-sel" id="selB" onchange="renderComparativo()"></select>
+      </div>
+
       <div class="comp-grid" id="compWrap">
         <div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses para comparar</p></div>
       </div>
@@ -352,23 +359,32 @@ async function cargarDatos() {
 }
 
 function poblarSelectores(periodos) {
-  const lbl = id => CONFIG.meses.find(m => m.id === id)?.label || id;
-  ['selA', 'selB'].forEach((sid, i) => {
-    const s = document.getElementById(sid);
-    s.innerHTML = periodos.map((p, j) =>
-      `<option value="${p}" ${j === (i === 0 ? periodos.length - 2 : periodos.length - 1) ? 'selected' : ''}>${lbl(p)}</option>`
-    ).join('');
-    // Si solo hay 1 periodo, seleccionar el mismo en ambos
-    if (periodos.length === 1) s.value = periodos[0];
-  });
-  onMesChange();
-}
+  const lbl  = id => CONFIG.meses.find(m => m.id === id)?.label || id;
+  const opts = periodos.map(p => `<option value="${p}">${lbl(p)}</option>`).join('');
 
-function onMesChange() { renderResumen(); }
+  // Selector propio de Resumen — el más reciente
+  const selR = document.getElementById('selResumen');
+  if (selR) {
+    selR.innerHTML = opts;
+    selR.value = periodos[periodos.length - 1] || '';
+  }
+
+  // Selectores propios de Comparativo — A penúltimo, B último
+  const selA = document.getElementById('selA');
+  const selB = document.getElementById('selB');
+  if (selA && selB) {
+    selA.innerHTML = opts;
+    selB.innerHTML = opts;
+    selA.value = periodos.length >= 2 ? periodos[periodos.length - 2] : (periodos[0] || '');
+    selB.value = periodos[periodos.length - 1] || '';
+  }
+
+  renderResumen();
+}
 
 // ── Render Resumen ────────────────────────────────────────────────────────
 function renderResumen() {
-  const mesId = document.getElementById('selA').value;
+  const mesId = document.getElementById('selResumen').value;
   const resRows = allResumen[mesId] || [];
   const diaRows = allDiario[mesId]  || [];
   const label   = CONFIG.meses.find(m => m.id === mesId)?.label || mesId;
