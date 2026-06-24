@@ -284,7 +284,7 @@ async function cargarDatos() {
     // Agrupar por periodo
     DATA = {};
     const addTo = (key, row) => {
-      if (!DATA[row.periodo_id]) DATA[row.periodo_id] = {proceso:[],trans:[],diario:[],detalle:[],detalleLoaded:false};
+      if (!DATA[row.periodo_id]) DATA[row.periodo_id] = {proceso:[],trans:[],diario:[],detalle:[],detalleLoaded:false,detalleLoading:false};
       DATA[row.periodo_id][key].push(row);
     };
     (proceso||[]).forEach(r => addTo('proceso',r));
@@ -706,7 +706,8 @@ function switchSubTab(periodoId, st, btn) {
 // ── Lazy load detalle por periodo ─────────────────────────────────────────
 async function loadDetalle(periodoId) {
   const d = DATA[periodoId];
-  if (!d || d.detalleLoaded) return;   // ya cargado → no volver a pedir
+  if (!d || d.detalleLoaded || d.detalleLoading) return;  // ya cargado o en curso → salir
+  d.detalleLoading = true;
 
   const tbody = document.getElementById(`tbody-${periodoId}`);
   if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--muted)">⏳ Cargando pedidos…</td></tr>`;
@@ -716,7 +717,8 @@ async function loadDetalle(periodoId) {
       `kpi_des008_detalle?periodo_id=eq.${periodoId}&order=fecha.asc&limit=5000`
     );
     d.detalle = rows || [];
-    d.detalleLoaded = true;
+    d.detalleLoaded  = true;
+    d.detalleLoading = false;
 
     // Redibujar gráficos que dependen de detalle (estaban vacíos en el primer render)
     requestAnimationFrame(() => {
@@ -728,20 +730,17 @@ async function loadDetalle(periodoId) {
       buildTablaDetalle(periodoId);
     });
   } catch(e) {
+    d.detalleLoading = false;
     if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1rem;color:#C0392B">⚠️ Error: ${e.message}</td></tr>`;
   }
 }
 
-// ── Toggle tabla (con lazy load) ──────────────────────────────────────────
+// ── Toggle tabla ──────────────────────────────────────────────────────────
 function toggleTabla(tblId, iconId, periodoId) {
   const el   = document.getElementById(tblId);
   const icon = document.getElementById(iconId);
   const hidden = el.classList.toggle('tbl-hidden');
   icon.textContent = hidden ? '▼' : '▲';
-  if (!hidden) {
-    // Al abrir: cargar datos si aún no se han pedido
-    loadDetalle(periodoId);
-  }
 }
 
 // ── Filtrar tabla ─────────────────────────────────────────────────────────
