@@ -125,6 +125,7 @@ function procesarExcel(arrayBuffer, mesIdSeleccionado) {
     fechaIngresa:idx(['FECHA INGRESA','FECHA_INGRESA']),
     fechaRecibo: idx(['FECHA RECIBO','FECHA_RECIBO']),
     cantUds:     idx(['CANTIDAD RECIBO UNIDADES','CANT RECIBO']),
+    cantCaj:     idx(['CANTIDAD RECIBO CAJAS','CANT RECIBO CAJAS','CAJAS RECIBIDAS','CAJAS']),
     oc:          idx(['O.C','OC']),
     horaCita:    idx(['HORA CITA']),
     horaInicio:  idx(['HORA INICIO DESCARGUE','HORA INICIO']),
@@ -226,12 +227,13 @@ function procesarExcel(arrayBuffer, mesIdSeleccionado) {
     const familia    = familiaRaw ? familiaRaw.charAt(0)+familiaRaw.slice(1).toLowerCase() : null;
     const skus       = new Set(filas.map(f=>String(f[C.ref]||'')).filter(Boolean)).size;
     const unidades   = filas.reduce((s,f) => s+(parseInt(f[C.cantUds])||0), 0);
+    const cajas      = filas.reduce((s,f) => s+(parseInt(f[C.cantCaj])||0), 0);
     const isCert     = filas.some(f => f[C.cert]!==null && f[C.cert]!==undefined && f[C.cert]!=='');
 
     const record = {
       mes_id: mesId, documento:doc, oc,
       fecha:fechaStr, semana:semanaISO(fechaStr),
-      proveedor, familia, tipo, skus, unidades,
+      proveedor, familia, tipo, skus, unidades, cajas,
       hora_cita:   fmtHora(horaCitaRaw),
       hora_inicio: horaIni ? `${String(horaIni.h).padStart(2,'0')}:${String(horaIni.m).padStart(2,'0')}` : null,
       hora_tt:     horaTT  ? `${String(horaTT.h).padStart(2,'0')}:${String(horaTT.m).padStart(2,'0')}`  : null,

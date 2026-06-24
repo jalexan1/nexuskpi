@@ -140,6 +140,20 @@
     .comp-charts{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem}
     @media(max-width:699px){.comp-charts{grid-template-columns:1fr}}
 
+    /* ── Gráficas de volumen (nuevas) ── */
+    .vol-charts{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem}
+    @media(max-width:799px){.vol-charts{grid-template-columns:1fr}}
+    .vol-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;display:flex;flex-direction:column}
+    .vol-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem}
+    .vol-title{font-size:.78rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:.5rem}
+    .vol-title .bar{width:4px;height:14px;border-radius:2px;flex-shrink:0}
+    .vol-btns{display:flex;gap:.3rem}
+    .vol-btn{padding:.25rem .65rem;border-radius:var(--r-sm);font-size:.71rem;font-weight:600;cursor:pointer;border:1px solid var(--border2);background:var(--surface2);color:var(--muted);transition:all .15s;white-space:nowrap}
+    .vol-btn:hover{border-color:var(--accent);color:var(--accent)}
+    .vol-btn.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700}
+    .vol-wrap{position:relative;flex:1;min-height:180px;height:180px}
+    .vol-wrap canvas{position:absolute;top:0;left:0;width:100%!important;height:100%!important}
+
     /* Colors / Tags */
     .c-ok{color:var(--ok)}.c-err{color:var(--error)}.c-warn{color:var(--warn)}.c-acc{color:var(--accent)}
     .tag{display:inline-block;padding:.1rem .5rem;border-radius:10px;font-weight:700;font-size:.7rem}
@@ -298,6 +312,30 @@
         <div class="detail-card">
           <h4>🎯 Estado del KPI</h4>
           <div id="detalleEstado"></div>
+        </div>
+      </div>
+
+      <!-- ── Gráficas de Volumen (nuevas) ── -->
+      <div class="vol-charts">
+        <div class="vol-card">
+          <div class="vol-toolbar">
+            <div class="vol-title"><div class="bar" style="background:#FFB020"></div>📦 Volumen de Cajas Recibidas</div>
+            <div class="vol-btns">
+              <button class="vol-btn active" id="btnCajasDia"  onclick="switchVolChart('cajas','dia')">Día</button>
+              <button class="vol-btn"        id="btnCajasSem"  onclick="switchVolChart('cajas','semana')">Semana</button>
+            </div>
+          </div>
+          <div class="vol-wrap"><canvas id="cCajas"></canvas></div>
+        </div>
+        <div class="vol-card">
+          <div class="vol-toolbar">
+            <div class="vol-title"><div class="bar" style="background:#00D4FF"></div>📋 Número de Recepciones (OC)</div>
+            <div class="vol-btns">
+              <button class="vol-btn active" id="btnRecibDia" onclick="switchVolChart('recibos','dia')">Día</button>
+              <button class="vol-btn"        id="btnRecibSem" onclick="switchVolChart('recibos','semana')">Semana</button>
+            </div>
+          </div>
+          <div class="vol-wrap"><canvas id="cRecibos"></canvas></div>
         </div>
       </div>
     </div>
@@ -538,6 +576,118 @@ function renderResumen(){
   renderCharts(rec);
 }
 
+// ── Charts de Volumen (Cajas y Recepciones) ───────────────────────────────
+const volState = { cajas: 'dia', recibos: 'dia' };
+
+function switchVolChart(tipo, modo) {
+  volState[tipo] = modo;
+  // Actualizar botones activos
+  if (tipo === 'cajas') {
+    document.getElementById('btnCajasDia').classList.toggle('active', modo === 'dia');
+    document.getElementById('btnCajasSem').classList.toggle('active', modo === 'semana');
+  } else {
+    document.getElementById('btnRecibDia').classList.toggle('active', modo === 'dia');
+    document.getElementById('btnRecibSem').classList.toggle('active', modo === 'semana');
+  }
+  const mesId = document.getElementById('selMes').value;
+  const rec   = allData[mesId] || [];
+  renderVolCharts(rec);
+}
+
+function renderVolCharts(rec) {
+  const cons = rec.filter(r => !r.is_inconsistente);
+
+  // ── Agrupar por día ──────────────────────────────────────────────────
+  const porDia = {};
+  cons.forEach(r => {
+    if (!r.fecha) return;
+    if (!porDia[r.fecha]) porDia[r.fecha] = { cajas: 0, oc: 0 };
+    porDia[r.fecha].cajas += (r.cajas || 0);
+    porDia[r.fecha].oc    += 1;
+  });
+
+  // ── Agrupar por semana ───────────────────────────────────────────────
+  const porSem = {};
+  cons.forEach(r => {
+    if (!r.semana) return;
+    if (!porSem[r.semana]) porSem[r.semana] = { cajas: 0, oc: 0 };
+    porSem[r.semana].cajas += (r.cajas || 0);
+    porSem[r.semana].oc    += 1;
+  });
+
+  // ── Gráfica CAJAS ────────────────────────────────────────────────────
+  const cajasModo  = volState.cajas;
+  const cajasData  = cajasModo === 'dia' ? porDia : porSem;
+  const cajasKeys  = Object.keys(cajasData).sort();
+  const cajasVals  = cajasKeys.map(k => cajasData[k].cajas);
+  const cajasLabel = cajasModo === 'dia'
+    ? cajasKeys.map(d => d.slice(5))   // MM-DD
+    : cajasKeys;
+
+  destroyChart('cCajas');
+  charts.cCajas = new Chart(document.getElementById('cCajas'), {
+    type: 'bar',
+    data: {
+      labels: cajasLabel,
+      datasets: [{
+        label: 'Cajas',
+        data:   cajasVals,
+        backgroundColor: 'rgba(255,176,32,.75)',
+        borderColor:     '#FFB020',
+        borderWidth: 1,
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.raw.toLocaleString('es-CO')} cajas` } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxTicksLimit: 14 } },
+        y: { grid: { color: 'rgba(255,255,255,.04)' },
+             ticks: { font: { size: 10 }, callback: v => v.toLocaleString('es-CO') } }
+      }
+    }
+  });
+
+  // ── Gráfica RECEPCIONES ──────────────────────────────────────────────
+  const recibModo  = volState.recibos;
+  const recibData  = recibModo === 'dia' ? porDia : porSem;
+  const recibKeys  = Object.keys(recibData).sort();
+  const recibVals  = recibKeys.map(k => recibData[k].oc);
+  const recibLabel = recibModo === 'dia'
+    ? recibKeys.map(d => d.slice(5))
+    : recibKeys;
+
+  destroyChart('cRecibos');
+  charts.cRecibos = new Chart(document.getElementById('cRecibos'), {
+    type: 'bar',
+    data: {
+      labels: recibLabel,
+      datasets: [{
+        label: 'OC / Recepciones',
+        data:   recibVals,
+        backgroundColor: 'rgba(0,212,255,.65)',
+        borderColor:     '#00D4FF',
+        borderWidth: 1,
+        borderRadius: 3,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.raw} recepciones` } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxTicksLimit: 14 } },
+        y: { grid: { color: 'rgba(255,255,255,.04)' },
+             ticks: { font: { size: 10 }, stepSize: 1 } }
+      }
+    }
+  });
+}
+
 // ── Charts ────────────────────────────────────────────────────────────────
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
@@ -632,6 +782,9 @@ function renderCharts(rec){
   provDataCache=buildProvData(rec);
   destroyChart('cProv');
   charts.cProv=new Chart(document.getElementById('cProv'), provChartConfig(provDataCache));
+
+  // Gráficas de volumen (cajas y recepciones)
+  renderVolCharts(rec);
 }
 
 // ── AJUSTE 2: Maximizar / Minimizar gráfica ───────────────────────────────
