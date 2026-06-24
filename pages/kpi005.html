@@ -479,16 +479,27 @@ function renderMes(periodoId, container) {
 }
 
 // ── Banner de tardías B2B+B2C ─────────────────────────────────────────────
+// Usa kpi_otd_proceso (disponible desde el inicio, no lazy) para evitar
+// mostrar "Sin tardías" cuando el detalle aún no se ha cargado.
 function buildTardiasBanner(periodoId) {
   const d = DATA[periodoId];
   if (!d) return;
-  const tardias = d.detalle.filter(r =>
-    (r.proceso === 'B2B' || r.proceso === 'B2C') && !r.ontime
-  );
   const el = document.getElementById(`tardias-section-${periodoId}`);
   if (!el) return;
 
-  if (tardias.length === 0) {
+  const getPr = proceso => (d.proceso || []).find(r => r.proceso === proceso);
+  const b2b2c = getPr('B2B+B2C') || {};
+  const numTardias = b2b2c.pedidos_tarde ?? null;
+
+  // Si aún no hay datos de proceso, mostrar estado de carga
+  if (numTardias === null) {
+    el.innerHTML = `<div class="note-box" style="color:var(--muted);margin-bottom:1rem">
+      ⏳ Cargando estado de tardías…
+    </div>`;
+    return;
+  }
+
+  if (numTardias === 0) {
     el.innerHTML = `<div class="note-box" style="background:rgba(26,135,84,.06);border-color:rgba(26,135,84,.25);color:#1A8754;margin-bottom:1rem">
       ✅ <strong>Sin tardías en B2B + B2C durante ${lbl(periodoId)}.</strong>
       Todas las entregas cumplieron la fecha promesa.
@@ -496,30 +507,11 @@ function buildTardiasBanner(periodoId) {
     return;
   }
 
-  const filas = tardias.map((r,i) => `<tr>
-    <td>${i+1}</td>
-    <td>${r.fecha||'—'}</td>
-    <td><strong>${r.comprobante||'—'}</strong></td>
-    <td>${r.proceso||'—'}</td>
-    <td>${r.transportador||'—'}</td>
-    <td>${r.ciudad||'—'}</td>
-    <td style="color:#D97706">${r.ontime_dias != null ? r.ontime_dias : '—'}</td>
-    <td><span class="badge-late">TARDÍA</span></td>
-  </tr>`).join('');
-
+  // Hay tardías — mostrar alerta y botón lazy para ver el detalle
   el.innerHTML = `
-    <div class="note-box">⚠️ <strong>${tardias.length} tardía(s) en B2B + B2C — ${lbl(periodoId)}.</strong>
-    Revisar detalles abajo.</div>
-    <div class="table-section" style="margin-bottom:1rem">
-      <div class="chart-title" style="margin-bottom:.75rem">Tardías B2B + B2C — ${lbl(periodoId)}</div>
-      <div class="tbl-scroll">
-        <table>
-          <thead><tr><th>#</th><th>Fecha</th><th>Comprobante</th><th>Proceso</th>
-            <th>Transportadora</th><th>Ciudad</th><th>ON-TIME (días)</th><th>Estado</th>
-          </tr></thead>
-          <tbody>${filas}</tbody>
-        </table>
-      </div>
+    <div class="note-box" style="margin-bottom:.75rem">
+      ⚠️ <strong>${numTardias} tardía(s) en B2B + B2C — ${lbl(periodoId)}.</strong>
+      Abre el detalle de pedidos para ver el listado completo.
     </div>`;
 }
 
@@ -705,10 +697,62 @@ async function loadDetalle(periodoId) {
     );
     d.detalle = rows || [];
     d.detalleLoaded = true;
+
+    // Reconstruir banner de tardías con datos reales del detalle
+    buildTardiasBannerConDetalle(periodoId);
     buildTablaDetalle(periodoId);
   } catch(e) {
     if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1rem;color:#C0392B">⚠️ Error: ${e.message}</td></tr>`;
   }
+}
+
+// ── Banner de tardías enriquecido con datos reales del detalle ────────────
+// Se llama DESPUÉS de que loadDetalle trae los datos. Muestra la tabla real.
+function buildTardiasBannerConDetalle(periodoId) {
+  const d = DATA[periodoId];
+  if (!d) return;
+  const el = document.getElementById(`tardias-section-${periodoId}`);
+  if (!el) return;
+
+  const tardias = (d.detalle || []).filter(r =>
+    (r.proceso === 'B2B' || r.proceso === 'B2C') && !r.ontime
+  );
+
+  if (tardias.length === 0) {
+    el.innerHTML = `<div class="note-box" style="background:rgba(26,135,84,.06);border-color:rgba(26,135,84,.25);color:#1A8754;margin-bottom:1rem">
+      ✅ <strong>Sin tardías en B2B + B2C durante ${lbl(periodoId)}.</strong>
+      Todas las entregas cumplieron la fecha promesa.
+    </div>`;
+    return;
+  }
+
+  const filas = tardias.map((r,i) => `<tr>
+    <td>${i+1}</td>
+    <td>${r.fecha||'—'}</td>
+    <td><strong>${r.comprobante||'—'}</strong></td>
+    <td>${r.proceso||'—'}</td>
+    <td>${r.transportador||'—'}</td>
+    <td>${r.ciudad||'—'}</td>
+    <td style="color:#D97706">${r.ontime_dias != null ? r.ontime_dias : '—'}</td>
+    <td><span class="badge-late">TARDÍA</span></td>
+  </tr>`).join('');
+
+  el.innerHTML = `
+    <div class="note-box" style="margin-bottom:.75rem">
+      ⚠️ <strong>${tardias.length} tardía(s) en B2B + B2C — ${lbl(periodoId)}.</strong>
+      Revisar listado abajo.
+    </div>
+    <div class="table-section" style="margin-bottom:1rem">
+      <div class="chart-title" style="margin-bottom:.75rem">Tardías B2B + B2C — ${lbl(periodoId)}</div>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>#</th><th>Fecha</th><th>Comprobante</th><th>Proceso</th>
+            <th>Transportadora</th><th>Ciudad</th><th>ON-TIME (días)</th><th>Estado</th>
+          </tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>
+    </div>`;
 }
 
 // ── Toggle tabla (con lazy load) ──────────────────────────────────────────
