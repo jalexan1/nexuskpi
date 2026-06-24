@@ -274,23 +274,22 @@ async function cargarDatos() {
   const btn = document.getElementById('btnRefresh');
   btn.disabled = true; btn.textContent = '⏳';
   try {
-    const [proceso, trans, diario, detalle] = await Promise.all([
+    // kpi_des008_detalle NO se carga aquí — se carga bajo demanda al abrir la tabla
+    const [proceso, trans, diario] = await Promise.all([
       sb.rest('GET','kpi_des008_proceso?order=periodo_id.asc'),
       sb.rest('GET','kpi_des008_trans?order=periodo_id.asc,transportador.asc'),
       sb.rest('GET','kpi_des008_diario?order=periodo_id.asc,fecha.asc'),
-      sb.rest('GET','kpi_des008_detalle?order=periodo_id.asc,fecha.asc'),
     ]);
 
     // Agrupar por periodo
     DATA = {};
     const addTo = (key, row) => {
-      if (!DATA[row.periodo_id]) DATA[row.periodo_id] = {proceso:[],trans:[],diario:[],detalle:[]};
+      if (!DATA[row.periodo_id]) DATA[row.periodo_id] = {proceso:[],trans:[],diario:[],detalle:[],detalleLoaded:false};
       DATA[row.periodo_id][key].push(row);
     };
     (proceso||[]).forEach(r => addTo('proceso',r));
     (trans||[]).forEach(r   => addTo('trans',r));
     (diario||[]).forEach(r  => addTo('diario',r));
-    (detalle||[]).forEach(r => addTo('detalle',r));
 
     periodos = Object.keys(DATA).sort();
     document.getElementById('tsUpdate').textContent = new Date().toLocaleTimeString('es-CO');
@@ -467,7 +466,7 @@ function renderMes(periodoId, container) {
     <!-- Tabla detallada con toggle -->
     <div class="table-section">
       <div class="table-controls">
-        <button class="tbl-toggle-btn" onclick="toggleTabla('tbl-${periodoId}','tbl-icon-${periodoId}')">
+        <button class="tbl-toggle-btn" onclick="toggleTabla('tbl-${periodoId}','tbl-icon-${periodoId}','${periodoId}')">
           <span id="tbl-icon-${periodoId}">▼</span> Mostrar / Ocultar tabla de pedidos
         </button>
         <input class="search-inp" type="text" placeholder="Buscar picking, proceso, transportadora…"
@@ -705,14 +704,35 @@ function switchSubTab(periodoId, st, btn) {
   if (btn) btn.classList.add('active');
 }
 
-// ── Toggle tabla ──────────────────────────────────────────────────────────
-function toggleTabla(tblId, iconId) {
+// ── Lazy load detalle por periodo ─────────────────────────────────────────
+async function loadDetalle(periodoId) {
+  const d = DATA[periodoId];
+  if (!d || d.detalleLoaded) return;   // ya cargado → no volver a pedir
+
+  const tbody = document.getElementById(`tbody-${periodoId}`);
+  if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--muted)">⏳ Cargando pedidos…</td></tr>`;
+
+  try {
+    const rows = await sb.rest('GET',
+      `kpi_des008_detalle?periodo_id=eq.${periodoId}&order=fecha.asc&limit=5000`
+    );
+    d.detalle = rows || [];
+    d.detalleLoaded = true;
+    buildTablaDetalle(periodoId);
+  } catch(e) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:1rem;color:#C0392B">⚠️ Error: ${e.message}</td></tr>`;
+  }
+}
+
+// ── Toggle tabla (con lazy load) ──────────────────────────────────────────
+function toggleTabla(tblId, iconId, periodoId) {
   const el   = document.getElementById(tblId);
   const icon = document.getElementById(iconId);
-  if (el.classList.toggle('tbl-hidden')) {
-    icon.textContent = '▼';
-  } else {
-    icon.textContent = '▲';
+  const hidden = el.classList.toggle('tbl-hidden');
+  icon.textContent = hidden ? '▼' : '▲';
+  if (!hidden) {
+    // Al abrir: cargar datos si aún no se han pedido
+    loadDetalle(periodoId);
   }
 }
 
