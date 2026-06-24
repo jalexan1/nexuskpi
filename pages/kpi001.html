@@ -307,7 +307,7 @@
       <div class="tbl-hdr">
         <span class="tbl-hdr-title" id="detalleTituloMes">Detalle Recepciones</span>
         <div class="tbl-ctrl">
-          <select class="flt-sel" id="fMes" onchange="renderDetalle()" style="display:none"><option value="">Todos los meses</option></select>
+          <select class="flt-sel" id="fMes" onchange="renderDetalle()"><option value="">Todos los meses</option></select>
           <select class="flt-sel" id="fTipo" onchange="filtrar()"><option value="">Tipo</option><option value="PT">PT</option><option value="MP">MP</option></select>
           <select class="flt-sel" id="fSLA" onchange="filtrar()"><option value="">SLA</option><option value="ok">✅ A tiempo</option><option value="late">❌ Fuera</option></select>
           <select class="flt-sel" id="fProv" onchange="filtrar()"><option value="">Proveedor</option></select>
@@ -372,8 +372,8 @@ function tab(id,btn){
   document.getElementById('tab-'+id).classList.add('on'); btn.classList.add('on');
   if(id==='comparativo') renderComparativo();
   if(id==='detalle')     renderDetalle();
-  // Ocultar selector de mes global en Comparativo (tiene sus propios selA/selB)
-  document.getElementById('mesBar').style.display = id === 'comparativo' ? 'none' : '';
+  // Ocultar selector de mes global en Detalle y Comparativo (tienen sus propios filtros)
+  document.getElementById('mesBar').style.display = (id === 'comparativo' || id === 'detalle') ? 'none' : '';
 }
 
 // ── Cargar datos ──────────────────────────────────────────────────────────
