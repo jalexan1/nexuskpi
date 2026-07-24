@@ -124,6 +124,21 @@
       .hero-header{min-height:auto;padding:1rem;}
       .hero-text{max-width:100%;}
     }
+
+    /* ── Fase 2 · Tema OP (Operatividad) — acento ámbar, no toca --accent global ── */
+    :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
+    .tab-btn.op-tab.on{ color:var(--op-accent); border-bottom-color:var(--op-accent); }
+    .op-panel-hdr{display:flex;align-items:center;gap:.75rem;background:rgba(242,153,74,.06);border:1px solid rgba(242,153,74,.18);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+    .op-panel-hdr h2{font-size:1rem;font-weight:800;color:var(--op-accent);margin:0;}
+    .op-panel-hdr p{font-size:.76rem;color:var(--muted);margin:0;}
+    .op-quick{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.9rem;margin-bottom:1.5rem;}
+    @media(max-width:479px){.op-quick{grid-template-columns:1fr;gap:.6rem;}}
+    .op-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.25rem;display:flex;flex-direction:column;gap:.5rem;cursor:pointer;transition:all .18s;text-decoration:none;animation:fadeUp .35s ease both;}
+    .op-card:hover{border-color:var(--op-accent);background:var(--surface2);transform:translateY(-3px);box-shadow:0 8px 30px rgba(242,153,74,.15);}
+    .op-icon{font-size:1.7rem;}
+    .op-title{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;color:var(--text);}
+    .op-desc{font-size:.72rem;color:var(--muted);line-height:1.4;}
+    .op-arrow{color:var(--op-accent);font-size:.9rem;margin-top:auto;padding-top:.4rem;}
   </style>
 </head>
 <body>
@@ -142,6 +157,7 @@
 
   <nav class="tabs-nav" id="tabsNav" style="display:none">
     <button class="tab-btn on"        onclick="tab('kpis',this)">📊 Indicadores</button>
+    <button class="tab-btn op-tab"    onclick="tab('operatividad',this)">🚚 Operatividad</button>
     <button class="tab-btn admin-tab" onclick="tab('admin',this)">⚙️ Administración</button>
   </nav>
 
@@ -164,6 +180,34 @@
       <div class="kpi-grid" id="kpiGrid"></div>
 
     </div><!-- /tab-kpis -->
+
+    <!-- ══ TAB: OPERATIVIDAD (Fase 2) ═════════════════════════════════ -->
+    <div class="tab-panel" id="tab-operatividad">
+
+      <div class="op-panel-hdr">
+        <div style="font-size:1.5rem">🚚</div>
+        <div>
+          <h2>Operatividad</h2>
+          <p>Indicadores diarios de recibo, picking y ocupación de CEDI</p>
+        </div>
+      </div>
+
+      <div class="op-quick">
+        <a href="op_cargue_menu.html" class="op-card" style="animation-delay:.05s">
+          <div class="op-icon">📤</div>
+          <div class="op-title">Cargue de Información</div>
+          <div class="op-desc">Cargar SEGUIMIENTO CLICK y WMS BASE CLICK COSMETICS del mes</div>
+          <div class="op-arrow">→</div>
+        </a>
+        <a href="op_dashboard_menu.html" class="op-card" style="animation-delay:.09s">
+          <div class="op-icon">📊</div>
+          <div class="op-title">Dashboard Operatividad</div>
+          <div class="op-desc">Recibo, Picking, Productividad, Ocupación CEDI, Olas y más</div>
+          <div class="op-arrow">→</div>
+        </a>
+      </div>
+
+    </div><!-- /tab-operatividad -->
 
     <!-- ══ TAB: ADMINISTRACIÓN ════════════════════════════════════════ -->
     <div class="tab-panel" id="tab-admin">
@@ -302,6 +346,15 @@
     if (getRole() === 'admin') {
       document.getElementById('tabsNav').style.display = 'flex';
       buildKpiStatus();
+      // Ajuste Fase 2: si llega con #tab-operatividad o #tab-admin, activar ese tab
+      if (location.hash === '#tab-operatividad' || location.hash === '#tab-admin') {
+        const id = location.hash.replace('#tab-', '');
+        const idx = id === 'operatividad' ? 1 : 2;
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
+        document.getElementById('tab-' + id).classList.add('on');
+        document.querySelectorAll('.tab-btn')[idx].classList.add('on');
+      }
     }
     const ol = document.getElementById('overlay');
     setTimeout(() => ol.classList.add('out'), 150);

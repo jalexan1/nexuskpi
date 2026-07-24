@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Operatividad · Olas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
+    .content{padding:1.5rem;max-width:1280px;margin:0 auto;width:100%}
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--op-accent);font-weight:600;margin-bottom:.3rem}
+    .pg-hdr h1{font-size:clamp(1.2rem,3vw,1.5rem);font-weight:800}
+    .pg-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem;margin-bottom:1.25rem}
+
+    .filtros{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem}
+    .filtros select,.filtros input{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.8rem;padding:.4rem .65rem;outline:none;cursor:pointer}
+    .filtros label{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:.25rem}
+
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:340px;display:flex;flex-direction:column;margin-bottom:1.25rem}
+    .chart-card h3{font-size:.85rem;font-weight:700;margin-bottom:.6rem}
+    .chart-wrap{flex:1;position:relative}
+
+    .olas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.85rem}
+    .ola-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;cursor:pointer;transition:border-color .18s,transform .18s;animation:fadeUp .35s ease both}
+    .ola-card:hover{border-color:var(--op-accent);transform:translateY(-2px)}
+    .ola-card.sel{border-color:var(--op-accent);background:rgba(242,153,74,.06)}
+    .ola-dia{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700}
+    .ola-stats{font-size:.72rem;color:var(--muted);margin-top:.4rem;line-height:1.6}
+    .ola-stats b{color:var(--text)}
+
+    .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-top:1.25rem}
+    .tbl-scroll{overflow-x:auto;max-height:420px;overflow-y:auto}
+    table{width:100%;border-collapse:collapse;font-size:.79rem}
+    thead th{text-align:left;padding:.5rem .7rem;font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0}
+    tbody tr{border-bottom:1px solid var(--border)}
+    tbody tr:hover{background:var(--surface2)}
+    tbody td{padding:.46rem .7rem}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="op_dashboard_menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--op-accent)">🚚 Operatividad</span>
+    <span class="topbar-sep">/</span><span class="topbar-title">🌊 Olas</span>
+    <div class="topbar-spacer"></div>
+    <a href="op_dashboard_menu.html" class="btn btn-sm">← Dashboard</a>
+    <div class="theme-bar"><button class="theme-btn" onclick="setTheme('')">🌙</button><button class="theme-btn" onclick="setTheme('light')">☀️</button></div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="pg-hdr">
+      <div class="eyebrow">🌊 Operatividad · Olas</div>
+      <h1>Olas</h1>
+      <p>Una ola = agrupación de Comprobantes de ALISTAMIENTO por día. Cada cambio de fecha inicia una nueva ola.</p>
+    </div>
+
+    <div class="filtros">
+      <div><label>Mes</label><select id="fMes" onchange="render()"></select></div>
+      <div><label>Operario</label><select id="fOperario" onchange="render()"><option value="">Todos</option></select></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Comprobantes por Ola (Día)</h3>
+      <div class="chart-wrap"><canvas id="cOlas"></canvas></div>
+    </div>
+
+    <div class="olas-grid" id="olasGrid"></div>
+
+    <div class="tbl-wrap" id="detalleWrap" style="display:none">
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Comprobante</th><th>Tercero</th><th>SKU</th><th>Cajas</th><th>Operario</th><th>Inicio</th><th>Fin</th></tr></thead>
+          <tbody id="detalleBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+applyTheme();
+let alistamiento = [];
+let charts = {};
+let olaSeleccionada = null;
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+function poblarFiltros() {
+  const meses = [...new Set(alistamiento.map(r=>r.periodo_id))].sort();
+  const sel = document.getElementById('fMes');
+  sel.innerHTML = `<option value="">Todos los meses</option>` + meses.map(m=>{
+    const label = CONFIG.meses.find(x=>x.id===m)?.label || m;
+    return `<option value="${m}">${label}</option>`;
+  }).join('');
+  if (meses.length) sel.value = meses[meses.length-1];
+
+  const ops = [...new Set(alistamiento.map(r=>r.operario).filter(Boolean))].sort();
+  document.getElementById('fOperario').innerHTML = `<option value="">Todos</option>` + ops.map(o=>`<option value="${o}">${o}</option>`).join('');
+}
+
+function filtrar() {
+  const mes = document.getElementById('fMes').value;
+  const op = document.getElementById('fOperario').value;
+  return alistamiento.filter(r => (!mes || r.periodo_id===mes) && (!op || r.operario===op));
+}
+
+function tiempoRealAMinutos(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+
+function render() {
+  const data = filtrar();
+  const porOla = {};
+  data.forEach(r => {
+    const olaId = r.ola_id || r.dia;
+    if (!olaId) return;
+    porOla[olaId] = porOla[olaId] || { dia:r.dia, comprobantes:new Set(), lineas:0, cajas:0, operarios:new Set(), tiempoTotal:0 };
+    porOla[olaId].comprobantes.add(r.comprobante);
+    porOla[olaId].lineas++;
+    porOla[olaId].cajas += (r.cantidad_cajas||0);
+    if (r.operario) porOla[olaId].operarios.add(r.operario);
+    porOla[olaId].tiempoTotal += tiempoRealAMinutos(r.tiempo_real);
+  });
+
+  const olas = Object.entries(porOla).sort((a,b)=>a[1].dia.localeCompare(b[1].dia));
+
+  destroyChart('cOlas');
+  charts.cOlas = new Chart(document.getElementById('cOlas'), {
+    type:'bar',
+    data:{ labels:olas.map(o=>o[1].dia), datasets:[{ label:'Comprobantes', data:olas.map(o=>o[1].comprobantes.size), backgroundColor:'#F2994A' }] },
+    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{color:'rgba(255,255,255,.04)'}} } }
+  });
+
+  document.getElementById('olasGrid').innerHTML = olas.map(([olaId,o])=>`
+    <div class="ola-card ${olaId===olaSeleccionada?'sel':''}" onclick="seleccionarOla('${olaId}')">
+      <div class="ola-dia">🌊 ${o.dia}</div>
+      <div class="ola-stats">
+        Comprobantes: <b>${o.comprobantes.size}</b><br>
+        Líneas / Cajas: <b>${o.lineas}</b> / <b>${o.cajas.toLocaleString('es-CO')}</b><br>
+        Operarios: <b>${o.operarios.size}</b> · Tiempo total: <b>${Math.round(o.tiempoTotal)} min</b>
+      </div>
+    </div>`).join('') || `<p style="color:var(--muted);font-size:.82rem">Sin olas para los filtros seleccionados.</p>`;
+
+  window._olasData = data;
+  if (olaSeleccionada) mostrarDetalleOla(olaSeleccionada);
+}
+
+function seleccionarOla(olaId) {
+  olaSeleccionada = (olaSeleccionada === olaId) ? null : olaId;
+  render();
+  if (olaSeleccionada) mostrarDetalleOla(olaSeleccionada);
+  else document.getElementById('detalleWrap').style.display = 'none';
+}
+
+function mostrarDetalleOla(olaId) {
+  const filas = (window._olasData||[]).filter(r => (r.ola_id||r.dia) === olaId);
+  document.getElementById('detalleWrap').style.display = 'block';
+  document.getElementById('detalleBody').innerHTML = filas.map(r=>`<tr>
+    <td>${r.comprobante||'—'}</td><td>${r.nombre_tercero||'—'}</td><td>${r.sku||'—'}</td>
+    <td>${(r.cantidad_cajas||0).toLocaleString('es-CO')}</td><td>${r.operario||'—'}</td>
+    <td>${r.inicio_picking||'—'}</td><td>${r.fin_picking||'—'}</td>
+  </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:1rem">Sin comprobantes en esta ola.</td></tr>`;
+}
+
+async function cargarDatos() {
+  try { alistamiento = await sb.rest('GET','op_alistamiento?order=periodo_id.asc,dia.asc') || []; }
+  catch(e) { alistamiento = []; console.error(e); }
+  poblarFiltros();
+  render();
+}
+
+window.addEventListener('load', async () => {
+  const user = await checkAuth(); if (!user) return;
+  renderUser();
+  await cargarDatos();
+  const ol = document.getElementById('overlay');
+  setTimeout(() => ol.classList.add('out'), 200);
+  setTimeout(() => ol.remove(), 600);
+});
+</script>
+</body>
+</html>

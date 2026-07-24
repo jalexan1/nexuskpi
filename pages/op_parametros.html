@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Operatividad · Parametrización</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <style>
+    :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
+    .content{padding:1.5rem;max-width:820px;margin:0 auto;width:100%}
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--op-accent);font-weight:600;margin-bottom:.3rem}
+    .pg-hdr h1{font-size:clamp(1.2rem,3vw,1.5rem);font-weight:800}
+    .pg-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem;margin-bottom:1.25rem}
+
+    .param-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.25rem;margin-bottom:1rem;animation:fadeUp .35s ease both}
+    .param-clave{font-family:'Syne',sans-serif;font-size:.72rem;font-weight:700;color:var(--op-accent);letter-spacing:.06em;text-transform:uppercase;margin-bottom:.25rem}
+    .param-desc{font-size:.8rem;color:var(--muted);margin-bottom:.85rem;line-height:1.5}
+    .param-row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+    .param-row input{flex:1;min-width:140px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.9rem;padding:.5rem .75rem;outline:none}
+    .param-row input:focus{border-color:var(--op-accent)}
+    .param-meta{font-size:.7rem;color:var(--muted);margin-top:.6rem}
+    .btn-guardar{background:linear-gradient(135deg,var(--op-accent),var(--op-accent2));border:none;border-radius:var(--r-sm);color:#fff;font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;padding:.5rem 1.1rem;cursor:pointer;transition:opacity .2s}
+    .btn-guardar:hover{opacity:.9}
+    .btn-guardar:disabled{opacity:.5;cursor:not-allowed}
+    .saved-msg{font-size:.74rem;color:var(--ok);margin-left:.4rem;opacity:0;transition:opacity .3s}
+    .saved-msg.show{opacity:1}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="op_dashboard_menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--op-accent)">🚚 Operatividad</span>
+    <span class="topbar-sep">/</span><span class="topbar-title">⚙️ Parametrización</span>
+    <div class="topbar-spacer"></div>
+    <a href="op_dashboard_menu.html" class="btn btn-sm">← Dashboard</a>
+    <div class="theme-bar"><button class="theme-btn" onclick="setTheme('')">🌙</button><button class="theme-btn" onclick="setTheme('light')">☀️</button></div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="pg-hdr">
+      <div class="eyebrow">⚙️ Operatividad · Parametrización</div>
+      <h1>Parametrización</h1>
+      <p>Configura los parámetros generales del módulo Operatividad. La tabla es genérica (clave/valor) para poder agregar más parámetros en el futuro sin cambios de base de datos.</p>
+    </div>
+
+    <div id="paramsList">
+      <div style="text-align:center;color:var(--muted);font-size:.85rem;padding:1rem">Cargando parámetros…</div>
+    </div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+applyTheme();
+
+// Etiquetas amigables para claves conocidas; cualquier clave nueva se muestra con su propia descripción de BD.
+const ETIQUETAS = {
+  acordeon_intervalo_segundos: 'Intervalo de rotación del Acordeón de Productividad (segundos)',
+};
+
+async function cargarParametros() {
+  const cont = document.getElementById('paramsList');
+  try {
+    const rows = await sb.rest('GET', 'op_parametros?order=clave.asc') || [];
+    if (!rows.length) { cont.innerHTML = `<div style="text-align:center;color:var(--muted);font-size:.85rem;padding:1rem">No hay parámetros configurados aún.</div>`; return; }
+    cont.innerHTML = rows.map((p,i) => `
+      <div class="param-card" style="animation-delay:${.05*(i+1)}s">
+        <div class="param-clave">${ETIQUETAS[p.clave] || p.clave}</div>
+        <div class="param-desc">${p.descripcion || ''}</div>
+        <div class="param-row">
+          <input type="text" id="val-${p.clave}" value="${(p.valor||'').replace(/"/g,'&quot;')}"/>
+          <button class="btn-guardar" onclick="guardarParametro('${p.clave}', this)">Guardar</button>
+          <span class="saved-msg" id="msg-${p.clave}">✓ Guardado</span>
+        </div>
+        <div class="param-meta" id="meta-${p.clave}">${p.actualizado_por ? `Último cambio: ${p.actualizado_por} · ${new Date(p.updated_at).toLocaleString('es-CO')}` : 'Sin cambios manuales registrados'}</div>
+      </div>`).join('');
+  } catch(e) {
+    cont.innerHTML = `<div style="text-align:center;color:var(--error);font-size:.85rem;padding:1rem">Error cargando parámetros: ${e.message}</div>`;
+  }
+}
+
+async function guardarParametro(clave, btn) {
+  const input = document.getElementById(`val-${clave}`);
+  const valor = input.value.trim();
+  btn.disabled = true;
+  try {
+    const usuario = (getSession() && getSession().email) || 'desconocido';
+    await sb.rest('PATCH', `op_parametros?clave=eq.${clave}`, { valor, actualizado_por: usuario, updated_at: new Date().toISOString() }, {'Prefer':'return=minimal'});
+    document.getElementById(`meta-${clave}`).textContent = `Último cambio: ${usuario} · ${new Date().toLocaleString('es-CO')}`;
+    const msg = document.getElementById(`msg-${clave}`);
+    msg.classList.add('show');
+    setTimeout(()=>msg.classList.remove('show'), 2000);
+  } catch(e) {
+    alert('Error al guardar: ' + e.message);
+  }
+  btn.disabled = false;
+}
+
+window.addEventListener('load', async () => {
+  const user = await checkAuth('admin'); if (!user) return;
+  renderUser();
+  await cargarParametros();
+  const ol = document.getElementById('overlay');
+  setTimeout(() => ol.classList.add('out'), 200);
+  setTimeout(() => ol.remove(), 600);
+});
+</script>
+</body>
+</html>

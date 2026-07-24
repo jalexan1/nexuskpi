@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Operatividad · Cargue WMS Base Cosmetics</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
+    .page{display:flex;flex-direction:column;min-height:100vh}
+    .content{flex:1;padding:1.5rem;max-width:960px;margin:0 auto;width:100%}
+    .pg-hdr{margin-bottom:1.5rem}
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--op-accent);font-weight:600;margin-bottom:.3rem}
+    .pg-hdr h1{font-size:clamp(1.2rem,3vw,1.5rem);font-weight:800}
+    .pg-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem}
+
+    .cargue-card,.repro-card,.log-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.5rem;margin-bottom:1.25rem}
+    .cargue-card h2,.repro-card h2,.log-card h2{font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+    .repro-card{border-color:rgba(242,153,74,.25)}
+    .card-sub{font-size:.78rem;color:var(--muted);margin-top:-.5rem;margin-bottom:.85rem;line-height:1.5}
+
+    .meta-row{display:flex;gap:.65rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
+    .meta-row label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+    .meta-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;padding:.4rem .75rem;outline:none;cursor:pointer;min-width:140px}
+    .meta-sel:focus{border-color:var(--op-accent)}
+
+    .drop-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:1.75rem 1.5rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:1rem}
+    .drop-zone:hover,.drop-zone.over{border-color:var(--op-accent);background:rgba(242,153,74,.05)}
+    .drop-zone input{display:none}
+    .drop-icon{font-size:1.8rem;margin-bottom:.4rem}
+    .drop-txt{font-size:.85rem;color:var(--muted);margin-bottom:.2rem}
+    .drop-nombre{font-size:.82rem;color:var(--text);font-weight:600;margin-bottom:.25rem}
+    .drop-limite{display:inline-block;background:rgba(255,176,32,.12);color:var(--warn);border:1px solid rgba(255,176,32,.3);border-radius:6px;font-size:.72rem;font-weight:600;padding:.12rem .55rem}
+    .drop-picked{font-size:.8rem;color:var(--op-accent);font-weight:600;margin-top:.5rem;word-break:break-all}
+
+    .btn-cargue{width:100%;padding:.85rem;background:linear-gradient(135deg,var(--op-accent),var(--op-accent2));border:none;border-radius:var(--r-sm);color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:transform .15s,opacity .2s;min-height:48px}
+    .btn-cargue:hover{transform:translateY(-1px);opacity:.92}
+    .btn-cargue:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+    .prog-box{display:none;background:var(--surface2);border-radius:var(--r-sm);padding:.75rem 1rem;margin-top:.75rem;font-size:.8rem}
+    .prog-box.show{display:block}
+    .prog-bar-wrap{height:6px;background:var(--surface3);border-radius:3px;margin-top:.4rem;overflow:hidden}
+    .prog-bar{height:100%;background:linear-gradient(90deg,var(--op-accent),var(--op-accent2));border-radius:3px;transition:width .3s}
+
+    .result-box{display:none;border-radius:var(--r-sm);padding:.8rem 1rem;font-size:.82rem;margin-top:.75rem;line-height:1.65}
+    .result-box.show{display:block}
+    .result-box.ok  {background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);color:var(--ok)}
+    .result-box.warn{background:rgba(255,176,32,.08);border:1px solid rgba(255,176,32,.25);color:var(--warn)}
+    .result-box.err {background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25);color:var(--error)}
+
+    .repro-list{display:flex;flex-direction:column;gap:.45rem;margin-bottom:.85rem}
+    .repro-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:.6rem .85rem;gap:.75rem;flex-wrap:wrap}
+    .repro-item-info{display:flex;flex-direction:column;gap:.1rem}
+    .repro-label{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700}
+    .repro-stats{font-size:.7rem;color:var(--muted)}
+    .repro-stats .inc{color:var(--warn);font-weight:600}
+    .repro-stats .ok {color:var(--ok);font-weight:600}
+
+    .log-area{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:.7rem;font-family:'Courier New',monospace;font-size:.7rem;color:var(--muted);max-height:190px;overflow-y:auto;word-break:break-word}
+    .lg-ok{color:var(--ok)}.lg-err{color:var(--error)}.lg-inf{color:var(--op-accent)}.lg-warn{color:var(--warn)}
+    .log-btns{display:flex;gap:.45rem;margin-top:.6rem;flex-wrap:wrap}
+
+    .cua-hdr{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin:1.1rem 0 .55rem}
+    .cua-title{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:var(--warn);display:flex;align-items:center;gap:.45rem}
+    .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+    .tbl-scroll{overflow-x:auto;max-height:380px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+    table{width:100%;border-collapse:collapse;font-size:.79rem}
+    thead th{text-align:left;padding:.5rem .7rem;font-size:.64rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:1;white-space:nowrap}
+    tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+    tbody tr:hover{background:var(--surface2)}
+    tbody td{padding:.46rem .7rem;vertical-align:middle}
+    .row-inc td:first-child{border-left:3px solid var(--warn)}
+
+    .cell-edit{background:transparent;border:none;border-bottom:1px dashed var(--border2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.78rem;width:100%;min-width:80px;padding:.1rem .2rem;outline:none;cursor:pointer}
+    .cell-edit:focus{border-bottom-color:var(--op-accent);background:rgba(242,153,74,.05);border-radius:3px}
+    select.cell-edit{cursor:pointer}
+
+    .btn-guardar-fila{padding:.2rem .55rem;font-size:.7rem;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);color:var(--ok);border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap}
+    .btn-guardar-fila:hover{background:rgba(0,255,136,.2)}
+    .btn-guardar-fila.guardando{opacity:.6;cursor:not-allowed}
+
+    .cua-tabs{display:flex;gap:.35rem;margin-bottom:.6rem;flex-wrap:wrap}
+    .cua-tab{padding:.35rem .75rem;font-size:.74rem;font-weight:600;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);cursor:pointer}
+    .cua-tab.on{color:var(--op-accent);border-color:var(--op-accent)}
+
+    .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
+    .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
+    @media(max-width:479px){.nav-btn span{display:none}}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="op_cargue_menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--op-accent)">🚚 Operatividad</span>
+    <span class="topbar-sep">/</span><span class="topbar-title">🗃️ WMS Base Cosmetics</span>
+    <div class="topbar-spacer"></div>
+    <div class="nav-btns">
+      <a href="op_cargue_menu.html" class="btn btn-sm nav-btn" title="Volver a Cargue de Información">📤 <span>Cargue</span></a>
+      <a href="menu.html" class="btn btn-sm nav-btn" title="Volver al menú principal">🏠 <span>Menú</span></a>
+    </div>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="pg-hdr">
+      <div class="eyebrow">📥 Cargue de Información · Operatividad</div>
+      <h1>WMS Base Cosmetics Mes Año</h1>
+      <p>Carga el archivo, revisa el log y gestiona los registros en cuarentena de Inventario, Densidad, Productividad Pk y Recogidas.</p>
+    </div>
+
+    <!-- ── Cargue ── -->
+    <div class="cargue-card">
+      <h2>⬆️ Cargar WMS Base Cosmetics</h2>
+      <div class="meta-row">
+        <label>Mes a cargar</label>
+        <select class="meta-sel" id="uploadMes"></select>
+      </div>
+      <div class="drop-zone" id="dropKpi"
+           onclick="document.getElementById('fileKpi').click()"
+           ondragover="onDragOver(event,'dropKpi')"
+           ondragleave="onDragLeave('dropKpi')"
+           ondrop="onDrop(event,'fileKpi','dropKpi')">
+        <input type="file" id="fileKpi" accept=".xlsx,.xls" onchange="onFilePicked(this)"/>
+        <div class="drop-icon">📊</div>
+        <p class="drop-txt">Toca para seleccionar o arrastra el archivo</p>
+        <p class="drop-nombre">WMS_BASE_CLICK COSMETICS MES AÑO.xlsx</p>
+        <span class="drop-limite">⚠️ Tamaño máximo: 50 MB</span>
+        <p class="drop-picked" id="lblKpi"></p>
+      </div>
+      <button class="btn-cargue" id="btnCargar" onclick="subirKpi()">⬆️ Cargar WMS Base Cosmetics</button>
+      <div class="prog-box" id="progKpi"><span id="progKpiTxt">Procesando…</span><div class="prog-bar-wrap"><div class="prog-bar" id="barKpi" style="width:0%"></div></div></div>
+      <div class="result-box" id="resKpi"></div>
+    </div>
+
+    <!-- ── Meses cargados / eliminar ── -->
+    <div class="repro-card">
+      <h2>📅 Meses Cargados</h2>
+      <p class="card-sub">Consulta lo cargado por mes y elimina un mes completo si necesitas volver a procesarlo desde cero.</p>
+      <div class="repro-list" id="reproList">
+        <div style="text-align:center;color:var(--muted);font-size:.8rem;padding:.5rem">Cargando meses…</div>
+      </div>
+      <div class="result-box" id="resRepro"></div>
+    </div>
+
+    <!-- ── Log ── -->
+    <div class="log-card">
+      <h2>📋 Log de Cargues</h2>
+      <div class="log-area" id="etlLog"></div>
+      <div class="log-btns">
+        <button class="btn" onclick="loadEtlLog()">🔄 Refrescar</button>
+        <button class="btn" onclick="document.getElementById('etlLog').innerHTML=''">🗑️ Limpiar vista</button>
+      </div>
+
+      <!-- Cuarentena -->
+      <div class="cua-hdr" id="secCuaHdr" style="display:none">
+        <div class="cua-title">
+          ⚠️ Cuarentena — Requieren Revisión
+          <span class="badge badge-warn" id="cntCua"></span>
+        </div>
+        <button class="btn" onclick="descargarInconsistentes()">📥 Descargar Excel</button>
+      </div>
+      <div class="cua-tabs" id="cuaTabs" style="display:none">
+        <button class="cua-tab on" onclick="cambiarHojaCua('inventario',this)">🗃️ Inventario Ubicación</button>
+        <button class="cua-tab" onclick="cambiarHojaCua('productividadPk',this)">⚡ Productividad Pk</button>
+      </div>
+      <p class="card-sub" id="cuaNota" style="display:none">DensidadxUbicacion y RecogidasPkxRango no manejan cuarentena (tablas informativas, sin reglas de inconsistencia definidas).</p>
+      <div class="tbl-wrap" id="cuaWrap" style="display:none">
+        <div class="tbl-scroll">
+          <table>
+            <thead id="cuaHead"></thead>
+            <tbody id="cuaBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script src="../utils/etl_op_wms.js"></script>
+<script>
+applyTheme();
+
+const FRASE_ESPERADA = 'WMS_BASE_CLICK COSMETICS';
+const TABLAS = { inventario:'op_inventario_ubicacion', densidad:'op_densidad_ubicacion', productividadPk:'op_productividad_pk', recogidas:'op_recogidas_pk_rango' };
+let cuarentenaPorHoja = { inventario:[], productividadPk:[] };
+let hojaCuaActual = 'inventario';
+
+function validarNombre(nombre) { return opwValidarNombreArchivo(nombre, FRASE_ESPERADA).ok; }
+
+function onDragOver(e,id){ e.preventDefault(); document.getElementById(id).classList.add('over'); }
+function onDragLeave(id) { document.getElementById(id).classList.remove('over'); }
+function onDrop(e,inputId,zoneId){
+  e.preventDefault(); onDragLeave(zoneId);
+  const f=e.dataTransfer.files[0]; if(!f) return;
+  const dt=new DataTransfer(); dt.items.add(f);
+  document.getElementById(inputId).files=dt.files;
+  document.getElementById(inputId).dispatchEvent(new Event('change'));
+}
+function onFilePicked(input){
+  const f=input.files[0]; if(!f) return;
+  const val = opwValidarNombreArchivo(f.name, FRASE_ESPERADA);
+  if(!val.ok){
+    alert(`El archivo que va a cargar es incorrecto y tiene nombre diferente (similitud ${val.score}%).\n\nPor favor revisa que el archivo sea el correcto.\nEl nombre del archivo debe ser: WMS_BASE_CLICK COSMETICS MES AÑO`);
+    input.value=''; document.getElementById('lblKpi').textContent=''; return;
+  }
+  document.getElementById('lblKpi').textContent=`📎 ${f.name}  (${(f.size/1024/1024).toFixed(1)} MB) · similitud ${val.score}%`;
+}
+
+function showProg(pId,bId,tId,pct,msg){ document.getElementById(pId).classList.add('show'); document.getElementById(bId).style.width=pct+'%'; document.getElementById(tId).textContent=msg; }
+function hideProg(id){ setTimeout(()=>document.getElementById(id).classList.remove('show'),1200); }
+function showRes(id,type,msg){ const el=document.getElementById(id); el.className=`result-box show ${type}`; el.innerHTML=msg; }
+function addLog(msg,tipo='inf'){
+  const log=document.getElementById('etlLog');
+  const d=document.createElement('div'); d.className='lg-'+tipo;
+  d.textContent=`[${new Date().toLocaleTimeString('es-CO')}] ${msg}`;
+  log.appendChild(d); log.scrollTop=log.scrollHeight;
+}
+
+async function upsertLotes(tabla, records, onProg){
+  if(!records.length){ if(onProg) onProg(100); return; }
+  const BATCH=100;
+  for(let i=0;i<records.length;i+=BATCH){
+    const lote=records.slice(i,i+BATCH);
+    await sb.rest('POST',tabla,lote,{'Prefer':'resolution=merge-duplicates,return=minimal'});
+    if(onProg) onProg(Math.round(((i+lote.length)/records.length)*100));
+  }
+}
+
+async function upsertPeriodoCargue(periodoId, nombreArchivo, registrosOk, registrosCua){
+  const payload={periodo_id:periodoId,archivo_origen:'WMS_BASE',nombre_archivo:nombreArchivo,fecha_carga:new Date().toISOString(),usuario_carga:(getSession()&&getSession().email)||'—',estado:'completado',registros_ok:registrosOk,registros_cuarentena:registrosCua,updated_at:new Date().toISOString()};
+  const ex=await sb.rest('GET',`op_periodos_cargue?periodo_id=eq.${periodoId}&archivo_origen=eq.WMS_BASE&select=id`);
+  if(ex&&ex.length){ await sb.rest('PATCH',`op_periodos_cargue?periodo_id=eq.${periodoId}&archivo_origen=eq.WMS_BASE`,payload,{'Prefer':'return=minimal'}); }
+  else { await sb.rest('POST','op_periodos_cargue',[payload],{'Prefer':'return=minimal'}); }
+}
+
+function traducirError(msg){
+  if(!msg) return 'Error desconocido. Contacta al desarrollador del sistema.';
+  if(msg.includes('InventarioxUbicacion')) return 'No se encontró la hoja InventarioxUbicacion en el archivo. Verifica que el archivo sea el correcto.';
+  if(msg.includes('DensidadxUbicacion')) return 'No se encontró la hoja DensidadxUbicacion en el archivo. Verifica que el archivo sea el correcto.';
+  if(msg.includes('ProductividadxPk')) return 'No se encontró la hoja ProductividadxPk en el archivo. Verifica que el archivo sea el correcto.';
+  if(msg.includes('RecogidasPkxRango')) return 'No se encontró la hoja RecogidasPkxRango en el archivo. Verifica que el archivo sea el correcto.';
+  if(msg.includes('zip')||msg.includes('archive')) return 'El archivo está dañado o no es un Excel válido. Intenta guardarlo de nuevo desde Excel.';
+  return `Error técnico: ${msg}`;
+}
+
+async function subirKpi(){
+  const file  = document.getElementById('fileKpi').files[0];
+  const mesSeleccionado = document.getElementById('uploadMes').value;
+  if(!file){ showRes('resKpi','warn','⚠️ Selecciona un archivo primero.'); return; }
+  if(!validarNombre(file.name)){
+    showRes('resKpi','err','❌ El archivo es incorrecto. El nombre debe parecerse a <b>WMS_BASE_CLICK COSMETICS</b>.');
+    return;
+  }
+
+  const btn=document.getElementById('btnCargar');
+  btn.disabled=true;
+  const runId=`op-run-${Date.now()}`;
+  addLog(`Iniciando cargue: ${file.name}…`,'inf');
+  showProg('progKpi','barKpi','progKpiTxt',5,'Leyendo archivo…');
+
+  try{ await sb.rest('POST','etl_log',[{run_id:runId,mes_id:mesSeleccionado,archivo:file.name,estado:'iniciado'}],{'Prefer':'return=minimal'}); }
+  catch(e){ addLog('Advertencia etl_log: '+e.message,'warn'); }
+
+  try{
+    let result;
+    try{ result = await procesarWmsBase(file, mesSeleccionado, (pct,msg)=>showProg('progKpi','barKpi','progKpiTxt',20+Math.round(pct*.3),msg)); }
+    catch(e){ throw new Error(traducirError(e.message)); }
+
+    const { inventario, densidad, productividadPk, recogidas, mesPredominante, mesConflicto } = result;
+    const mesId = mesPredominante || mesSeleccionado;
+    const labelMes = CONFIG.meses.find(m=>m.id===mesId)?.label||mesId;
+    const labelSel = CONFIG.meses.find(m=>m.id===mesSeleccionado)?.label||mesSeleccionado;
+
+    if(mesConflicto){
+      const continuar = confirm(
+        `⚠️ Seleccionó el mes "${labelSel}" pero las fechas del archivo (FechaCreacionCaja / FechaRegistro) corresponden principalmente a "${labelMes}".\n\n`+
+        `Nota: InventarioxUbicacion trae fechas históricas de creación de caja, por lo que puede diferir del mes de corte real.\n\n`+
+        `¿Desea continuar y registrarlo como "${labelMes}" (recomendado)?\n\n`+
+        `Presione Aceptar para registrar como ${labelMes}.\nPresione Cancelar para detener el cargue y revisar el archivo.`
+      );
+      if(!continuar){
+        hideProg('progKpi');
+        showRes('resKpi','warn',`⚠️ Cargue detenido. Las fechas del archivo corresponden principalmente a <b>${labelMes}</b>. Revisa la selección del mes y vuelve a intentarlo.`);
+        btn.disabled=false; return;
+      }
+      addLog(`Mes corregido automáticamente: ${labelSel} → ${labelMes}`,'warn');
+    }
+
+    [...inventario.records, ...densidad.records, ...productividadPk.records, ...recogidas.records].forEach(r=>{ r.periodo_id=mesId; });
+
+    addLog(`ETL completado — Inventario: ${inventario.records.length} (${inventario.inconsistencias.length} cuarentena) · Densidad: ${densidad.records.length} · Productividad Pk: ${productividadPk.records.length} (${productividadPk.inconsistencias.length} cuarentena) · Recogidas: ${recogidas.records.length}`,'inf');
+
+    showProg('progKpi','barKpi','progKpiTxt',55,'Guardando InventarioxUbicacion…');
+    await upsertLotes('op_inventario_ubicacion', inventario.records, p=>showProg('progKpi','barKpi','progKpiTxt',55+Math.round(p*.08),'Guardando Inventario…'));
+    showProg('progKpi','barKpi','progKpiTxt',63,'Guardando DensidadxUbicacion…');
+    await upsertLotes('op_densidad_ubicacion', densidad.records, p=>showProg('progKpi','barKpi','progKpiTxt',63+Math.round(p*.08),'Guardando Densidad…'));
+    showProg('progKpi','barKpi','progKpiTxt',71,'Guardando ProductividadxPk…');
+    await upsertLotes('op_productividad_pk', productividadPk.records, p=>showProg('progKpi','barKpi','progKpiTxt',71+Math.round(p*.08),'Guardando Productividad Pk…'));
+    showProg('progKpi','barKpi','progKpiTxt',79,'Guardando RecogidasPkxRango…');
+    await upsertLotes('op_recogidas_pk_rango', recogidas.records, p=>showProg('progKpi','barKpi','progKpiTxt',79+Math.round(p*.08),'Guardando Recogidas…'));
+
+    const totalOk  = inventario.records.length + densidad.records.length + productividadPk.records.length + recogidas.records.length;
+    const totalCua = inventario.inconsistencias.length + productividadPk.inconsistencias.length;
+    showProg('progKpi','barKpi','progKpiTxt',95,'Registrando cargue…');
+    await upsertPeriodoCargue(mesId, file.name, totalOk, totalCua);
+    await sb.rest('PATCH',`etl_log?run_id=eq.${runId}`,{estado:'completado',mes_id:mesId,docs_procesados:totalOk,docs_insertados:totalOk,completado_at:new Date().toISOString()},{'Prefer':'return=minimal'});
+
+    showProg('progKpi','barKpi','progKpiTxt',100,'Completado');
+    hideProg('progKpi');
+
+    showRes('resKpi','ok',
+      `✅ <b>Cargue completado</b><br>`+
+      `🗃️ Inventario Ubicación: <b>${inventario.records.length}</b> (⚠️${inventario.inconsistencias.length}) · `+
+      `📐 Densidad: <b>${densidad.records.length}</b> · `+
+      `⚡ Productividad Pk: <b>${productividadPk.records.length}</b> (⚠️${productividadPk.inconsistencias.length}) · `+
+      `🚚 Recogidas: <b>${recogidas.records.length}</b><br>`+
+      `Total en cuarentena: <b>${totalCua}</b>`
+    );
+    addLog(`✓ ${labelMes}: ${totalOk} registros · ${totalCua} en cuarentena`,'ok');
+
+    cuarentenaPorHoja = { inventario: inventario.inconsistencias, productividadPk: productividadPk.inconsistencias };
+    mostrarCuarentena();
+    cargarMeses();
+  }catch(e){
+    hideProg('progKpi');
+    showRes('resKpi','err',`❌ <b>Error al cargar</b><br>${e.message}<br><small style="color:var(--muted)">Si el problema persiste, contacta al desarrollador del sistema.</small>`);
+    addLog('✗ '+e.message,'err');
+    try{ await sb.rest('PATCH',`etl_log?run_id=eq.${runId}`,{estado:'error',error_msg:e.message,completado_at:new Date().toISOString()},{'Prefer':'return=minimal'}); }catch{}
+  }
+  btn.disabled=false;
+}
+
+// ── Cuarentena: 2 sub-pestañas (inventario / productividadPk) ──────────────
+const COLUMNAS_CUA = {
+  inventario:      [['ean','EAN'],['ubicacion','Ubicación'],['item','Item'],['qty_saldo','QtySaldo']],
+  productividadPk: [['pedido_wms','PedidoWMS'],['referencia','Referencia'],['fecha_registro','Fecha'],['empleado','Empleado']],
+};
+const TABLAS_CUA = { inventario:'op_inventario_ubicacion', productividadPk:'op_productividad_pk' };
+
+function cambiarHojaCua(hoja, btn){
+  hojaCuaActual = hoja;
+  document.querySelectorAll('.cua-tab').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  renderCuarentena();
+}
+
+function mostrarCuarentena(){
+  const total = cuarentenaPorHoja.inventario.length + cuarentenaPorHoja.productividadPk.length;
+  const hdr=document.getElementById('secCuaHdr'), wrap=document.getElementById('cuaWrap'), tabs=document.getElementById('cuaTabs'), nota=document.getElementById('cuaNota');
+  if(!total){ hdr.style.display='none'; wrap.style.display='none'; tabs.style.display='none'; nota.style.display='none'; return; }
+  hdr.style.display='flex'; wrap.style.display='block'; tabs.style.display='flex'; nota.style.display='block';
+  document.getElementById('cntCua').textContent=total;
+  renderCuarentena();
+}
+
+function renderCuarentena(){
+  const cols = COLUMNAS_CUA[hojaCuaActual];
+  const data = cuarentenaPorHoja[hojaCuaActual]||[];
+  document.getElementById('cuaHead').innerHTML = `<tr>${cols.map(c=>`<th>${c[1]}</th>`).join('')}<th>¿Inconsistente?</th><th>Causal / Gestión</th><th>Guardar</th></tr>`;
+  document.getElementById('cuaBody').innerHTML = data.map((r,i)=>`<tr class="row-inc" id="row-cua-${i}">
+    ${cols.map(c=>`<td>${r[c[0]] ?? '—'}</td>`).join('')}
+    <td>
+      <select class="cell-edit" id="inc-${i}" onchange="marcarCambio(${i})">
+        <option value="true"  ${r.is_inconsistente?'selected':''}>Sí (en cuarentena)</option>
+        <option value="false" ${!r.is_inconsistente?'selected':''}>No (levantar marca)</option>
+      </select>
+    </td>
+    <td><input class="cell-edit" type="text" id="causal-${i}" value="${(r.causal_inconsistencia||'').replace(/"/g,'&quot;')}" placeholder="Describe la gestión…" onchange="marcarCambio(${i})"/></td>
+    <td><button class="btn-guardar-fila" id="save-${i}" onclick="guardarFila(${i})" disabled>Guardar</button></td>
+  </tr>`).join('');
+}
+
+function marcarCambio(i){ document.getElementById(`save-${i}`).disabled=false; }
+
+async function guardarFila(i){
+  const hoja = hojaCuaActual;
+  const tabla = TABLAS_CUA[hoja];
+  const r = cuarentenaPorHoja[hoja][i];
+  const btn = document.getElementById(`save-${i}`);
+  const esInc = document.getElementById(`inc-${i}`).value === 'true';
+  const causalInput = document.getElementById(`causal-${i}`);
+  const causalNueva = causalInput.value.trim();
+
+  btn.disabled=true; btn.classList.add('guardando'); btn.textContent='…';
+  try{
+    const causalAnterior = r.causal_inconsistencia||'';
+    let causalFinal;
+    const ts=new Date().toLocaleDateString('es-CO');
+    if(!esInc){
+      const gestion = causalNueva?` | Gestión: ${causalNueva}`:'';
+      causalFinal = causalAnterior ? `${causalAnterior} | ✅ LEVANTADO MANUALMENTE ${ts}${gestion}` : `✅ LEVANTADO MANUALMENTE ${ts}${gestion}`;
+    } else {
+      causalFinal = causalNueva && causalNueva!==causalAnterior ? (causalAnterior?`${causalAnterior} | ${causalNueva}`:causalNueva) : causalAnterior;
+    }
+
+    let filtro;
+    if(hoja==='inventario') filtro=`periodo_id=eq.${r.periodo_id}&ean=eq.${encodeURIComponent(r.ean||'')}&ubicacion=eq.${encodeURIComponent(r.ubicacion||'')}&caja=eq.${encodeURIComponent(r.caja||'')}`;
+    else filtro=`periodo_id=eq.${r.periodo_id}&pedido_wms=eq.${encodeURIComponent(r.pedido_wms||'')}&linea_de_picking=eq.${encodeURIComponent(r.linea_de_picking||'')}&id_caja=eq.${encodeURIComponent(r.id_caja||'')}`;
+
+    await sb.rest('PATCH', `${tabla}?${filtro}`, { is_inconsistente:esInc, causal_inconsistencia:causalFinal, updated_at:new Date().toISOString() }, {'Prefer':'return=minimal'});
+
+    r.is_inconsistente=esInc; r.causal_inconsistencia=causalFinal;
+    causalInput.value=causalFinal;
+    btn.classList.remove('guardando'); btn.textContent='✓';
+    btn.style.cssText='background:rgba(0,255,136,.15);border-color:var(--ok);color:var(--ok)';
+    addLog(`${esInc?'Cuarentena actualizada':'Marca levantada'} (${hoja})`,'ok');
+    setTimeout(()=>{ btn.textContent='Guardar'; btn.style.cssText=''; btn.disabled=true; },2500);
+  }catch(e){
+    btn.classList.remove('guardando'); btn.textContent='Error';
+    btn.style.cssText='background:rgba(255,77,109,.1);border-color:var(--error);color:var(--error)';
+    addLog('✗ Error guardando: '+e.message,'err');
+    setTimeout(()=>{ btn.textContent='Guardar'; btn.style.cssText=''; btn.disabled=false; },3000);
+  }
+}
+
+function descargarInconsistentes(){
+  const data = cuarentenaPorHoja[hojaCuaActual]||[];
+  if(!data.length){ alert('No hay registros en cuarentena para esta hoja.'); return; }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb, ws, hojaCuaActual);
+  XLSX.writeFile(wb, `Inconsistentes_${hojaCuaActual}_WmsBase.xlsx`);
+  addLog(`Excel descargado: Inconsistentes_${hojaCuaActual}.xlsx`,'ok');
+}
+
+async function eliminarMes(mesId, label){
+  if(!confirm(`⚠️ ¿Eliminar TODOS los datos de WMS Base de "${label}"?\n\nSe borrarán op_inventario_ubicacion, op_densidad_ubicacion, op_productividad_pk y op_recogidas_pk_rango de ese mes. Esta acción es irreversible.`)) return;
+  try{
+    addLog(`Eliminando ${label}…`,'warn');
+    await sb.rest('DELETE',`op_inventario_ubicacion?periodo_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
+    await sb.rest('DELETE',`op_densidad_ubicacion?periodo_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
+    await sb.rest('DELETE',`op_productividad_pk?periodo_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
+    await sb.rest('DELETE',`op_recogidas_pk_rango?periodo_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
+    await sb.rest('DELETE',`op_periodos_cargue?periodo_id=eq.${mesId}&archivo_origen=eq.WMS_BASE`,null,{'Prefer':'return=minimal'});
+
+    const check = await sb.rest('GET',`op_inventario_ubicacion?periodo_id=eq.${mesId}&select=id`);
+    if((check||[]).length>0) throw new Error(`Quedaron ${check.length} registros sin borrar. Verifica las políticas RLS en Supabase.`);
+
+    addLog(`✓ ${label} eliminado completamente`,'warn');
+    cuarentenaPorHoja = { inventario:[], productividadPk:[] };
+    mostrarCuarentena();
+    cargarMeses();
+  }catch(e){
+    addLog('✗ Error al eliminar: '+e.message,'err');
+    alert('Error al eliminar el mes: '+e.message);
+  }
+}
+
+async function cargarMeses(){
+  const lista=document.getElementById('reproList');
+  try{
+    const res=await sb.rest('GET','op_periodos_cargue?archivo_origen=eq.WMS_BASE&order=periodo_id.asc');
+    if(!res||!res.length){ lista.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">No hay meses cargados aún.</div>`; return; }
+    lista.innerHTML=res.map(c=>{
+      const label=CONFIG.meses.find(m=>m.id===c.periodo_id)?.label||c.periodo_id;
+      return `<div class="repro-item">
+        <div class="repro-item-info">
+          <span class="repro-label">${label}</span>
+          <span class="repro-stats">${c.registros_ok||0} registros · Cuarentena: <span class="${c.registros_cuarentena>0?'inc':'ok'}">${c.registros_cuarentena||0}</span> · Cargado: ${new Date(c.fecha_carga).toLocaleDateString('es-CO')}</span>
+        </div>
+        <div style="display:flex;gap:.35rem">
+          <button class="btn btn-sm btn-danger" onclick="eliminarMes('${c.periodo_id}','${label}')">🗑️ Eliminar mes</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    lista.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">Sin conexión a Supabase.</div>`;
+  }
+}
+
+async function loadEtlLog(){
+  try{
+    const rows=await sb.rest('GET','etl_log?order=iniciado_at.desc&limit=20');
+    if(!rows||!rows.length){ addLog('Sin registros de cargue aún.','inf'); return; }
+    rows.forEach(r=>{
+      const dt=new Date(r.iniciado_at).toLocaleString('es-CO');
+      const tp=r.estado==='completado'?'ok':r.estado==='error'?'err':'inf';
+      addLog(`[${dt}] ${r.mes_id||'—'} | ${r.archivo||'—'} | ${r.estado}`,tp);
+    });
+  }catch(e){ addLog('No se pudo cargar el historial: '+e.message,'warn'); }
+}
+
+async function cargarCuarentenaActual(){
+  try{
+    const [inv,pk] = await Promise.all([
+      sb.rest('GET','op_inventario_ubicacion?is_inconsistente=eq.true&order=periodo_id.asc'),
+      sb.rest('GET','op_productividad_pk?is_inconsistente=eq.true&order=periodo_id.asc'),
+    ]);
+    cuarentenaPorHoja = { inventario:inv||[], productividadPk:pk||[] };
+    mostrarCuarentena();
+  }catch(e){ addLog('No se pudo cargar cuarentena: '+e.message,'warn'); }
+}
+
+window.addEventListener('load',async()=>{
+  const user=await checkAuth('admin'); if(!user) return;
+  renderUser();
+  const sel=document.getElementById('uploadMes');
+  sel.innerHTML=CONFIG.meses.map((m,i)=>`<option value="${m.id}" ${i===CONFIG.meses.length-1?'selected':''}>${m.label}</option>`).join('');
+  cargarMeses();
+  loadEtlLog();
+  cargarCuarentenaActual();
+  const ol=document.getElementById('overlay');
+  setTimeout(()=>ol.classList.add('out'),200);
+  setTimeout(()=>ol.remove(),600);
+});
+</script>
+</body>
+</html>

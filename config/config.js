@@ -48,4 +48,22 @@ const CONFIG = Object.freeze({
     { code:'KPI-DES-008', name:'Ciclo de Pedido (Lead Time)', icon:'⏱️', href:'kpi008.html', activo:true  },
     { code:'KPI-DEV-006', name:'Tasa de Devoluciones',        icon:'↩️', href:null,           activo:false, hidden:true },
   ],
+
+  // ── Fase 2 · Operatividad (prefijo op_ en BD, sufijo OP en páginas) ──────
+  // No se toca ninguna clave anterior de este objeto.
+  operatividad: Object.freeze({
+    cargueHref:    'op_cargue_menu.html',
+    dashboardHref: 'op_dashboard_menu.html',
+    theme: 'op',
+    dashboardKpis: [
+      { code:'OP-RECIBO',      name:'Recibo',                     icon:'📥', href:'op_kpi_recibo.html' },
+      { code:'OP-PROD-REC',    name:'Productividad Recibo',       icon:'👷', href:'op_kpi_prod_recibo.html' },
+      { code:'OP-OCUPACION',   name:'Ocupación CEDI',              icon:'🏗️', href:'op_kpi_ocupacion.html' },
+      { code:'OP-PICKING',     name:'Picking',                     icon:'🧰', href:'op_kpi_picking.html' },
+      { code:'OP-PROD-PICK',   name:'Productividad Picking',       icon:'⚡', href:'op_kpi_prod_picking.html' },
+      { code:'OP-OLAS',        name:'Olas',                        icon:'🌊', href:'op_kpi_olas.html' },
+      { code:'OP-ACORDEON',    name:'Acordeón de Productividad',   icon:'📺', href:'op_acordeon.html' },
+      { code:'OP-PARAMETROS',  name:'Parametrización',             icon:'⚙️', href:'op_parametros.html' },
+    ],
+  }),
 });

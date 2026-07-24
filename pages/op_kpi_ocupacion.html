@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Operatividad · Ocupación CEDI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
+    .content{padding:1.5rem;max-width:1280px;margin:0 auto;width:100%}
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--op-accent);font-weight:600;margin-bottom:.3rem}
+    .pg-hdr h1{font-size:clamp(1.2rem,3vw,1.5rem);font-weight:800}
+    .pg-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem;margin-bottom:1.25rem}
+
+    .filtros{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem}
+    .filtros select{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.8rem;padding:.4rem .65rem;outline:none;cursor:pointer}
+    .filtros label{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:.25rem}
+
+    .hero{display:grid;grid-template-columns:260px 1fr;gap:1rem;margin-bottom:1.25rem}
+    @media(max-width:800px){.hero{grid-template-columns:1fr}}
+    .semaforo{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.5rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5rem;text-align:center}
+    .sem-pct{font-family:'Syne',sans-serif;font-size:2.6rem;font-weight:800}
+    .sem-label{font-size:.78rem;color:var(--muted)}
+    .sem-pill{padding:.25rem .8rem;border-radius:999px;font-size:.72rem;font-weight:700}
+    .sem-bien{background:rgba(0,255,136,.12);color:var(--ok)}
+    .sem-alerta{background:rgba(255,176,32,.12);color:var(--warn)}
+    .sem-critico{background:rgba(255,77,109,.12);color:var(--error)}
+
+    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.85rem}
+    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;animation:fadeUp .35s ease both}
+    .metric-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
+    .metric-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800}
+
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:380px;display:flex;flex-direction:column;margin-bottom:1.25rem}
+    .chart-card h3{font-size:.85rem;font-weight:700;margin-bottom:.6rem}
+    .chart-wrap{flex:1;position:relative}
+
+    .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+    .tbl-scroll{overflow-x:auto;max-height:420px;overflow-y:auto}
+    table{width:100%;border-collapse:collapse;font-size:.79rem}
+    thead th{text-align:left;padding:.5rem .7rem;font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0}
+    tbody tr{border-bottom:1px solid var(--border)}
+    tbody tr:hover{background:var(--surface2)}
+    tbody td{padding:.46rem .7rem}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="op_dashboard_menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--op-accent)">🚚 Operatividad</span>
+    <span class="topbar-sep">/</span><span class="topbar-title">🏗️ Ocupación CEDI</span>
+    <div class="topbar-spacer"></div>
+    <a href="op_dashboard_menu.html" class="btn btn-sm">← Dashboard</a>
+    <div class="theme-bar"><button class="theme-btn" onclick="setTheme('')">🌙</button><button class="theme-btn" onclick="setTheme('light')">☀️</button></div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="pg-hdr">
+      <div class="eyebrow">🏗️ Operatividad · Ocupación CEDI</div>
+      <h1>Ocupación CEDI</h1>
+      <p>Ocupación por zona y saldo en bodega (WMS Base Cosmetics).</p>
+    </div>
+
+    <div class="filtros">
+      <div><label>Mes</label><select id="fMes" onchange="render()"></select></div>
+      <div><label>Zona</label><select id="fZona" onchange="render()"><option value="">Todas</option></select></div>
+      <div><label>Mueble</label><select id="fMueble" onchange="render()"><option value="">Todos</option></select></div>
+    </div>
+
+    <div class="hero">
+      <div class="semaforo">
+        <div class="sem-pct" id="semPct">—</div>
+        <div class="sem-label">Ocupación promedio del CEDI</div>
+        <div class="sem-pill" id="semPill"></div>
+      </div>
+      <div class="metrics-grid" id="metricsGrid"></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Ocupación % por Zona</h3>
+      <div class="chart-wrap"><canvas id="cZona"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Top 15 Ubicaciones por Saldo (unidades)</h3>
+      <div class="chart-wrap"><canvas id="cTopUbic"></canvas></div>
+    </div>
+
+    <div class="tbl-wrap">
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Zona</th><th>Ubicaciones</th><th>Ocupación Prom.</th><th>Cap. Cúbica Total</th></tr></thead>
+          <tbody id="tblBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+applyTheme();
+let densidad = [], inventario = [];
+let charts = {};
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+function poblarFiltros() {
+  const meses = [...new Set(densidad.map(r=>r.periodo_id))].sort();
+  const sel = document.getElementById('fMes');
+  sel.innerHTML = `<option value="">Todos los meses</option>` + meses.map(m=>{
+    const label = CONFIG.meses.find(x=>x.id===m)?.label || m;
+    return `<option value="${m}">${label}</option>`;
+  }).join('');
+  if (meses.length) sel.value = meses[meses.length-1];
+
+  const zonas = [...new Set(densidad.map(r=>r.zona).filter(Boolean))].sort();
+  document.getElementById('fZona').innerHTML = `<option value="">Todas</option>` + zonas.map(z=>`<option value="${z}">${z}</option>`).join('');
+
+  const muebles = [...new Set(densidad.map(r=>r.mueble).filter(Boolean))].sort();
+  document.getElementById('fMueble').innerHTML = `<option value="">Todos</option>` + muebles.map(m=>`<option value="${m}">${m}</option>`).join('');
+}
+
+function filtrarDensidad() {
+  const mes = document.getElementById('fMes').value;
+  const zona = document.getElementById('fZona').value;
+  const mueble = document.getElementById('fMueble').value;
+  return densidad.filter(r => (!mes || r.periodo_id===mes) && (!zona || r.zona===zona) && (!mueble || r.mueble===mueble));
+}
+function filtrarInventario() {
+  const mes = document.getElementById('fMes').value;
+  const zona = document.getElementById('fZona').value;
+  return inventario.filter(r => (!mes || r.periodo_id===mes) && (!zona || r.zona===zona));
+}
+
+function render() {
+  const dens = filtrarDensidad();
+  const inv = filtrarInventario();
+
+  const ocupaciones = dens.map(r=>r.ocupacion||0);
+  const ocupPromedio = ocupaciones.length ? Math.round(ocupaciones.reduce((a,b)=>a+b,0)/ocupaciones.length*100)/100 : 0;
+  // Ocupacion puede venir como fracción (0-1) o porcentaje (0-100); normalizamos a %
+  const ocupPct = ocupPromedio <= 1 ? Math.round(ocupPromedio*10000)/100 : Math.round(ocupPromedio*100)/100;
+
+  document.getElementById('semPct').textContent = ocupPct + '%';
+  const pill = document.getElementById('semPill');
+  if (ocupPct >= 85) { pill.className='sem-pill sem-critico'; pill.textContent='🔴 CRÍTICO'; }
+  else if (ocupPct >= 65) { pill.className='sem-pill sem-alerta'; pill.textContent='🟡 ALERTA'; }
+  else { pill.className='sem-pill sem-bien'; pill.textContent='🟢 BIEN'; }
+
+  const totalUbic = dens.length;
+  const totalSaldo = inv.reduce((s,r)=>s+(r.qty_saldo||0),0);
+  const capCubicaTotal = dens.reduce((s,r)=>s+(r.capcubica||0),0);
+  const bloqueadas = inv.filter(r=>r.bloqueada).length;
+
+  document.getElementById('metricsGrid').innerHTML = `
+    <div class="metric-card" style="animation-delay:.02s"><div class="metric-label">Ubicaciones</div><div class="metric-value">${totalUbic.toLocaleString('es-CO')}</div></div>
+    <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Saldo Total (uds)</div><div class="metric-value">${totalSaldo.toLocaleString('es-CO')}</div></div>
+    <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Cap. Cúbica Total</div><div class="metric-value">${capCubicaTotal.toLocaleString('es-CO')}</div></div>
+    <div class="metric-card" style="animation-delay:.11s"><div class="metric-label">Cajas Bloqueadas</div><div class="metric-value" style="color:var(--warn)">${bloqueadas}</div></div>
+  `;
+
+  // Ocupación por zona
+  const porZona = {};
+  dens.forEach(r => { const z=r.zona||'—'; porZona[z]=porZona[z]||{suma:0,n:0}; porZona[z].suma+=(r.ocupacion||0); porZona[z].n++; });
+  const zonas = Object.keys(porZona).sort();
+  const valoresZona = zonas.map(z=>{ const v=porZona[z].suma/porZona[z].n; return v<=1?Math.round(v*10000)/100:Math.round(v*100)/100; });
+  destroyChart('cZona');
+  charts.cZona = new Chart(document.getElementById('cZona'), {
+    type:'bar',
+    data:{ labels:zonas, datasets:[{ label:'Ocupación %', data:valoresZona, backgroundColor:'#F2994A' }] },
+    options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{beginAtZero:true, max:100, grid:{color:'rgba(255,255,255,.04)'}}, x:{grid:{display:false}} } }
+  });
+
+  // Top ubicaciones por saldo
+  const porUbic = {};
+  inv.forEach(r => { const u=r.ubicacion||'—'; porUbic[u]=(porUbic[u]||0)+(r.qty_saldo||0); });
+  const topUbic = Object.entries(porUbic).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  destroyChart('cTopUbic');
+  charts.cTopUbic = new Chart(document.getElementById('cTopUbic'), {
+    type:'bar',
+    data:{ labels:topUbic.map(u=>u[0]), datasets:[{ label:'Saldo (uds)', data:topUbic.map(u=>u[1]), backgroundColor:'#00D4FF' }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{display:false}} } }
+  });
+
+  // Tabla por zona
+  document.getElementById('tblBody').innerHTML = zonas.map(z=>{
+    const d = porZona[z];
+    const prom = d.suma/d.n; const pct = prom<=1?Math.round(prom*10000)/100:Math.round(prom*100)/100;
+    const capZona = dens.filter(r=>r.zona===z).reduce((s,r)=>s+(r.capcubica||0),0);
+    return `<tr><td>${z}</td><td>${d.n}</td><td>${pct}%</td><td>${capZona.toLocaleString('es-CO')}</td></tr>`;
+  }).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
+}
+
+async function cargarDatos() {
+  try {
+    const [d,i] = await Promise.all([
+      sb.rest('GET','op_densidad_ubicacion?order=periodo_id.asc'),
+      sb.rest('GET','op_inventario_ubicacion?order=periodo_id.asc'),
+    ]);
+    densidad = d||[]; inventario = i||[];
+  } catch(e) { densidad=[]; inventario=[]; console.error(e); }
+  poblarFiltros();
+  render();
+}
+
+window.addEventListener('load', async () => {
+  const user = await checkAuth(); if (!user) return;
+  renderUser();
+  await cargarDatos();
+  const ol = document.getElementById('overlay');
+  setTimeout(() => ol.classList.add('out'), 200);
+  setTimeout(() => ol.remove(), 600);
+});
+</script>
+</body>
+</html>

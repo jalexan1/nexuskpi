@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Operatividad · Productividad Picking</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
+    .content{padding:1.5rem;max-width:1280px;margin:0 auto;width:100%}
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--op-accent);font-weight:600;margin-bottom:.3rem}
+    .pg-hdr h1{font-size:clamp(1.2rem,3vw,1.5rem);font-weight:800}
+    .pg-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem;margin-bottom:1.25rem}
+
+    .tabs-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 1.25rem;gap:.1rem;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--topbar-h);z-index:90;margin:0 -1.5rem 1.25rem}
+    .tab-btn{padding:.75rem .95rem;font-size:.82rem;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+    .tab-btn.on{color:var(--op-accent);border-bottom-color:var(--op-accent)}
+    .tab-panel{display:none}.tab-panel.on{display:block}
+
+    .filtros{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem}
+    .filtros select{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.8rem;padding:.4rem .65rem;outline:none;cursor:pointer}
+    .filtros label{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:.25rem}
+
+    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.85rem;margin-bottom:1.25rem}
+    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;animation:fadeUp .35s ease both}
+    .metric-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
+    .metric-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800}
+
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:420px;display:flex;flex-direction:column;margin-bottom:1.25rem}
+    .chart-card h3{font-size:.85rem;font-weight:700;margin-bottom:.6rem}
+    .chart-wrap{flex:1;position:relative}
+
+    .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+    .tbl-scroll{overflow-x:auto;max-height:480px;overflow-y:auto}
+    table{width:100%;border-collapse:collapse;font-size:.79rem}
+    thead th{text-align:left;padding:.5rem .7rem;font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0}
+    tbody tr{border-bottom:1px solid var(--border)}
+    tbody tr:hover{background:var(--surface2)}
+    tbody td{padding:.46rem .7rem}
+    .sin-asignar{color:var(--muted);font-style:italic}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="op_dashboard_menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--op-accent)">🚚 Operatividad</span>
+    <span class="topbar-sep">/</span><span class="topbar-title">⚡ Productividad Picking</span>
+    <div class="topbar-spacer"></div>
+    <a href="op_dashboard_menu.html" class="btn btn-sm">← Dashboard</a>
+    <div class="theme-bar"><button class="theme-btn" onclick="setTheme('')">🌙</button><button class="theme-btn" onclick="setTheme('light')">☀️</button></div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="pg-hdr">
+      <div class="eyebrow">⚡ Operatividad · Productividad Picking</div>
+      <h1>Productividad Picking</h1>
+      <p>Líneas y cajas alistadas por operario (ALISTAMIENTO), complementado con ProductividadxPk del WMS.</p>
+    </div>
+
+    <div class="filtros">
+      <div><label>Mes</label><select id="fMes" onchange="render()"></select></div>
+      <div><label>Operario</label><select id="fOperario" onchange="render()"><option value="">Todos</option></select></div>
+    </div>
+
+    <div class="metrics-grid" id="metricsGrid"></div>
+
+    <div class="chart-card">
+      <h3>Ranking de Operarios — Cajas Alistadas</h3>
+      <div class="chart-wrap"><canvas id="cRanking"></canvas></div>
+    </div>
+
+    <div class="tbl-wrap">
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Operario</th><th>Comprobantes</th><th>Líneas</th><th>Cajas</th><th>Tiempo Total (min)</th></tr></thead>
+          <tbody id="tblBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+applyTheme();
+let alistamiento = [];
+let charts = {};
+const SIN_OPERARIO = 'Sin operario asignado';
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+function poblarFiltros() {
+  const meses = [...new Set(alistamiento.map(r=>r.periodo_id))].sort();
+  const sel = document.getElementById('fMes');
+  sel.innerHTML = `<option value="">Todos los meses</option>` + meses.map(m=>{
+    const label = CONFIG.meses.find(x=>x.id===m)?.label || m;
+    return `<option value="${m}">${label}</option>`;
+  }).join('');
+  if (meses.length) sel.value = meses[meses.length-1];
+
+  const ops = [...new Set(alistamiento.map(r=>r.operario||SIN_OPERARIO))].sort();
+  document.getElementById('fOperario').innerHTML = `<option value="">Todos</option>` + ops.map(o=>`<option value="${o}">${o}</option>`).join('');
+}
+
+function filtrar() {
+  const mes = document.getElementById('fMes').value;
+  const op = document.getElementById('fOperario').value;
+  return alistamiento.filter(r => {
+    const opNombre = r.operario || SIN_OPERARIO;
+    return (!mes || r.periodo_id===mes) && (!op || opNombre===op);
+  });
+}
+
+function render() {
+  const data = filtrar();
+  const porOperario = {};
+  data.forEach(r => {
+    const op = r.operario || SIN_OPERARIO;
+    porOperario[op] = porOperario[op] || { comprobantes:new Set(), lineas:0, cajas:0, tiempoMin:0 };
+    if (r.comprobante) porOperario[op].comprobantes.add(r.comprobante);
+    porOperario[op].lineas++;
+    porOperario[op].cajas += (r.cantidad_cajas||0);
+    const t = parseFloat(r.tiempo_real); if (!isNaN(t)) porOperario[op].tiempoMin += t;
+  });
+
+  const nombrados = Object.keys(porOperario).filter(o=>o!==SIN_OPERARIO);
+  const sinAsignar = porOperario[SIN_OPERARIO];
+  const totalCajas = data.reduce((s,r)=>s+(r.cantidad_cajas||0),0);
+
+  document.getElementById('metricsGrid').innerHTML = `
+    <div class="metric-card" style="animation-delay:.02s"><div class="metric-label">Operarios Activos</div><div class="metric-value">${nombrados.length}</div></div>
+    <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Líneas Alistadas</div><div class="metric-value">${data.length.toLocaleString('es-CO')}</div></div>
+    <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Cajas Alistadas</div><div class="metric-value">${totalCajas.toLocaleString('es-CO')}</div></div>
+    <div class="metric-card" style="animation-delay:.11s"><div class="metric-label">Sin Operario Asignado</div><div class="metric-value" style="color:var(--muted)">${sinAsignar?sinAsignar.lineas:0}</div></div>
+  `;
+
+  const ranking = nombrados.map(o=>({op:o, ...porOperario[o]})).sort((a,b)=>b.cajas-a.cajas).slice(0,20);
+  destroyChart('cRanking');
+  charts.cRanking = new Chart(document.getElementById('cRanking'), {
+    type:'bar',
+    data:{ labels:ranking.map(r=>r.op), datasets:[{ label:'Cajas Alistadas', data:ranking.map(r=>r.cajas), backgroundColor:'#F2994A' }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{display:false}} } }
+  });
+
+  const filas = [...nombrados.sort((a,b)=>porOperario[b].cajas-porOperario[a].cajas)];
+  if (sinAsignar) filas.push(SIN_OPERARIO);
+  document.getElementById('tblBody').innerHTML = filas.map(op=>{
+    const d = porOperario[op];
+    const cls = op===SIN_OPERARIO ? 'sin-asignar' : '';
+    return `<tr class="${cls}"><td>${op}</td><td>${d.comprobantes.size}</td><td>${d.lineas}</td><td>${d.cajas.toLocaleString('es-CO')}</td><td>${Math.round(d.tiempoMin)}</td></tr>`;
+  }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
+}
+
+async function cargarDatos() {
+  try { alistamiento = await sb.rest('GET','op_alistamiento?order=periodo_id.asc,dia.asc') || []; }
+  catch(e) { alistamiento = []; console.error(e); }
+  poblarFiltros();
+  render();
+}
+
+window.addEventListener('load', async () => {
+  const user = await checkAuth(); if (!user) return;
+  renderUser();
+  await cargarDatos();
+  const ol = document.getElementById('overlay');
+  setTimeout(() => ol.classList.add('out'), 200);
+  setTimeout(() => ol.remove(), 600);
+});
+</script>
+</body>
+</html>

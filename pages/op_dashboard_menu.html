@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Operatividad · Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <style>
+    :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--op-accent);font-weight:600;margin-bottom:.3rem}
+    .page-title{font-size:clamp(1.4rem,4vw,1.9rem);font-weight:800;line-height:1.1}
+    .page-sub{color:var(--muted);font-size:.85rem;margin-top:.25rem}
+    .pg-hdr{margin-bottom:1.75rem}
+
+    .op-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem}
+    @media(max-width:767px){.op-grid{grid-template-columns:1fr 1fr;gap:.65rem}}
+    @media(max-width:479px){.op-grid{grid-template-columns:1fr;gap:.6rem}}
+    @media(min-width:1920px){.op-grid{grid-template-columns:repeat(4,1fr)}}
+
+    .op-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r-lg);padding:1.25rem;
+      display:flex;flex-direction:column;gap:.6rem;
+      transition:transform .2s,border-color .2s,box-shadow .2s;
+      animation:fadeUp .4s ease both;position:relative;overflow:hidden;
+      text-decoration:none;color:inherit;border-color:rgba(242,153,74,.25);
+    }
+    .op-card:hover{transform:translateY(-3px);box-shadow:0 8px 30px rgba(242,153,74,.15);border-color:var(--op-accent)}
+    .op-card:active{transform:translateY(-1px)}
+    .card-top{display:flex;align-items:flex-start;justify-content:space-between}
+    .op-icon{width:40px;height:40px;border-radius:10px;background:rgba(242,153,74,.08);border:1px solid rgba(242,153,74,.3);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+    .op-code{font-family:'Syne',sans-serif;font-size:.7rem;font-weight:700;color:var(--op-accent);letter-spacing:.1em}
+    .op-name{font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;line-height:1.3}
+    .op-card-footer{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:.6rem;border-top:1px solid var(--border)}
+    .op-paso{font-size:.66rem;color:var(--dim)}
+    .op-arrow{font-size:.9rem;color:var(--op-accent);transition:transform .2s}
+    .op-card:hover .op-arrow{transform:translateX(4px)}
+
+    @media(max-width:479px){
+      .op-card{padding:1rem;gap:.45rem}
+      .op-icon{width:34px;height:34px;font-size:1rem}
+      .op-name{font-size:.82rem}
+    }
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--op-accent)">🚚 Operatividad</span>
+    <span class="topbar-sep">/</span><span class="topbar-title">📊 Dashboard</span>
+    <div class="topbar-spacer"></div>
+    <a href="menu.html#tab-operatividad" class="btn btn-sm">← Operatividad</a>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+      <button class="theme-btn" onclick="setTheme('sepia')" title="Sepia">📜</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="pg-hdr">
+      <div class="eyebrow">🚚 Operatividad · Dashboard</div>
+      <h1 class="page-title">Indicadores de Operatividad</h1>
+      <p class="page-sub">Recibo, picking, productividad y ocupación del CEDI</p>
+    </div>
+
+    <div class="op-grid" id="opGrid"></div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+  applyTheme();
+
+  function buildGrid() {
+    const kpis = CONFIG.operatividad.dashboardKpis;
+    document.getElementById('opGrid').innerHTML = kpis.map((k, i) => `
+      <a href="${k.href}" class="op-card" style="animation-delay:${.05*(i+1)}s">
+        <div class="card-top">
+          <div class="op-icon">${k.icon}</div>
+        </div>
+        <div class="op-code">${k.code}</div>
+        <div class="op-name">${k.name}</div>
+        <div class="op-card-footer">
+          <span class="op-paso">Paso ${i+1} de ${kpis.length}</span>
+          <span class="op-arrow">→</span>
+        </div>
+      </a>`).join('');
+  }
+
+  window.addEventListener('load', async () => {
+    const user = await checkAuth(); if (!user) return;
+    renderUser();
+    buildGrid();
+    const ol = document.getElementById('overlay');
+    setTimeout(() => ol.classList.add('out'), 150);
+    setTimeout(() => ol.remove(), 550);
+  });
+</script>
+</body>
+</html>

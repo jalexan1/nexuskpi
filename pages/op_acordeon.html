@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Acordeón de Productividad</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
+    html,body{height:100%;overflow:hidden}
+    .kiosk{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column}
+    .kiosk-hdr{display:flex;align-items:center;gap:.75rem;padding:1.5rem 2.5rem .5rem}
+    .kiosk-brand{display:flex;align-items:center;gap:.6rem;font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem}
+    .kiosk-dot{width:10px;height:10px;border-radius:50%;background:var(--op-accent);box-shadow:0 0 10px var(--op-accent)}
+    .kiosk-clock{margin-left:auto;font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;color:var(--muted)}
+
+    .slide{position:absolute;inset:0;padding:2rem 2.5rem;opacity:0;transition:opacity .8s ease;pointer-events:none;display:flex;flex-direction:column}
+    .slide.on{opacity:1;pointer-events:auto}
+    .slide-stage{flex:1;position:relative;margin-top:5.5rem}
+
+    .slide-title{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:800;margin-bottom:.35rem;display:flex;align-items:center;gap:.6rem}
+    .slide-sub{color:var(--muted);font-size:.95rem;margin-bottom:1.5rem}
+
+    .big-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1.25rem;margin-bottom:1.5rem}
+    .big-metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.75rem;text-align:center}
+    .big-metric .val{font-family:'Syne',sans-serif;font-size:2.8rem;font-weight:800;color:var(--op-accent)}
+    .big-metric .lbl{font-size:.85rem;color:var(--muted);margin-top:.4rem}
+
+    .big-chart{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.5rem;min-height:280px;position:relative}
+
+    .progress-strip{position:fixed;bottom:0;left:0;height:4px;background:linear-gradient(90deg,var(--op-accent),var(--op-accent2));width:0%;transition:width .1s linear}
+    .dots{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:.4rem}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--border2)}
+    .dot.on{background:var(--op-accent)}
+
+    .exit-btn{position:fixed;top:1.25rem;right:1.5rem;opacity:0;transition:opacity .3s;z-index:20}
+    .exit-btn.show{opacity:1}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="kiosk">
+  <div class="kiosk-hdr">
+    <div class="kiosk-brand"><span class="kiosk-dot"></span>NexusKPI · Operatividad</div>
+    <div class="kiosk-clock" id="reloj"></div>
+  </div>
+  <div id="slides"></div>
+  <div class="progress-strip" id="progressStrip"></div>
+  <div class="dots" id="dots"></div>
+</div>
+<a href="op_dashboard_menu.html" class="btn btn-sm exit-btn" id="exitBtn">✕ Salir</a>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+applyTheme();
+let intervaloSegundos = 300;
+let slideActual = 0;
+let charts = {};
+let recibo=[], alistamiento=[], densidad=[];
+
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+function reloj() {
+  document.getElementById('reloj').textContent = new Date().toLocaleTimeString('es-CO');
+}
+
+// ── Inactividad: mostrar botón salir solo al mover mouse/tocar ─────────────
+let inactTimer;
+function mostrarExit() {
+  const btn = document.getElementById('exitBtn');
+  btn.classList.add('show');
+  clearTimeout(inactTimer);
+  inactTimer = setTimeout(() => btn.classList.remove('show'), 4000);
+}
+['mousemove','touchstart','keydown'].forEach(ev => document.addEventListener(ev, mostrarExit));
+
+async function leerIntervalo() {
+  try {
+    const rows = await sb.rest('GET', `op_parametros?clave=eq.acordeon_intervalo_segundos&select=valor`);
+    const v = rows && rows[0] && parseInt(rows[0].valor, 10);
+    if (v && v > 0) intervaloSegundos = v;
+  } catch(e) { /* usa el valor por defecto (300s) si falla */ }
+}
+
+function fmtMin(mins){ const h=Math.floor(mins/60), m=Math.round(mins%60); return h?`${h}h ${m}m`:`${m}m`; }
+
+// ── Construcción de las 4 diapositivas ──────────────────────────────────────
+function construirSlides() {
+  const cont = document.getElementById('slides');
+  cont.innerHTML = `
+    <div class="slide" id="slide-0" data-icon="📥" data-titulo="Productividad Recibo">
+      <div class="slide-title">📥 Productividad Recibo</div>
+      <div class="slide-sub">Mes más reciente cargado</div>
+      <div class="slide-stage">
+        <div class="big-metrics" id="s0-metrics"></div>
+        <div class="big-chart"><canvas id="s0-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="slide" id="slide-1" data-icon="⚡" data-titulo="Productividad Picking">
+      <div class="slide-title">⚡ Productividad Picking</div>
+      <div class="slide-sub">Mes más reciente cargado</div>
+      <div class="slide-stage">
+        <div class="big-metrics" id="s1-metrics"></div>
+        <div class="big-chart"><canvas id="s1-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="slide" id="slide-2" data-icon="🌊" data-titulo="Olas del Día">
+      <div class="slide-title">🌊 Olas del Día</div>
+      <div class="slide-sub" id="s2-sub">—</div>
+      <div class="slide-stage">
+        <div class="big-metrics" id="s2-metrics"></div>
+        <div class="big-chart"><canvas id="s2-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="slide" id="slide-3" data-icon="🏗️" data-titulo="Ocupación CEDI">
+      <div class="slide-title">🏗️ Ocupación CEDI</div>
+      <div class="slide-sub">Mes más reciente cargado</div>
+      <div class="slide-stage">
+        <div class="big-metrics" id="s3-metrics"></div>
+        <div class="big-chart"><canvas id="s3-chart"></canvas></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('dots').innerHTML = [0,1,2,3].map(i=>`<div class="dot" id="dot-${i}"></div>`).join('');
+}
+
+function mesMasReciente(rows) {
+  const meses = [...new Set(rows.map(r=>r.periodo_id))].sort();
+  return meses[meses.length-1] || null;
+}
+
+function renderSlide0() {
+  const mes = mesMasReciente(recibo);
+  const data = recibo.filter(r=>r.periodo_id===mes);
+  const conCita = data.filter(r=>r.tiene_cita).length;
+  const porOperario = {};
+  data.forEach(r=>{ const op=r.operario||'Sin asignar'; porOperario[op]=(porOperario[op]||0)+(r.cantidad_recibo_unidades||0); });
+  const top = Object.entries(porOperario).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  document.getElementById('s0-metrics').innerHTML = `
+    <div class="big-metric"><div class="val">${data.length}</div><div class="lbl">Recepciones</div></div>
+    <div class="big-metric"><div class="val">${data.length?Math.round(conCita/data.length*100):0}%</div><div class="lbl">Con Cita</div></div>
+    <div class="big-metric"><div class="val">${data.reduce((s,r)=>s+(r.cantidad_recibo_unidades||0),0).toLocaleString('es-CO')}</div><div class="lbl">Unidades Recibidas</div></div>
+  `;
+  destroyChart('s0');
+  charts.s0 = new Chart(document.getElementById('s0-chart'), {
+    type:'bar',
+    data:{ labels:top.map(t=>t[0]), datasets:[{ label:'Unidades', data:top.map(t=>t[1]), backgroundColor:'#F2994A' }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{display:false}} } }
+  });
+}
+
+function renderSlide1() {
+  const mes = mesMasReciente(alistamiento);
+  const data = alistamiento.filter(r=>r.periodo_id===mes);
+  const porOperario = {};
+  data.forEach(r=>{ const op=r.operario||'Sin asignar'; porOperario[op]=(porOperario[op]||0)+(r.cantidad_cajas||0); });
+  const top = Object.entries(porOperario).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const comprobantes = new Set(data.map(r=>r.comprobante)).size;
+
+  document.getElementById('s1-metrics').innerHTML = `
+    <div class="big-metric"><div class="val">${comprobantes}</div><div class="lbl">Comprobantes</div></div>
+    <div class="big-metric"><div class="val">${data.reduce((s,r)=>s+(r.cantidad_cajas||0),0).toLocaleString('es-CO')}</div><div class="lbl">Cajas Alistadas</div></div>
+    <div class="big-metric"><div class="val">${Object.keys(porOperario).length}</div><div class="lbl">Operarios Activos</div></div>
+  `;
+  destroyChart('s1');
+  charts.s1 = new Chart(document.getElementById('s1-chart'), {
+    type:'bar',
+    data:{ labels:top.map(t=>t[0]), datasets:[{ label:'Cajas', data:top.map(t=>t[1]), backgroundColor:'#00D4FF' }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{display:false}} } }
+  });
+}
+
+function renderSlide2() {
+  const hoy = new Date();
+  const hoyISO = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+  let data = alistamiento.filter(r=>r.dia===hoyISO);
+  let etiqueta = 'Hoy';
+  if (!data.length) {
+    // Si no hay carga de hoy (dato histórico), usa la última ola disponible
+    const ultimoDia = [...new Set(alistamiento.map(r=>r.dia))].filter(Boolean).sort().pop();
+    data = alistamiento.filter(r=>r.dia===ultimoDia);
+    etiqueta = ultimoDia || '—';
+  }
+  document.getElementById('s2-sub').textContent = `Ola del ${etiqueta}`;
+  const comprobantes = new Set(data.map(r=>r.comprobante)).size;
+  const operarios = new Set(data.map(r=>r.operario).filter(Boolean)).size;
+  const tiempoTotal = data.reduce((s,r)=>{ const t=parseFloat(r.tiempo_real); return s+(isNaN(t)?0:t); },0);
+
+  document.getElementById('s2-metrics').innerHTML = `
+    <div class="big-metric"><div class="val">${comprobantes}</div><div class="lbl">Comprobantes</div></div>
+    <div class="big-metric"><div class="val">${data.reduce((s,r)=>s+(r.cantidad_cajas||0),0).toLocaleString('es-CO')}</div><div class="lbl">Cajas</div></div>
+    <div class="big-metric"><div class="val">${operarios}</div><div class="lbl">Operarios</div></div>
+    <div class="big-metric"><div class="val">${fmtMin(tiempoTotal)}</div><div class="lbl">Tiempo Total</div></div>
+  `;
+  const porSku = {};
+  data.forEach(r=>{ const s=r.sku||'—'; porSku[s]=(porSku[s]||0)+(r.cantidad_cajas||0); });
+  const top = Object.entries(porSku).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  destroyChart('s2');
+  charts.s2 = new Chart(document.getElementById('s2-chart'), {
+    type:'bar',
+    data:{ labels:top.map(t=>t[0]), datasets:[{ label:'Cajas', data:top.map(t=>t[1]), backgroundColor:'#7B2FFF' }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{color:'rgba(255,255,255,.04)'}} } }
+  });
+}
+
+function renderSlide3() {
+  const mes = mesMasReciente(densidad);
+  const data = densidad.filter(r=>r.periodo_id===mes);
+  const vals = data.map(r=>r.ocupacion||0);
+  const prom = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+  const pct = prom<=1 ? Math.round(prom*10000)/100 : Math.round(prom*100)/100;
+
+  const porZona = {};
+  data.forEach(r=>{ const z=r.zona||'—'; porZona[z]=porZona[z]||{s:0,n:0}; porZona[z].s+=(r.ocupacion||0); porZona[z].n++; });
+  const zonas = Object.keys(porZona).sort();
+
+  document.getElementById('s3-metrics').innerHTML = `
+    <div class="big-metric"><div class="val">${pct}%</div><div class="lbl">Ocupación Promedio</div></div>
+    <div class="big-metric"><div class="val">${data.length.toLocaleString('es-CO')}</div><div class="lbl">Ubicaciones</div></div>
+    <div class="big-metric"><div class="val">${zonas.length}</div><div class="lbl">Zonas</div></div>
+  `;
+  destroyChart('s3');
+  charts.s3 = new Chart(document.getElementById('s3-chart'), {
+    type:'bar',
+    data:{ labels:zonas, datasets:[{ label:'Ocupación %', data:zonas.map(z=>{const v=porZona[z].s/porZona[z].n; return v<=1?Math.round(v*10000)/100:Math.round(v*100)/100;}), backgroundColor:'#00FF88' }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{beginAtZero:true, max:100, grid:{color:'rgba(255,255,255,.04)'}}, x:{grid:{display:false}} } }
+  });
+}
+
+const RENDERERS = [renderSlide0, renderSlide1, renderSlide2, renderSlide3];
+
+function irASlide(i) {
+  document.querySelectorAll('.slide').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.dot').forEach(d=>d.classList.remove('on'));
+  document.getElementById('slide-'+i).classList.add('on');
+  document.getElementById('dot-'+i).classList.add('on');
+  RENDERERS[i]();
+  slideActual = i;
+}
+
+let cicloTimer, progressTimer, progressPct;
+async function iniciarCiclo() {
+  clearTimeout(cicloTimer); clearInterval(progressTimer);
+  await leerIntervalo(); // relee el parámetro en cada ciclo para reflejar cambios sin recargar
+  progressPct = 0;
+  const strip = document.getElementById('progressStrip');
+  progressTimer = setInterval(() => {
+    progressPct += (100 / (intervaloSegundos*10));
+    strip.style.width = Math.min(progressPct,100) + '%';
+  }, 100);
+  cicloTimer = setTimeout(async () => {
+    irASlide((slideActual+1) % 4);
+    await iniciarCiclo();
+  }, intervaloSegundos*1000);
+}
+
+async function cargarDatos() {
+  try {
+    const [r,a,d] = await Promise.all([
+      sb.rest('GET','op_recibo?order=periodo_id.asc'),
+      sb.rest('GET','op_alistamiento?order=periodo_id.asc,dia.asc'),
+      sb.rest('GET','op_densidad_ubicacion?order=periodo_id.asc'),
+    ]);
+    recibo = r||[]; alistamiento = a||[]; densidad = d||[];
+  } catch(e) { recibo=[]; alistamiento=[]; densidad=[]; console.error(e); }
+}
+
+window.addEventListener('load', async () => {
+  const user = await checkAuth(); if (!user) return;
+  construirSlides();
+  await cargarDatos();
+  await leerIntervalo();
+  irASlide(0);
+  iniciarCiclo();
+  reloj(); setInterval(reloj, 1000);
+  mostrarExit();
+  const ol = document.getElementById('overlay');
+  setTimeout(() => ol.classList.add('out'), 200);
+  setTimeout(() => ol.remove(), 600);
+});
+</script>
+</body>
+</html>

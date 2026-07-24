@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Operatividad · Recibo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
+    .content{padding:1.5rem;max-width:1280px;margin:0 auto;width:100%}
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--op-accent);font-weight:600;margin-bottom:.3rem}
+    .pg-hdr h1{font-size:clamp(1.2rem,3vw,1.5rem);font-weight:800}
+    .pg-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem;margin-bottom:1.25rem}
+
+    .tabs-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 1.25rem;gap:.1rem;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--topbar-h);z-index:90;margin:0 -1.5rem 1.25rem}
+    .tab-btn{padding:.75rem .95rem;font-size:.82rem;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+    .tab-btn.on{color:var(--op-accent);border-bottom-color:var(--op-accent)}
+    .tab-panel{display:none}.tab-panel.on{display:block}
+
+    .filtros{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem}
+    .filtros select,.filtros input{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.8rem;padding:.4rem .65rem;outline:none;cursor:pointer}
+    .filtros select:focus,.filtros input:focus{border-color:var(--op-accent)}
+    .filtros label{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:.25rem}
+
+    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.85rem;margin-bottom:1.25rem}
+    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;animation:fadeUp .35s ease both}
+    .metric-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
+    .metric-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800}
+    .metric-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem}
+
+    .charts-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:1rem;margin-bottom:1.25rem}
+    @media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:320px;display:flex;flex-direction:column}
+    .chart-card h3{font-size:.85rem;font-weight:700;margin-bottom:.6rem}
+    .chart-wrap{flex:1;position:relative}
+
+    .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1.25rem}
+    .tbl-scroll{overflow-x:auto;max-height:480px;overflow-y:auto}
+    table{width:100%;border-collapse:collapse;font-size:.78rem}
+    thead th{text-align:left;padding:.5rem .7rem;font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;white-space:nowrap}
+    tbody tr{border-bottom:1px solid var(--border)}
+    tbody tr:hover{background:var(--surface2)}
+    tbody td{padding:.42rem .7rem;white-space:nowrap}
+    .cua-title{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:var(--warn);margin:1.25rem 0 .6rem;display:flex;align-items:center;gap:.4rem}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="op_dashboard_menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--op-accent)">🚚 Operatividad</span>
+    <span class="topbar-sep">/</span><span class="topbar-title">📥 Recibo</span>
+    <div class="topbar-spacer"></div>
+    <a href="op_dashboard_menu.html" class="btn btn-sm">← Dashboard</a>
+    <div class="theme-bar"><button class="theme-btn" onclick="setTheme('')">🌙</button><button class="theme-btn" onclick="setTheme('light')">☀️</button></div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="pg-hdr">
+      <div class="eyebrow">📥 Operatividad · Recibo</div>
+      <h1>Recibo</h1>
+      <p>Recepciones con cita y sin cita, volumen y tiempos de descargue.</p>
+    </div>
+
+    <nav class="tabs-nav">
+      <button class="tab-btn on" onclick="tab('resumen',this)">📊 Resumen</button>
+      <button class="tab-btn" onclick="tab('detalle',this)">📋 Detalle</button>
+    </nav>
+
+    <div class="filtros">
+      <div><label>Mes</label><select id="fMes" onchange="render()"></select></div>
+      <div><label>Proveedor</label><select id="fProveedor" onchange="render()"><option value="">Todos</option></select></div>
+      <div><label>Familia</label><select id="fFamilia" onchange="render()"><option value="">Todas</option></select></div>
+      <div><label>Cita</label><select id="fCita" onchange="render()"><option value="">Con cita y sin cita</option><option value="true">Con cita</option><option value="false">Sin cita</option></select></div>
+    </div>
+
+    <!-- ══ RESUMEN ══ -->
+    <div class="tab-panel on" id="tab-resumen">
+      <div class="metrics-grid" id="metricsGrid"></div>
+      <div class="charts-grid">
+        <div class="chart-card"><h3>Recepciones por día — Con cita vs Sin cita</h3><div class="chart-wrap"><canvas id="cDia"></canvas></div></div>
+        <div class="chart-card"><h3>Con cita vs Sin cita</h3><div class="chart-wrap"><canvas id="cCita"></canvas></div></div>
+      </div>
+      <div class="chart-card" style="height:340px">
+        <h3>Diferencia Pedido vs Recibido por Proveedor (unidades)</h3>
+        <div class="chart-wrap"><canvas id="cProveedor"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ══ DETALLE ══ -->
+    <div class="tab-panel" id="tab-detalle">
+      <div class="tbl-wrap">
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr>
+              <th>Fecha Recibo</th><th>Documento</th><th>Proveedor</th><th>Referencia</th>
+              <th>Uds. Recibo</th><th>Cajas</th><th>Operario</th><th>Cita</th><th>Hora TT Recibo</th>
+            </tr></thead>
+            <tbody id="detalleBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="cua-title">⚠️ Cuarentena — Registros con fallas <span class="badge badge-warn" id="cntCua"></span></div>
+      <div class="tbl-wrap">
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr><th>Documento</th><th>Referencia</th><th>Fecha</th><th>Causal</th></tr></thead>
+            <tbody id="cuaBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+applyTheme();
+let allData = [];
+let charts = {};
+
+function tab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
+  document.getElementById('tab-' + id).classList.add('on');
+  btn.classList.add('on');
+}
+
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+function horasEntre(hIni, hFin) {
+  if (!hIni || !hFin) return null;
+  const [h1,m1] = hIni.split(':').map(Number), [h2,m2] = hFin.split(':').map(Number);
+  let mins = (h2*60+m2) - (h1*60+m1);
+  if (mins < 0) mins += 1440;
+  return Math.round((mins/60)*100)/100;
+}
+
+function poblarFiltros() {
+  const meses = [...new Set(allData.map(r=>r.periodo_id))].sort();
+  const sel = document.getElementById('fMes');
+  sel.innerHTML = `<option value="">Todos los meses</option>` + meses.map(m=>{
+    const label = CONFIG.meses.find(x=>x.id===m)?.label || m;
+    return `<option value="${m}">${label}</option>`;
+  }).join('');
+  if (meses.length) sel.value = meses[meses.length-1];
+
+  const provs = [...new Set(allData.map(r=>r.proveedor).filter(Boolean))].sort();
+  document.getElementById('fProveedor').innerHTML = `<option value="">Todos</option>` + provs.map(p=>`<option value="${p}">${p}</option>`).join('');
+
+  const familias = [...new Set(allData.map(r=>r.familia).filter(Boolean))].sort();
+  document.getElementById('fFamilia').innerHTML = `<option value="">Todas</option>` + familias.map(f=>`<option value="${f}">${f}</option>`).join('');
+}
+
+function filtrar() {
+  const mes = document.getElementById('fMes').value;
+  const prov = document.getElementById('fProveedor').value;
+  const fam = document.getElementById('fFamilia').value;
+  const cita = document.getElementById('fCita').value;
+  return allData.filter(r =>
+    (!mes || r.periodo_id===mes) &&
+    (!prov || r.proveedor===prov) &&
+    (!fam || r.familia===fam) &&
+    (cita==='' || String(r.tiene_cita)===cita)
+  );
+}
+
+function render() {
+  const data = filtrar();
+  const conCita = data.filter(r=>r.tiene_cita).length;
+  const sinCita = data.length - conCita;
+  const uds = data.reduce((s,r)=>s+(r.cantidad_recibo_unidades||0),0);
+  const cajas = data.reduce((s,r)=>s+(r.cantidad_recibo_cajas||0),0);
+  const tiempos = data.map(r=>horasEntre(r.hora_inicio_descargue,r.hora_final_descargue)).filter(t=>t!==null && t>0 && t<24);
+  const tProm = tiempos.length ? Math.round(tiempos.reduce((a,b)=>a+b,0)/tiempos.length*100)/100 : null;
+
+  document.getElementById('metricsGrid').innerHTML = `
+    <div class="metric-card" style="animation-delay:.02s"><div class="metric-label">Total Recibos</div><div class="metric-value">${data.length}</div></div>
+    <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Con Cita</div><div class="metric-value" style="color:var(--ok)">${conCita}</div><div class="metric-sub">${data.length?Math.round(conCita/data.length*100):0}% del total</div></div>
+    <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Sin Cita</div><div class="metric-value" style="color:var(--warn)">${sinCita}</div><div class="metric-sub">${data.length?Math.round(sinCita/data.length*100):0}% del total</div></div>
+    <div class="metric-card" style="animation-delay:.11s"><div class="metric-label">Unidades Recibidas</div><div class="metric-value">${uds.toLocaleString('es-CO')}</div></div>
+    <div class="metric-card" style="animation-delay:.14s"><div class="metric-label">Cajas Recibidas</div><div class="metric-value">${cajas.toLocaleString('es-CO')}</div></div>
+    <div class="metric-card" style="animation-delay:.17s"><div class="metric-label">Tiempo Prom. Descargue</div><div class="metric-value">${tProm ?? '—'}<span style="font-size:.9rem">h</span></div></div>
+  `;
+
+  // Chart: recepciones por día, con/sin cita
+  const porDia = {};
+  data.forEach(r => { if(!r.fecha_recibo) return; porDia[r.fecha_recibo] = porDia[r.fecha_recibo] || {con:0,sin:0}; r.tiene_cita ? porDia[r.fecha_recibo].con++ : porDia[r.fecha_recibo].sin++; });
+  const dias = Object.keys(porDia).sort();
+  destroyChart('cDia');
+  charts.cDia = new Chart(document.getElementById('cDia'), {
+    type:'bar',
+    data:{ labels:dias, datasets:[
+      { label:'Con cita', data:dias.map(d=>porDia[d].con), backgroundColor:'#00D4FF' },
+      { label:'Sin cita',  data:dias.map(d=>porDia[d].sin), backgroundColor:'#F2994A' },
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{stacked:true, grid:{color:'rgba(255,255,255,.04)'}}, y:{stacked:true, grid:{color:'rgba(255,255,255,.04)'}} } }
+  });
+
+  // Chart: donut con/sin cita
+  destroyChart('cCita');
+  charts.cCita = new Chart(document.getElementById('cCita'), {
+    type:'doughnut',
+    data:{ labels:['Con cita','Sin cita'], datasets:[{ data:[conCita,sinCita], backgroundColor:['#00D4FF','#F2994A'] }] },
+    options:{ responsive:true, maintainAspectRatio:false }
+  });
+
+  // Chart: diferencia por proveedor
+  const porProv = {};
+  data.forEach(r => { const p=r.proveedor||'—'; porProv[p]=(porProv[p]||0)+(r.diferencia_unidades||0); });
+  const topProv = Object.entries(porProv).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,12);
+  destroyChart('cProveedor');
+  charts.cProveedor = new Chart(document.getElementById('cProveedor'), {
+    type:'bar',
+    data:{ labels:topProv.map(p=>p[0]), datasets:[{ label:'Diferencia Unidades', data:topProv.map(p=>p[1]), backgroundColor:topProv.map(p=>p[1]<0?'#FF4D6D':'#00FF88') }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{display:false}} } }
+  });
+
+  // Detalle tabla
+  document.getElementById('detalleBody').innerHTML = data.slice(0,500).map(r=>`<tr>
+    <td>${r.fecha_recibo||'—'}</td><td>${r.documento||'—'}</td><td>${r.proveedor||'—'}</td><td>${r.referencia||'—'}</td>
+    <td>${(r.cantidad_recibo_unidades||0).toLocaleString('es-CO')}</td><td>${(r.cantidad_recibo_cajas||0).toLocaleString('es-CO')}</td>
+    <td>${r.operario||'—'}</td>
+    <td><span class="badge ${r.tiene_cita?'badge-ok':'badge-warn'}">${r.tiene_cita?'Con cita':'Sin cita'}</span></td>
+    <td>${r.hora_tt_recibo_txt||'—'}</td>
+  </tr>`).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
+
+  // Cuarentena
+  const cua = data.filter(r=>r.is_inconsistente);
+  document.getElementById('cntCua').textContent = cua.length;
+  document.getElementById('cuaBody').innerHTML = cua.map(r=>`<tr><td>${r.documento||'—'}</td><td>${r.referencia||'—'}</td><td>${r.fecha_recibo||'—'}</td><td>${r.causal_inconsistencia||'—'}</td></tr>`).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:.85rem">Sin registros en cuarentena.</td></tr>`;
+}
+
+async function cargarDatos() {
+  try {
+    allData = await sb.rest('GET', 'op_recibo?order=periodo_id.asc,fecha_recibo.asc') || [];
+  } catch(e) { allData = []; console.error(e); }
+  poblarFiltros();
+  render();
+}
+
+window.addEventListener('load', async () => {
+  const user = await checkAuth(); if (!user) return;
+  renderUser();
+  await cargarDatos();
+  const ol = document.getElementById('overlay');
+  setTimeout(() => ol.classList.add('out'), 200);
+  setTimeout(() => ol.remove(), 600);
+});
+</script>
+</body>
+</html>

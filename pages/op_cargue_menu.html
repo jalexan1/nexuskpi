@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Operatividad · Cargue de Información</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <style>
+    /* ── Tema OP (Operatividad) — acento ámbar, no toca --accent global ── */
+    :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--op-accent);font-weight:600;margin-bottom:.3rem}
+    .op-hdr h1{font-size:clamp(1.3rem,4vw,1.6rem);font-weight:800}
+    .op-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem;margin-bottom:1.5rem}
+
+    .grid-op{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem}
+    @media(max-width:799px){.grid-op{grid-template-columns:1fr}}
+
+    .op-link-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--r-lg);padding:1.5rem;
+      cursor:pointer;transition:transform .18s,border-color .18s,box-shadow .18s;
+      animation:fadeUp .4s ease both;text-decoration:none;display:block;
+      border-color:rgba(242,153,74,.3);
+    }
+    .op-link-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(242,153,74,.15);border-color:var(--op-accent)}
+    .op-link-card h2{font-size:1rem;font-weight:700;margin-bottom:.35rem;display:flex;align-items:center;gap:.5rem;color:var(--text)}
+    .op-link-card .desc{font-size:.78rem;color:var(--muted);margin-bottom:1rem;line-height:1.55}
+    .op-link-row{display:flex;align-items:center;justify-content:space-between;padding:.7rem 1rem;border-radius:var(--r-sm);background:rgba(242,153,74,.06);border:1px solid rgba(242,153,74,.2)}
+    .op-link-row span{font-size:.82rem;color:var(--muted)}
+    .op-link-row .arr{font-size:1.1rem;color:var(--op-accent)}
+
+    @media(max-width:479px){
+      .op-link-card{padding:1rem}
+      .op-link-card h2{font-size:.88rem}
+    }
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Verificando acceso…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-title" style="color:var(--op-accent)">🚚 Operatividad</span>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-title">📤 Cargue de Información</span>
+    <div class="topbar-spacer"></div>
+    <a href="menu.html#tab-operatividad" class="btn btn-sm">← Operatividad</a>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+      <button class="theme-btn" onclick="setTheme('sepia')" title="Sepia">📜</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="op-hdr">
+      <div class="eyebrow">🚚 Operatividad · Fase 2</div>
+      <h1>Cargue de Información</h1>
+      <p>Carga mensual de los dos archivos fuente de Operatividad. Cada uno tiene su propia pantalla con validación de nombre, validación de mes, cuarentena y opción de eliminar el mes procesado.</p>
+    </div>
+
+    <div class="grid-op">
+
+      <a href="op_cargue_seguimiento.html" class="op-link-card" style="animation-delay:.05s">
+        <h2>📥 Seguimiento Click</h2>
+        <p class="desc">Carga el archivo <b>SEGUIMIENTO CLICK MES AÑO.xlsx</b> (hojas RECIBOS, ALISTAMIENTO y PICKING WMS). Alimenta Recibo, Productividad Recibo, Picking, Productividad Picking y Olas.</p>
+        <div class="op-link-row">
+          <span>Cargue + Reproceso + Cuarentena + Eliminar mes</span>
+          <span class="arr">→</span>
+        </div>
+      </a>
+
+      <a href="op_cargue_wms.html" class="op-link-card" style="animation-delay:.09s">
+        <h2>🗃️ WMS Base Cosmetics</h2>
+        <p class="desc">Carga el archivo <b>WMS_BASE_CLICK COSMETICS MES AÑO.xlsx</b> (Inventario por Ubicación, Densidad de Almacenamiento, Productividad Pk y Recogidas). Alimenta Ocupación CEDI y complementa Picking.</p>
+        <div class="op-link-row">
+          <span>Cargue + Reproceso + Cuarentena + Eliminar mes</span>
+          <span class="arr">→</span>
+        </div>
+      </a>
+
+    </div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+  applyTheme();
+  window.addEventListener('load', async () => {
+    const user = await checkAuth('admin'); if (!user) return;
+    renderUser();
+    const ol = document.getElementById('overlay');
+    setTimeout(() => ol.classList.add('out'), 150);
+    setTimeout(() => ol.remove(), 550);
+  });
+</script>
+</body>
+</html>
