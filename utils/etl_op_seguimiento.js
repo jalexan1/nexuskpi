@@ -132,6 +132,25 @@ function opDetectarMesPredominante(fechasISO) {
   return Object.entries(conteo).sort((a, b) => b[1] - a[1])[0][0];
 }
 
+/**
+ * opAsignarSecuencia(records, keyFn)
+ * La llave natural (periodo_id + columnas de negocio) puede repetirse dentro
+ * del mismo archivo Excel (ej. la misma referencia recibida dos veces el mismo
+ * día en el mismo documento, por líneas/lotes distintos). Se asigna un número
+ * de secuencia (1,2,3…) por cada repetición de la llave, en el orden en que
+ * aparecen las filas en el Excel, para que la llave + secuencia sí sea única
+ * y el upsert (on_conflict) funcione sin error 23505.
+ */
+function opAsignarSecuencia(records, keyFn) {
+  const contador = {};
+  records.forEach(r => {
+    const k = keyFn(r);
+    contador[k] = (contador[k] || 0) + 1;
+    r.secuencia = contador[k];
+  });
+  return records;
+}
+
 // ── Hoja RECIBOS → op_recibo ─────────────────────────────────────────────
 function opProcesarRecibos(wb, periodoId) {
   const hoja = opLeerHoja(wb, ['RECIB']);
@@ -217,6 +236,7 @@ function opProcesarRecibos(wb, periodoId) {
     records.push(record);
     if (esInc) inconsistencias.push(record);
   }
+  opAsignarSecuencia(records, r => [r.periodo_id, r.documento, r.referencia, r.fecha_recibo].join('|'));
   return { records, inconsistencias, fechasISO };
 }
 
@@ -286,6 +306,7 @@ function opProcesarAlistamiento(wb, periodoId) {
     records.push(record);
     if (esInc) inconsistencias.push(record);
   }
+  opAsignarSecuencia(records, r => [r.periodo_id, r.comprobante, r.sku, r.dia].join('|'));
   return { records, inconsistencias, fechasISO };
 }
 
@@ -355,6 +376,7 @@ function opProcesarPickingWms(wb, periodoId) {
     records.push(record);
     if (esInc) inconsistencias.push(record);
   }
+  opAsignarSecuencia(records, r => [r.periodo_id, r.pedido_wms, r.linea_de_picking, r.id_caja].join('|'));
   return { records, inconsistencias, fechasISO };
 }
 

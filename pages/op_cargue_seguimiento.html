@@ -236,11 +236,23 @@ function addLog(msg,tipo='inf'){
 }
 
 // ── Upsert por lotes ───────────────────────────────────────────────────────
+// IMPORTANTE: "resolution=merge-duplicates" por sí solo NO alcanza — PostgREST
+// necesita el parámetro on_conflict con las columnas exactas del UNIQUE
+// constraint de la tabla; si no se indica, intenta un INSERT plano y revienta
+// con 23505 (duplicate key) en vez de actualizar. Debe incluir "secuencia"
+// porque la llave de negocio puede repetirse dentro del mismo Excel.
+const ON_CONFLICT = {
+  op_recibo:       'periodo_id,documento,referencia,fecha_recibo,secuencia',
+  op_alistamiento: 'periodo_id,comprobante,sku,dia,secuencia',
+  op_picking_wms:  'periodo_id,pedido_wms,linea_de_picking,id_caja,secuencia',
+};
 async function upsertLotes(tabla, records, onProg){
   const BATCH=100;
+  const onConflict = ON_CONFLICT[tabla];
+  const path = onConflict ? `${tabla}?on_conflict=${onConflict}` : tabla;
   for(let i=0;i<records.length;i+=BATCH){
     const lote=records.slice(i,i+BATCH);
-    await sb.rest('POST',tabla,lote,{'Prefer':'resolution=merge-duplicates,return=minimal'});
+    await sb.rest('POST',path,lote,{'Prefer':'resolution=merge-duplicates,return=minimal'});
     if(onProg) onProg(Math.round(((i+lote.length)/records.length)*100));
   }
 }
@@ -411,11 +423,11 @@ async function guardarFila(i){
       causalFinal = causalNueva && causalNueva!==causalAnterior ? (causalAnterior?`${causalAnterior} | ${causalNueva}`:causalNueva) : causalAnterior;
     }
 
-    // Llave natural por hoja
+    // Llave natural por hoja + secuencia (la llave de negocio puede repetirse dentro del mismo Excel)
     let filtro;
-    if(hoja==='recibo')       filtro=`periodo_id=eq.${r.periodo_id}&documento=eq.${encodeURIComponent(r.documento)}&referencia=eq.${encodeURIComponent(r.referencia||'')}&fecha_recibo=eq.${r.fecha_recibo}`;
-    else if(hoja==='alistamiento') filtro=`periodo_id=eq.${r.periodo_id}&comprobante=eq.${encodeURIComponent(r.comprobante||'')}&sku=eq.${encodeURIComponent(r.sku||'')}&dia=eq.${r.dia}`;
-    else filtro=`periodo_id=eq.${r.periodo_id}&pedido_wms=eq.${encodeURIComponent(r.pedido_wms||'')}&linea_de_picking=eq.${encodeURIComponent(r.linea_de_picking||'')}&id_caja=eq.${encodeURIComponent(r.id_caja||'')}`;
+    if(hoja==='recibo')       filtro=`periodo_id=eq.${r.periodo_id}&documento=eq.${encodeURIComponent(r.documento)}&referencia=eq.${encodeURIComponent(r.referencia||'')}&fecha_recibo=eq.${r.fecha_recibo}&secuencia=eq.${r.secuencia}`;
+    else if(hoja==='alistamiento') filtro=`periodo_id=eq.${r.periodo_id}&comprobante=eq.${encodeURIComponent(r.comprobante||'')}&sku=eq.${encodeURIComponent(r.sku||'')}&dia=eq.${r.dia}&secuencia=eq.${r.secuencia}`;
+    else filtro=`periodo_id=eq.${r.periodo_id}&pedido_wms=eq.${encodeURIComponent(r.pedido_wms||'')}&linea_de_picking=eq.${encodeURIComponent(r.linea_de_picking||'')}&id_caja=eq.${encodeURIComponent(r.id_caja||'')}&secuencia=eq.${r.secuencia}`;
 
     await sb.rest('PATCH', `${tabla}?${filtro}`, { is_inconsistente:esInc, causal_inconsistencia:causalFinal, updated_at:new Date().toISOString() }, {'Prefer':'return=minimal'});
 

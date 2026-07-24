@@ -101,6 +101,23 @@ function opwDetectarMesPredominante(fechasISO) {
   return Object.entries(conteo).sort((a, b) => b[1] - a[1])[0][0];
 }
 
+/**
+ * opwAsignarSecuencia(records, keyFn)
+ * Igual que en etl_op_seguimiento.js: la llave natural puede repetirse dentro
+ * del mismo Excel (ej. la misma ubicación con varias cajas, o el mismo pedido
+ * con varias líneas). Se numera cada repetición (1,2,3…) para que llave +
+ * secuencia sea única y el upsert (on_conflict) no lance error 23505.
+ */
+function opwAsignarSecuencia(records, keyFn) {
+  const contador = {};
+  records.forEach(r => {
+    const k = keyFn(r);
+    contador[k] = (contador[k] || 0) + 1;
+    r.secuencia = contador[k];
+  });
+  return records;
+}
+
 // ── InventarioxUbicacion → op_inventario_ubicacion ──────────────────────────
 function opwProcesarInventarioUbicacion(wb, periodoId) {
   const hoja = opwLeerHoja(wb, ['INVENTARIOXUBICACION', 'INVENTARIO'], ['EAN', 'UBICACION', 'QTYSALDO', 'ZONA', 'ITEM']);
@@ -142,6 +159,7 @@ function opwProcesarInventarioUbicacion(wb, periodoId) {
     });
     if (esInc) inconsistencias.push(records[records.length - 1]);
   }
+  opwAsignarSecuencia(records, r => [r.periodo_id, r.ean, r.ubicacion, r.caja].join('|'));
   return { records, inconsistencias, fechasISO };
 }
 
@@ -169,6 +187,7 @@ function opwProcesarDensidadUbicacion(wb, periodoId) {
       periodo_id: periodoId,
     });
   }
+  opwAsignarSecuencia(records, r => [r.periodo_id, r.ubicacion].join('|'));
   return { records, inconsistencias: [], fechasISO: [] };
 }
 
@@ -208,6 +227,7 @@ function opwProcesarProductividadPk(wb, periodoId) {
     });
     if (esInc) inconsistencias.push(records[records.length - 1]);
   }
+  opwAsignarSecuencia(records, r => [r.periodo_id, r.pedido_wms, r.linea_de_picking, r.id_caja].join('|'));
   return { records, inconsistencias, fechasISO };
 }
 
@@ -242,6 +262,7 @@ function opwProcesarRecogidasPkRango(wb, periodoId) {
       nombre_cliente: r[C.nombreCliente] ?? null, periodo_id: periodoId,
     });
   }
+  opwAsignarSecuencia(records, r => [r.periodo_id, r.pedido_wms, r.linea_de_picking].join('|'));
   return { records, inconsistencias: [], fechasISO };
 }
 
