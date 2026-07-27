@@ -32,9 +32,12 @@
 
     .charts-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:1rem;margin-bottom:1.25rem}
     @media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
-    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:320px;display:flex;flex-direction:column}
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:320px;display:flex;flex-direction:column;min-width:0;min-height:0}
     .chart-card h3{font-size:.85rem;font-weight:700;margin-bottom:.6rem}
-    .chart-wrap{flex:1;position:relative}
+    /* fix: sin min-width/min-height:0 en el grid item, el canvas de Chart.js podía crecer más
+       que el contenedor (ej. la dona "Con cita vs Sin cita" se salía de la tarjeta al angostar
+       la ventana). overflow:hidden en el wrap es el tope físico definitivo. */
+    .chart-wrap{flex:1;position:relative;min-width:0;min-height:0;overflow:hidden}
 
     .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1.25rem}
     .tbl-scroll{overflow-x:auto;max-height:480px;overflow-y:auto}
@@ -44,6 +47,7 @@
     tbody tr:hover{background:var(--surface2)}
     tbody td{padding:.42rem .7rem;white-space:nowrap}
     .cua-title{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;color:var(--warn);margin:1.25rem 0 .6rem;display:flex;align-items:center;gap:.4rem}
+    .sec-title{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;margin:1.25rem 0 .6rem}
   </style>
 </head>
 <body>
@@ -88,6 +92,22 @@
       <div class="chart-card" style="height:340px">
         <h3>Diferencia Pedido vs Recibido por Proveedor (unidades)</h3>
         <div class="chart-wrap"><canvas id="cProveedor"></canvas></div>
+      </div>
+      <div class="chart-card" style="height:300px">
+        <h3>Unidades Recibidas por Familia (Materia Prima vs Producto Terminado)</h3>
+        <div class="chart-wrap"><canvas id="cFamilia"></canvas></div>
+      </div>
+
+      <div class="sec-title">📦 Top Productos Recibidos (por Descripción)</div>
+      <div class="tbl-wrap">
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr>
+              <th>Descripción</th><th>Familia</th><th>Recibos</th><th>Uds. Recibidas</th><th>Cajas Recibidas</th><th>% del Total Uds.</th>
+            </tr></thead>
+            <tbody id="descBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -179,13 +199,19 @@ function render() {
   const tiempos = data.map(r=>horasEntre(r.hora_inicio_descargue,r.hora_final_descargue)).filter(t=>t!==null && t>0 && t<24);
   const tProm = tiempos.length ? Math.round(tiempos.reduce((a,b)=>a+b,0)/tiempos.length*100)/100 : null;
 
+  // Fill Rate: Cantidad Pedido Unidades vs Cantidad Recibo Unidades (aprobado con el usuario)
+  const pedUds = data.reduce((s,r)=>s+(r.cantidad_pedido_unidades||0),0);
+  const brechaUds = pedUds - uds;
+  const fillRate = pedUds ? Math.round((uds/pedUds)*1000)/10 : null;
+
   document.getElementById('metricsGrid').innerHTML = `
     <div class="metric-card" style="animation-delay:.02s"><div class="metric-label">Total Recibos</div><div class="metric-value">${data.length}</div></div>
     <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Con Cita</div><div class="metric-value" style="color:var(--ok)">${conCita}</div><div class="metric-sub">${data.length?Math.round(conCita/data.length*100):0}% del total</div></div>
     <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Sin Cita</div><div class="metric-value" style="color:var(--warn)">${sinCita}</div><div class="metric-sub">${data.length?Math.round(sinCita/data.length*100):0}% del total</div></div>
     <div class="metric-card" style="animation-delay:.11s"><div class="metric-label">Unidades Recibidas</div><div class="metric-value">${uds.toLocaleString('es-CO')}</div></div>
-    <div class="metric-card" style="animation-delay:.14s"><div class="metric-label">Cajas Recibidas</div><div class="metric-value">${cajas.toLocaleString('es-CO')}</div></div>
+    <div class="metric-card" style="animation-delay:.14s"><div class="metric-label">Cajas Recibidas</div><div class="metric-value">${Math.round(cajas).toLocaleString('es-CO')}</div></div>
     <div class="metric-card" style="animation-delay:.17s"><div class="metric-label">Tiempo Prom. Descargue</div><div class="metric-value">${tProm ?? '—'}<span style="font-size:.9rem">h</span></div></div>
+    <div class="metric-card" style="animation-delay:.20s"><div class="metric-label">Fill Rate (Ped. vs Recibido)</div><div class="metric-value">${fillRate ?? '—'}${fillRate!==null?'<span style="font-size:.9rem">%</span>':''}</div><div class="metric-sub">Brecha: ${brechaUds.toLocaleString('es-CO')} uds</div></div>
   `;
 
   // Chart: recepciones por día, con/sin cita
@@ -220,6 +246,33 @@ function render() {
     data:{ labels:topProv.map(p=>p[0]), datasets:[{ label:'Diferencia Unidades', data:topProv.map(p=>p[1]), backgroundColor:topProv.map(p=>p[1]<0?'#FF4D6D':'#00FF88') }] },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{display:false}} } }
   });
+
+  // Chart: unidades recibidas por familia (Materia Prima vs Producto Terminado)
+  const porFamilia = {};
+  data.forEach(r => { const f = r.familia || 'Sin familia'; porFamilia[f] = (porFamilia[f]||0) + (r.cantidad_recibo_unidades||0); });
+  const familias = Object.entries(porFamilia).sort((a,b)=>b[1]-a[1]);
+  destroyChart('cFamilia');
+  charts.cFamilia = new Chart(document.getElementById('cFamilia'), {
+    type:'doughnut',
+    data:{ labels:familias.map(f=>f[0]), datasets:[{ data:familias.map(f=>f[1]), backgroundColor:['#B77CFF','#00FF88','#F2994A','#00D4FF'] }] },
+    options:{ responsive:true, maintainAspectRatio:false }
+  });
+
+  // Tabla: Top Productos Recibidos por Descripción, orden descendente por unidades
+  const porDesc = {};
+  data.forEach(r => {
+    const d = r.descripcion || '(sin descripción)';
+    if (!porDesc[d]) porDesc[d] = { familia: r.familia || '—', recibos:0, uds:0, cajas:0 };
+    porDesc[d].recibos++;
+    porDesc[d].uds += (r.cantidad_recibo_unidades||0);
+    porDesc[d].cajas += (r.cantidad_recibo_cajas||0);
+  });
+  const topDesc = Object.entries(porDesc).sort((a,b)=>b[1].uds-a[1].uds);
+  document.getElementById('descBody').innerHTML = topDesc.map(([desc,v])=>`<tr>
+    <td>${desc}</td><td>${v.familia}</td><td>${v.recibos}</td>
+    <td>${v.uds.toLocaleString('es-CO')}</td><td>${Math.round(v.cajas).toLocaleString('es-CO')}</td>
+    <td>${uds?Math.round(v.uds/uds*1000)/10:0}%</td>
+  </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
 
   // Detalle tabla
   document.getElementById('detalleBody').innerHTML = data.slice(0,500).map(r=>`<tr>
