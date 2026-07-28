@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="../styles/base.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <style>
     :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
     .content{padding:1.5rem;max-width:1280px;margin:0 auto;width:100%}
@@ -24,20 +25,28 @@
     .filtros select:focus,.filtros input:focus{border-color:var(--op-accent)}
     .filtros label{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:.25rem}
 
-    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.85rem;margin-bottom:1.25rem}
-    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;animation:fadeUp .35s ease both}
+    /* Grid fijo de 4 columnas: siempre 4 tarjetas por fila (en vez de auto-fill, que
+       generaba conteos irregulares por fila y desbordaba el contenedor). */
+    .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1.25rem}
+    @media(max-width:900px){.metrics-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:520px){.metrics-grid{grid-template-columns:1fr}}
+    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;animation:fadeUp .35s ease both;min-width:0}
     .metric-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
     .metric-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800}
     .metric-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem}
 
     .charts-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:1rem;margin-bottom:1.25rem}
     @media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
-    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:320px;display:flex;flex-direction:column;min-width:0;min-height:0}
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:320px;display:flex;flex-direction:column;min-width:0;min-height:0;margin-bottom:1rem}
     .chart-card h3{font-size:.85rem;font-weight:700;margin-bottom:.6rem}
+    .chart-card.donut-card{max-width:560px;margin-left:auto;margin-right:auto}
     /* fix: sin min-width/min-height:0 en el grid item, el canvas de Chart.js podía crecer más
        que el contenedor (ej. la dona "Con cita vs Sin cita" se salía de la tarjeta al angostar
        la ventana). overflow:hidden en el wrap es el tope físico definitivo. */
     .chart-wrap{flex:1;position:relative;min-width:0;min-height:0;overflow:hidden}
+    .tbl-buscar{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.78rem;padding:.4rem .65rem;outline:none;min-width:220px}
+    .tbl-buscar:focus{border-color:var(--op-accent)}
+    tfoot td{padding:.55rem .7rem;font-weight:700;background:var(--surface2);border-top:2px solid var(--border)}
 
     .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1.25rem}
     .tbl-scroll{overflow-x:auto;max-height:480px;overflow-y:auto}
@@ -85,20 +94,29 @@
     <!-- ══ RESUMEN ══ -->
     <div class="tab-panel on" id="tab-resumen">
       <div class="metrics-grid" id="metricsGrid"></div>
-      <div class="charts-grid">
-        <div class="chart-card"><h3>Recepciones por día — Con cita vs Sin cita</h3><div class="chart-wrap"><canvas id="cDia"></canvas></div></div>
-        <div class="chart-card"><h3>Con cita vs Sin cita</h3><div class="chart-wrap"><canvas id="cCita"></canvas></div></div>
+
+      <div class="chart-card" style="height:380px">
+        <h3>Recepciones por día — Con cita vs Sin cita</h3>
+        <div class="chart-wrap"><canvas id="cDia"></canvas></div>
       </div>
+      <div class="chart-card donut-card" style="height:340px">
+        <h3>Con cita vs Sin cita</h3>
+        <div class="chart-wrap"><canvas id="cCita"></canvas></div>
+      </div>
+
       <div class="chart-card" style="height:340px">
         <h3>Diferencia Pedido vs Recibido por Proveedor (unidades)</h3>
         <div class="chart-wrap"><canvas id="cProveedor"></canvas></div>
       </div>
-      <div class="chart-card" style="height:300px">
+      <div class="chart-card donut-card" style="height:320px">
         <h3>Unidades Recibidas por Familia (Materia Prima vs Producto Terminado)</h3>
         <div class="chart-wrap"><canvas id="cFamilia"></canvas></div>
       </div>
 
-      <div class="sec-title">📦 Top Productos Recibidos (por Descripción)</div>
+      <div class="sec-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+        <span>📦 Top Productos Recibidos (por Descripción)</span>
+        <input type="text" id="descBuscar" class="tbl-buscar" placeholder="🔍 Filtrar por descripción o familia…" oninput="renderDescTable()"/>
+      </div>
       <div class="tbl-wrap">
         <div class="tbl-scroll">
           <table>
@@ -106,6 +124,12 @@
               <th>Descripción</th><th>Familia</th><th>Recibos</th><th>Uds. Recibidas</th><th>Cajas Recibidas</th><th>% del Total Uds.</th>
             </tr></thead>
             <tbody id="descBody"></tbody>
+            <tfoot>
+              <tr>
+                <td>Total <span id="descTotFilas" style="font-weight:400;color:var(--muted)"></span></td><td></td>
+                <td id="descTotRecibos"></td><td id="descTotUds"></td><td id="descTotCajas"></td><td id="descTotPct"></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
@@ -141,8 +165,12 @@
 <script src="../utils/auth.js"></script>
 <script>
 applyTheme();
+if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
 let allData = [];
 let charts = {};
+let lastTopDesc = [];   // usado por renderDescTable() para el filtro de búsqueda de la tabla
+let lastUdsTotal = 0;
+const numCO = n => (n||0).toLocaleString('es-CO');
 
 function tab(id, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
@@ -225,7 +253,8 @@ function render() {
       { label:'Con cita', data:dias.map(d=>porDia[d].con), backgroundColor:'#00D4FF' },
       { label:'Sin cita',  data:dias.map(d=>porDia[d].sin), backgroundColor:'#F2994A' },
     ]},
-    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{stacked:true, grid:{color:'rgba(255,255,255,.04)'}}, y:{stacked:true, grid:{color:'rgba(255,255,255,.04)'}} } }
+    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{stacked:true, grid:{color:'rgba(255,255,255,.04)'}}, y:{stacked:true, grid:{color:'rgba(255,255,255,.04)'}} },
+      plugins:{ datalabels:{ color:'#0B0F1A', font:{weight:'700', size:10}, formatter:v=>v>0?v:'' } } }
   });
 
   // Chart: donut con/sin cita
@@ -233,7 +262,8 @@ function render() {
   charts.cCita = new Chart(document.getElementById('cCita'), {
     type:'doughnut',
     data:{ labels:['Con cita','Sin cita'], datasets:[{ data:[conCita,sinCita], backgroundColor:['#00D4FF','#F2994A'] }] },
-    options:{ responsive:true, maintainAspectRatio:false }
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ datalabels:{ color:'#0B0F1A', font:{weight:'700', size:13}, formatter:v=>v } } }
   });
 
   // Chart: diferencia por proveedor
@@ -244,7 +274,8 @@ function render() {
   charts.cProveedor = new Chart(document.getElementById('cProveedor'), {
     type:'bar',
     data:{ labels:topProv.map(p=>p[0]), datasets:[{ label:'Diferencia Unidades', data:topProv.map(p=>p[1]), backgroundColor:topProv.map(p=>p[1]<0?'#FF4D6D':'#00FF88') }] },
-    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{display:false}} } }
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{display:false}} },
+      plugins:{ datalabels:{ color: getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#E8F0FE', font:{weight:'700', size:10}, anchor:'end', align:v=>v.dataset.data[v.dataIndex]<0?'left':'right', formatter:v=>numCO(v), clip:false } } }
   });
 
   // Chart: unidades recibidas por familia (Materia Prima vs Producto Terminado)
@@ -255,7 +286,8 @@ function render() {
   charts.cFamilia = new Chart(document.getElementById('cFamilia'), {
     type:'doughnut',
     data:{ labels:familias.map(f=>f[0]), datasets:[{ data:familias.map(f=>f[1]), backgroundColor:['#B77CFF','#00FF88','#F2994A','#00D4FF'] }] },
-    options:{ responsive:true, maintainAspectRatio:false }
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ datalabels:{ color:'#0B0F1A', font:{weight:'700', size:12}, formatter:v=>numCO(v) } } }
   });
 
   // Tabla: Top Productos Recibidos por Descripción, orden descendente por unidades
@@ -267,12 +299,9 @@ function render() {
     porDesc[d].uds += (r.cantidad_recibo_unidades||0);
     porDesc[d].cajas += (r.cantidad_recibo_cajas||0);
   });
-  const topDesc = Object.entries(porDesc).sort((a,b)=>b[1].uds-a[1].uds);
-  document.getElementById('descBody').innerHTML = topDesc.map(([desc,v])=>`<tr>
-    <td>${desc}</td><td>${v.familia}</td><td>${v.recibos}</td>
-    <td>${v.uds.toLocaleString('es-CO')}</td><td>${Math.round(v.cajas).toLocaleString('es-CO')}</td>
-    <td>${uds?Math.round(v.uds/uds*1000)/10:0}%</td>
-  </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
+  lastTopDesc = Object.entries(porDesc).sort((a,b)=>b[1].uds-a[1].uds);
+  lastUdsTotal = uds;
+  renderDescTable();
 
   // Detalle tabla
   document.getElementById('detalleBody').innerHTML = data.slice(0,500).map(r=>`<tr>
@@ -287,6 +316,33 @@ function render() {
   const cua = data.filter(r=>r.is_inconsistente);
   document.getElementById('cntCua').textContent = cua.length;
   document.getElementById('cuaBody').innerHTML = cua.map(r=>`<tr><td>${r.documento||'—'}</td><td>${r.referencia||'—'}</td><td>${r.fecha_recibo||'—'}</td><td>${r.causal_inconsistencia||'—'}</td></tr>`).join('') || `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:.85rem">Sin registros en cuarentena.</td></tr>`;
+}
+
+/**
+ * renderDescTable()
+ * Pinta la tabla "Top Productos Recibidos" a partir de lastTopDesc (calculado en render()),
+ * aplicando el filtro de texto del buscador (#descBuscar) por Descripción o Familia.
+ * La fila de totales se recalcula según lo que quede visible tras el filtro (dinámico).
+ */
+function renderDescTable() {
+  const q = (document.getElementById('descBuscar')?.value || '').trim().toLowerCase();
+  const filas = q ? lastTopDesc.filter(([desc,v]) => desc.toLowerCase().includes(q) || String(v.familia).toLowerCase().includes(q)) : lastTopDesc;
+
+  document.getElementById('descBody').innerHTML = filas.map(([desc,v])=>`<tr>
+    <td>${desc}</td><td>${v.familia}</td><td>${v.recibos}</td>
+    <td>${numCO(v.uds)}</td><td>${numCO(Math.round(v.cajas))}</td>
+    <td>${lastUdsTotal?Math.round(v.uds/lastUdsTotal*1000)/10:0}%</td>
+  </tr>`).join('') || `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
+
+  const totRecibos = filas.reduce((s,[,v])=>s+v.recibos,0);
+  const totUds = filas.reduce((s,[,v])=>s+v.uds,0);
+  const totCajas = filas.reduce((s,[,v])=>s+v.cajas,0);
+  const totPct = lastUdsTotal ? Math.round(totUds/lastUdsTotal*1000)/10 : 0;
+  document.getElementById('descTotFilas').textContent = `(${filas.length} producto${filas.length===1?'':'s'})`;
+  document.getElementById('descTotRecibos').textContent = totRecibos;
+  document.getElementById('descTotUds').textContent = numCO(totUds);
+  document.getElementById('descTotCajas').textContent = numCO(Math.round(totCajas));
+  document.getElementById('descTotPct').textContent = totPct + '%';
 }
 
 async function cargarDatos() {
