@@ -39,7 +39,7 @@
     .btn-maximizar:hover{border-color:var(--op-accent);color:var(--op-accent)}
     .modal-grafica{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000;padding:2rem}
     .modal-grafica.on{display:flex}
-    .modal-grafica-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);width:min(1100px,95vw);height:min(650px,90vh);display:flex;flex-direction:column;padding:1.25rem}
+    .modal-grafica-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);width:min(1540px,96vw);height:min(910px,92vh);display:flex;flex-direction:column;padding:1.25rem}
     .modal-grafica-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem}
     .modal-grafica-body{flex:1;position:relative;min-height:0;overflow:hidden}
 
@@ -134,22 +134,28 @@ if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
 let allData = [];
 let charts = {};
 let modalChartInstance = null;
+let lastChartConfigs = {}; // guarda la config plana (type/data/options) de cada chart al crearla, para reusarla en el popup
 
 /**
  * abrirGraficaModal(chartId, titulo)
- * Reutiliza la instancia de Chart.js ya creada (type/data/options) y la vuelve a
- * dibujar en un canvas más grande dentro de un popup, sin duplicar lógica de cálculo.
+ * NOTA: no se puede reusar directamente chart.options de una instancia de Chart.js v4
+ * (es un objeto interno tipo Proxy con resolución de "scriptable options" que rompe al
+ * copiarse con spread — producía "Canvas is already in use" / "t.startsWith is not a
+ * function"). Por eso guardamos la config plana original en lastChartConfigs al crear
+ * cada chart, y esa es la que se reutiliza aquí para dibujar en el canvas del popup.
  */
 function abrirGraficaModal(chartId, titulo) {
-  const src = charts[chartId];
-  if (!src) return;
+  const cfg = lastChartConfigs[chartId];
+  if (!cfg) return;
   document.getElementById('modalGraficaTitulo').textContent = titulo;
   document.getElementById('modalGrafica').classList.add('on');
+  const huerfano = Chart.getChart('modalGraficaCanvas');
+  if (huerfano) huerfano.destroy();
   if (modalChartInstance) { modalChartInstance.destroy(); modalChartInstance = null; }
   modalChartInstance = new Chart(document.getElementById('modalGraficaCanvas'), {
-    type: src.config.type,
-    data: src.data,
-    options: { ...src.options, maintainAspectRatio:false, responsive:true }
+    type: cfg.type,
+    data: cfg.data,
+    options: { ...cfg.options, maintainAspectRatio:false, responsive:true }
   });
 }
 function cerrarGraficaModal() {
@@ -295,12 +301,14 @@ function render() {
   });
   const dias = Object.keys(porDia).sort();
   destroyChart('cTendencia');
-  charts.cTendencia = new Chart(document.getElementById('cTendencia'), {
+  const cTendenciaCfg = {
     type:'bar',
     data:{ labels:dias, datasets:[{ label:'Uds / Hora', data:dias.map(d=>porDia[d].horas?Math.round(porDia[d].uds/porDia[d].horas*100)/100:0), backgroundColor:'#00FF88' }] },
     options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{color:'rgba(255,255,255,.04)'}} },
       plugins:{ datalabels:{ ...DL_BARRA, anchor:'end', align:'top', formatter:v=>v>0?numCO(v):'' } } }
-  });
+  };
+  charts.cTendencia = new Chart(document.getElementById('cTendencia'), cTendenciaCfg);
+  lastChartConfigs.cTendencia = cTendenciaCfg;
 
   // Tabla: todos, con "Sin operario asignado" al final visualmente diferenciado
   const filas = [...operariosNombrados.sort((a,b)=>porOperario[b].unidades-porOperario[a].unidades)];
