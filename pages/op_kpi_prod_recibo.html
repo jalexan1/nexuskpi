@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="../styles/base.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <style>
     :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
     .content{padding:1.5rem;max-width:1280px;margin:0 auto;width:100%}
@@ -18,14 +19,21 @@
     .filtros select,.filtros input{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.8rem;padding:.4rem .65rem;outline:none;cursor:pointer}
     .filtros label{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:.25rem}
 
-    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.85rem;margin-bottom:1.25rem}
-    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;animation:fadeUp .35s ease both}
+    /* Grid fijo de 4 columnas (mismo fix aplicado en Recibo): evita el desborde que
+       generaba auto-fill al crecer el número de tarjetas. */
+    .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1.25rem}
+    @media(max-width:900px){.metrics-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:520px){.metrics-grid{grid-template-columns:1fr}}
+    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;animation:fadeUp .35s ease both;min-width:0}
     .metric-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
     .metric-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800}
+    .metric-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem}
 
-    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:420px;display:flex;flex-direction:column;margin-bottom:1.25rem}
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:380px;display:flex;flex-direction:column;margin-bottom:1.25rem;min-width:0;min-height:0}
     .chart-card h3{font-size:.85rem;font-weight:700;margin-bottom:.6rem}
-    .chart-wrap{flex:1;position:relative}
+    /* overflow:hidden es el tope físico que evita que el canvas de Chart.js se salga
+       de la tarjeta (mismo fix del desborde de la dona en Recibo). */
+    .chart-wrap{flex:1;position:relative;min-width:0;min-height:0;overflow:hidden}
 
     .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
     .tbl-scroll{overflow-x:auto;max-height:480px;overflow-y:auto}
@@ -61,6 +69,7 @@
       <div><label>Mes</label><select id="fMes" onchange="render()"></select></div>
       <div><label>Operario</label><select id="fOperario" onchange="render()"><option value="">Todos</option></select></div>
       <div><label>Proveedor</label><select id="fProveedor" onchange="render()"><option value="">Todos</option></select></div>
+      <div><label>Familia</label><select id="fFamilia" onchange="render()"><option value="">Todas</option></select></div>
     </div>
 
     <div class="metrics-grid" id="metricsGrid"></div>
@@ -69,11 +78,27 @@
       <h3>Ranking de Operarios — Unidades Recibidas</h3>
       <div class="chart-wrap"><canvas id="cRanking"></canvas></div>
     </div>
+    <div class="chart-card">
+      <h3>Ranking de Operarios — Recepciones (líneas procesadas)</h3>
+      <div class="chart-wrap"><canvas id="cRankingRecepciones"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Ranking de Operarios — Productividad (Unidades / Hora)</h3>
+      <div class="chart-wrap"><canvas id="cRankingProductividad"></canvas></div>
+      <div class="metric-sub" style="margin-top:.4rem">Solo incluye horas con HORA INICIO y HORA FINAL DESCARGUE diligenciadas.</div>
+    </div>
+    <div class="chart-card">
+      <h3>Tendencia diaria — Productividad (Unidades / Hora)</h3>
+      <div class="chart-wrap"><canvas id="cTendencia"></canvas></div>
+    </div>
 
     <div class="tbl-wrap">
       <div class="tbl-scroll">
         <table>
-          <thead><tr><th>Operario</th><th>Recepciones</th><th>Unidades</th><th>Cajas</th><th>Documentos</th></tr></thead>
+          <thead><tr>
+            <th>Operario</th><th>Recepciones</th><th>Unidades</th><th>Cajas</th><th>Documentos</th>
+            <th>Horas Descargue</th><th>Uds. / Hora</th><th>Cajas / Hora</th>
+          </tr></thead>
           <tbody id="tblBody"></tbody>
         </table>
       </div>
@@ -85,11 +110,29 @@
 <script src="../utils/auth.js"></script>
 <script>
 applyTheme();
+if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
 let allData = [];
 let charts = {};
 const SIN_OPERARIO = 'Sin operario asignado';
+const numCO = n => (n||0).toLocaleString('es-CO');
+// Estilo de etiqueta de valor sobre las barras: blanco con contorno oscuro para que
+// no se desvanezca sobre el naranja del tema (ajuste pedido: "subir la tonalidad").
+const DL_BARRA = { color:'#FFFFFF', font:{weight:'800', size:11}, textStrokeColor:'rgba(0,0,0,.6)', textStrokeWidth:3 };
+// Umbral mínimo de horas medidas para considerar una tasa uds/hora o cajas/hora
+// estadísticamente confiable. Con muestras muy pequeñas (ej. 0.02 horas) la tasa
+// se dispara a valores absurdos (cientos de miles de uds/hora) porque se divide
+// por un número casi cero. Por debajo de este umbral se muestra "—" en vez del dato.
+const MIN_HORAS_CONFIABLE = 1;
 
 function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+function horasEntre(hIni, hFin) {
+  if (!hIni || !hFin) return null;
+  const [h1,m1] = hIni.split(':').map(Number), [h2,m2] = hFin.split(':').map(Number);
+  let mins = (h2*60+m2) - (h1*60+m1);
+  if (mins < 0) mins += 1440;
+  return Math.round((mins/60)*100)/100;
+}
 
 function poblarFiltros() {
   const meses = [...new Set(allData.map(r=>r.periodo_id))].sort();
@@ -105,15 +148,19 @@ function poblarFiltros() {
 
   const provs = [...new Set(allData.map(r=>r.proveedor).filter(Boolean))].sort();
   document.getElementById('fProveedor').innerHTML = `<option value="">Todos</option>` + provs.map(p=>`<option value="${p}">${p}</option>`).join('');
+
+  const familias = [...new Set(allData.map(r=>r.familia).filter(Boolean))].sort();
+  document.getElementById('fFamilia').innerHTML = `<option value="">Todas</option>` + familias.map(f=>`<option value="${f}">${f}</option>`).join('');
 }
 
 function filtrar() {
   const mes = document.getElementById('fMes').value;
   const op = document.getElementById('fOperario').value;
   const prov = document.getElementById('fProveedor').value;
+  const fam = document.getElementById('fFamilia').value;
   return allData.filter(r => {
     const opNombre = r.operario || SIN_OPERARIO;
-    return (!mes || r.periodo_id===mes) && (!op || opNombre===op) && (!prov || r.proveedor===prov);
+    return (!mes || r.periodo_id===mes) && (!op || opNombre===op) && (!prov || r.proveedor===prov) && (!fam || r.familia===fam);
   });
 }
 
@@ -122,30 +169,93 @@ function render() {
   const porOperario = {};
   data.forEach(r => {
     const op = r.operario || SIN_OPERARIO;
-    porOperario[op] = porOperario[op] || { recepciones:0, unidades:0, cajas:0, docs:new Set() };
+    porOperario[op] = porOperario[op] || { recepciones:0, unidades:0, cajas:0, docs:new Set(), horas:0, udsConHora:0, cajasConHora:0 };
     porOperario[op].recepciones++;
     porOperario[op].unidades += (r.cantidad_recibo_unidades||0);
     porOperario[op].cajas += (r.cantidad_recibo_cajas||0);
     if (r.documento) porOperario[op].docs.add(r.documento);
+    // Productividad real: solo se contabilizan las horas y las uds/cajas de las filas
+    // que sí tienen HORA INICIO y HORA FINAL DESCARGUE diligenciadas (mismo criterio
+    // que "Tiempo Prom. Descargue" en la pantalla Recibo), para que la tasa uds/hora
+    // no quede inflada por filas sin tiempo medido.
+    const h = horasEntre(r.hora_inicio_descargue, r.hora_final_descargue);
+    if (h !== null && h > 0 && h < 24) {
+      porOperario[op].horas += h;
+      porOperario[op].udsConHora += (r.cantidad_recibo_unidades||0);
+      porOperario[op].cajasConHora += (r.cantidad_recibo_cajas||0);
+    }
   });
 
   const operariosNombrados = Object.keys(porOperario).filter(o=>o!==SIN_OPERARIO);
   const sinAsignar = porOperario[SIN_OPERARIO];
 
+  const totalCajas = data.reduce((s,r)=>s+(r.cantidad_recibo_cajas||0),0);
+  const totalHoras = operariosNombrados.reduce((s,o)=>s+porOperario[o].horas,0);
+  const totalUdsConHora = operariosNombrados.reduce((s,o)=>s+porOperario[o].udsConHora,0);
+  const totalCajasConHora = operariosNombrados.reduce((s,o)=>s+porOperario[o].cajasConHora,0);
+  const prodGlobalUdsHora = totalHoras ? Math.round(totalUdsConHora/totalHoras*100)/100 : null;
+  const prodGlobalCajasHora = totalHoras ? Math.round(totalCajasConHora/totalHoras*100)/100 : null;
+
   document.getElementById('metricsGrid').innerHTML = `
     <div class="metric-card" style="animation-delay:.02s"><div class="metric-label">Operarios Activos</div><div class="metric-value">${operariosNombrados.length}</div></div>
     <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Total Recepciones</div><div class="metric-value">${data.length}</div></div>
-    <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Total Unidades</div><div class="metric-value">${data.reduce((s,r)=>s+(r.cantidad_recibo_unidades||0),0).toLocaleString('es-CO')}</div></div>
-    <div class="metric-card" style="animation-delay:.11s"><div class="metric-label">Sin Operario Asignado</div><div class="metric-value" style="color:var(--muted)">${sinAsignar?sinAsignar.recepciones:0}</div></div>
+    <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Total Unidades</div><div class="metric-value">${numCO(data.reduce((s,r)=>s+(r.cantidad_recibo_unidades||0),0))}</div></div>
+    <div class="metric-card" style="animation-delay:.11s"><div class="metric-label">Total Cajas</div><div class="metric-value">${numCO(Math.round(totalCajas))}</div></div>
+    <div class="metric-card" style="animation-delay:.14s"><div class="metric-label">Productividad (Uds/Hora)</div><div class="metric-value" style="color:var(--ok)">${prodGlobalUdsHora ?? '—'}</div><div class="metric-sub">${numCO(Math.round(totalHoras*100)/100)} horas medidas</div></div>
+    <div class="metric-card" style="animation-delay:.17s"><div class="metric-label">Productividad (Cajas/Hora)</div><div class="metric-value" style="color:var(--ok)">${prodGlobalCajasHora ?? '—'}</div></div>
+    <div class="metric-card" style="animation-delay:.20s"><div class="metric-label">Sin Operario Asignado</div><div class="metric-value" style="color:var(--muted)">${sinAsignar?sinAsignar.recepciones:0}</div></div>
   `;
 
-  // Ranking: solo operarios nombrados, ordenado desc por unidades
+  // Ranking 1: Unidades Recibidas
   const ranking = operariosNombrados.map(o=>({op:o, ...porOperario[o]})).sort((a,b)=>b.unidades-a.unidades).slice(0,20);
   destroyChart('cRanking');
   charts.cRanking = new Chart(document.getElementById('cRanking'), {
     type:'bar',
     data:{ labels:ranking.map(r=>r.op), datasets:[{ label:'Unidades Recibidas', data:ranking.map(r=>r.unidades), backgroundColor:'#F2994A' }] },
-    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{display:false}} } }
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{display:false}} },
+      plugins:{ datalabels:{ ...DL_BARRA, anchor:'end', align:'start', formatter:v=>numCO(v) } } }
+  });
+
+  // Ranking 2: Recepciones (líneas procesadas)
+  const rankingRec = operariosNombrados.map(o=>({op:o, ...porOperario[o]})).sort((a,b)=>b.recepciones-a.recepciones).slice(0,20);
+  destroyChart('cRankingRecepciones');
+  charts.cRankingRecepciones = new Chart(document.getElementById('cRankingRecepciones'), {
+    type:'bar',
+    data:{ labels:rankingRec.map(r=>r.op), datasets:[{ label:'Recepciones', data:rankingRec.map(r=>r.recepciones), backgroundColor:'#00D4FF' }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{display:false}} },
+      plugins:{ datalabels:{ ...DL_BARRA, anchor:'end', align:'start', formatter:v=>numCO(v) } } }
+  });
+
+  // Ranking 3: Productividad (Uds/Hora) — solo operarios con horas medidas
+  const rankingProd = operariosNombrados
+    .map(o=>({ op:o, ratio: porOperario[o].horas ? Math.round(porOperario[o].udsConHora/porOperario[o].horas*100)/100 : null, horas: porOperario[o].horas }))
+    .filter(r=>r.ratio !== null && r.horas >= MIN_HORAS_CONFIABLE)
+    .sort((a,b)=>b.ratio-a.ratio).slice(0,20);
+  destroyChart('cRankingProductividad');
+  charts.cRankingProductividad = new Chart(document.getElementById('cRankingProductividad'), {
+    type:'bar',
+    data:{ labels:rankingProd.map(r=>r.op), datasets:[{ label:'Unidades / Hora', data:rankingProd.map(r=>r.ratio), backgroundColor:'#B77CFF' }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{display:false}} },
+      plugins:{ datalabels:{ ...DL_BARRA, anchor:'end', align:'start', formatter:v=>numCO(v) } } }
+  });
+
+  // Tendencia diaria: Productividad (Uds/Hora) promedio del día, sobre todos los operarios
+  const porDia = {};
+  data.forEach(r => {
+    if (!r.fecha_recibo) return;
+    const h = horasEntre(r.hora_inicio_descargue, r.hora_final_descargue);
+    if (h === null || h <= 0 || h >= 24) return;
+    porDia[r.fecha_recibo] = porDia[r.fecha_recibo] || { horas:0, uds:0 };
+    porDia[r.fecha_recibo].horas += h;
+    porDia[r.fecha_recibo].uds += (r.cantidad_recibo_unidades||0);
+  });
+  const dias = Object.keys(porDia).sort();
+  destroyChart('cTendencia');
+  charts.cTendencia = new Chart(document.getElementById('cTendencia'), {
+    type:'bar',
+    data:{ labels:dias, datasets:[{ label:'Uds / Hora', data:dias.map(d=>porDia[d].horas?Math.round(porDia[d].uds/porDia[d].horas*100)/100:0), backgroundColor:'#00FF88' }] },
+    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{color:'rgba(255,255,255,.04)'}} },
+      plugins:{ datalabels:{ ...DL_BARRA, anchor:'end', align:'top', formatter:v=>v>0?numCO(v):'' } } }
   });
 
   // Tabla: todos, con "Sin operario asignado" al final visualmente diferenciado
@@ -154,8 +264,13 @@ function render() {
   document.getElementById('tblBody').innerHTML = filas.map(op=>{
     const d = porOperario[op];
     const cls = op===SIN_OPERARIO ? 'sin-asignar' : '';
-    return `<tr class="${cls}"><td>${op}</td><td>${d.recepciones}</td><td>${d.unidades.toLocaleString('es-CO')}</td><td>${d.cajas.toLocaleString('es-CO')}</td><td>${d.docs.size}</td></tr>`;
-  }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
+    const confiable = d.horas >= MIN_HORAS_CONFIABLE;
+    const udsHora = confiable ? Math.round(d.udsConHora/d.horas*100)/100 : null;
+    const cajasHora = confiable ? Math.round(d.cajasConHora/d.horas*100)/100 : null;
+    const nota = !confiable && d.horas > 0 ? ' title="Muestra de horas insuficiente (< 1h medida) para una tasa confiable"' : '';
+    return `<tr class="${cls}"><td>${op}</td><td>${d.recepciones}</td><td>${numCO(d.unidades)}</td><td>${numCO(Math.round(d.cajas*100)/100)}</td><td>${d.docs.size}</td>
+      <td>${numCO(Math.round(d.horas*100)/100)}</td><td${nota}>${udsHora ?? '—'}</td><td${nota}>${cajasHora ?? '—'}</td></tr>`;
+  }).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
 }
 
 async function cargarDatos() {
