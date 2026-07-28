@@ -44,6 +44,14 @@
        que el contenedor (ej. la dona "Con cita vs Sin cita" se salía de la tarjeta al angostar
        la ventana). overflow:hidden en el wrap es el tope físico definitivo. */
     .chart-wrap{flex:1;position:relative;min-width:0;min-height:0;overflow:hidden}
+    .chart-card h3{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+    .btn-maximizar{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);cursor:pointer;font-size:.85rem;padding:.2rem .5rem;line-height:1.3;font-family:'DM Sans',sans-serif;font-weight:600}
+    .btn-maximizar:hover{border-color:var(--op-accent);color:var(--op-accent)}
+    .modal-grafica{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000;padding:2rem}
+    .modal-grafica.on{display:flex}
+    .modal-grafica-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);width:min(1100px,95vw);height:min(650px,90vh);display:flex;flex-direction:column;padding:1.25rem}
+    .modal-grafica-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem}
+    .modal-grafica-body{flex:1;position:relative;min-height:0;overflow:hidden}
     .tbl-buscar{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.78rem;padding:.4rem .65rem;outline:none;min-width:220px}
     .tbl-buscar:focus{border-color:var(--op-accent)}
     tfoot td{padding:.55rem .7rem;font-weight:700;background:var(--surface2);border-top:2px solid var(--border)}
@@ -96,7 +104,9 @@
       <div class="metrics-grid" id="metricsGrid"></div>
 
       <div class="chart-card" style="height:380px">
-        <h3>Recepciones por día — Con cita vs Sin cita</h3>
+        <h3><span>Recepciones por día — Con cita vs Sin cita</span>
+          <button class="btn-maximizar" onclick="abrirGraficaModal('cDia','Recepciones por día — Con cita vs Sin cita')" title="Maximizar">⛶ Maximizar</button>
+        </h3>
         <div class="chart-wrap"><canvas id="cDia"></canvas></div>
       </div>
       <div class="chart-card donut-card" style="height:340px">
@@ -161,6 +171,16 @@
   </main>
 </div>
 
+<div class="modal-grafica" id="modalGrafica" onclick="if(event.target===this) cerrarGraficaModal()">
+  <div class="modal-grafica-box">
+    <div class="modal-grafica-hdr">
+      <span id="modalGraficaTitulo"></span>
+      <button class="btn-maximizar" onclick="cerrarGraficaModal()" title="Minimizar">✕ Cerrar</button>
+    </div>
+    <div class="modal-grafica-body"><canvas id="modalGraficaCanvas"></canvas></div>
+  </div>
+</div>
+
 <script src="../config/config.js"></script>
 <script src="../utils/auth.js"></script>
 <script>
@@ -170,7 +190,31 @@ let allData = [];
 let charts = {};
 let lastTopDesc = [];   // usado por renderDescTable() para el filtro de búsqueda de la tabla
 let lastUdsTotal = 0;
+let modalChartInstance = null;
 const numCO = n => (n||0).toLocaleString('es-CO');
+
+/**
+ * abrirGraficaModal(chartId, titulo)
+ * Reutiliza la instancia de Chart.js ya creada (type/data/options) y la vuelve a
+ * dibujar en un canvas más grande dentro de un popup, sin duplicar lógica de cálculo.
+ */
+function abrirGraficaModal(chartId, titulo) {
+  const src = charts[chartId];
+  if (!src) return;
+  document.getElementById('modalGraficaTitulo').textContent = titulo;
+  document.getElementById('modalGrafica').classList.add('on');
+  if (modalChartInstance) { modalChartInstance.destroy(); modalChartInstance = null; }
+  modalChartInstance = new Chart(document.getElementById('modalGraficaCanvas'), {
+    type: src.config.type,
+    data: src.data,
+    options: { ...src.options, maintainAspectRatio:false, responsive:true }
+  });
+}
+function cerrarGraficaModal() {
+  document.getElementById('modalGrafica').classList.remove('on');
+  if (modalChartInstance) { modalChartInstance.destroy(); modalChartInstance = null; }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarGraficaModal(); });
 
 function tab(id, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
