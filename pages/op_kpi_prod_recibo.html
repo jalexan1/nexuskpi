@@ -39,7 +39,7 @@
     .btn-maximizar:hover{border-color:var(--op-accent);color:var(--op-accent)}
     .modal-grafica{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000;padding:2rem}
     .modal-grafica.on{display:flex}
-    .modal-grafica-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);width:min(1540px,96vw);height:min(910px,92vh);display:flex;flex-direction:column;padding:1.25rem}
+    .modal-grafica-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);width:min(1540px,96vw);height:min(774px,92vh);display:flex;flex-direction:column;padding:1.25rem}
     .modal-grafica-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem}
     .modal-grafica-body{flex:1;position:relative;min-height:0;overflow:hidden}
 
@@ -301,10 +301,13 @@ function render() {
   });
   const dias = Object.keys(porDia).sort();
   destroyChart('cTendencia');
+  // Mismo ajuste que en Recibo: las fechas del eje X casi no se veían con el gris tenue
+  // por defecto de Chart.js, se resuelve el color contra el tema activo (--text).
+  const colorEjes = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#E8F0FE';
   const cTendenciaCfg = {
     type:'bar',
     data:{ labels:dias, datasets:[{ label:'Uds / Hora', data:dias.map(d=>porDia[d].horas?Math.round(porDia[d].uds/porDia[d].horas*100)/100:0), backgroundColor:'#00FF88' }] },
-    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{color:'rgba(255,255,255,.04)'}} },
+    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes}}, y:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes}} },
       plugins:{ datalabels:{ ...DL_BARRA, anchor:'end', align:'top', formatter:v=>v>0?numCO(v):'' } } }
   };
   charts.cTendencia = new Chart(document.getElementById('cTendencia'), cTendenciaCfg);

@@ -49,7 +49,7 @@
     .btn-maximizar:hover{border-color:var(--op-accent);color:var(--op-accent)}
     .modal-grafica{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000;padding:2rem}
     .modal-grafica.on{display:flex}
-    .modal-grafica-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);width:min(1540px,96vw);height:min(910px,92vh);display:flex;flex-direction:column;padding:1.25rem}
+    .modal-grafica-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);width:min(1540px,96vw);height:min(774px,92vh);display:flex;flex-direction:column;padding:1.25rem}
     .modal-grafica-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem}
     .modal-grafica-body{flex:1;position:relative;min-height:0;overflow:hidden}
     .tbl-buscar{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.78rem;padding:.4rem .65rem;outline:none;min-width:220px}
@@ -299,13 +299,17 @@ function render() {
   data.forEach(r => { if(!r.fecha_recibo) return; porDia[r.fecha_recibo] = porDia[r.fecha_recibo] || {con:0,sin:0}; r.tiene_cita ? porDia[r.fecha_recibo].con++ : porDia[r.fecha_recibo].sin++; });
   const dias = Object.keys(porDia).sort();
   destroyChart('cDia');
+  // Color de las etiquetas de los ejes (fechas, valores): se resuelve dinámicamente contra
+  // el tema activo (--text) porque estaban usando el gris tenue por defecto de Chart.js y
+  // las fechas del eje X casi no se veían.
+  const colorEjes = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#E8F0FE';
   const cDiaCfg = {
     type:'bar',
     data:{ labels:dias, datasets:[
       { label:'Con cita', data:dias.map(d=>porDia[d].con), backgroundColor:'#00D4FF' },
       { label:'Sin cita',  data:dias.map(d=>porDia[d].sin), backgroundColor:'#F2994A' },
     ]},
-    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{stacked:true, grid:{color:'rgba(255,255,255,.04)'}}, y:{stacked:true, grid:{color:'rgba(255,255,255,.04)'}} },
+    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{stacked:true, grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes}}, y:{stacked:true, grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes}} },
       plugins:{ datalabels:{ color:'#0B0F1A', font:{weight:'700', size:10}, formatter:v=>v>0?v:'' } } }
   };
   charts.cDia = new Chart(document.getElementById('cDia'), cDiaCfg);
