@@ -88,6 +88,26 @@
     .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
     .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
     @media(max-width:479px){.nav-btn span{display:none}}
+
+    /* Badge permanente: qué mes quedó registrado en el último cargue. No desaparece
+       con timeout (a diferencia de la barra de progreso) — solo cambia con un nuevo cargue. */
+    .badge-mes{display:none;align-items:flex-start;gap:.5rem;background:rgba(242,153,74,.08);border:1px solid rgba(242,153,74,.3);border-radius:var(--r-sm);padding:.65rem .85rem;font-size:.78rem;line-height:1.55;margin-top:.75rem}
+    .badge-mes.show{display:flex}
+    .badge-mes b{color:var(--op-accent)}
+
+    /* Modal de confirmación de mes (reemplaza el confirm() nativo del navegador) */
+    .modal-mes{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1100;padding:1.5rem}
+    .modal-mes.on{display:flex}
+    .modal-mes-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);width:min(520px,94vw);max-height:90vh;overflow-y:auto;padding:1.5rem}
+    .modal-mes-box h3{font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem;color:var(--warn)}
+    .modal-mes-box p{font-size:.85rem;color:var(--text);line-height:1.6;margin-bottom:.6rem}
+    .modal-mes-tabla{width:100%;border-collapse:collapse;font-size:.8rem;margin:.75rem 0}
+    .modal-mes-tabla th{text-align:left;padding:.4rem .5rem;font-size:.65rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--border)}
+    .modal-mes-tabla td{padding:.4rem .5rem;border-bottom:1px solid var(--border)}
+    .modal-mes-btns{display:flex;gap:.6rem;margin-top:1.1rem}
+    .modal-mes-btns button{flex:1;padding:.7rem;border-radius:var(--r-sm);font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;border:none}
+    .btn-mes-aceptar{background:linear-gradient(135deg,var(--op-accent),var(--op-accent2));color:#fff}
+    .btn-mes-cancelar{background:var(--surface2);border:1px solid var(--border2) !important;color:var(--text)}
   </style>
 </head>
 <body>
@@ -138,6 +158,7 @@
       <button class="btn-cargue" id="btnCargar" onclick="subirKpi()">⬆️ Cargar WMS Base Cosmetics</button>
       <div class="prog-box" id="progKpi"><span id="progKpiTxt">Procesando…</span><div class="prog-bar-wrap"><div class="prog-bar" id="barKpi" style="width:0%"></div></div></div>
       <div class="result-box" id="resKpi"></div>
+      <div class="badge-mes" id="badgeMes"></div>
     </div>
 
     <!-- ── Meses cargados / eliminar ── -->
@@ -184,11 +205,67 @@
   </main>
 </div>
 
+<div class="modal-mes" id="modalMes">
+  <div class="modal-mes-box">
+    <h3>⚠️ El mes seleccionado no coincide con el archivo</h3>
+    <p id="modalMesTxt"></p>
+    <table class="modal-mes-tabla">
+      <thead><tr><th>Mes detectado en las fechas</th><th>Registros</th></tr></thead>
+      <tbody id="modalMesTabla"></tbody>
+    </table>
+    <p style="font-size:.78rem;color:var(--muted)">InventarioxUbicacion trae fechas históricas de creación de caja, que pueden ser de meses anteriores al corte real — por eso se prioriza RecogidasPkxRango (actividad real del período) para esta detección. ¿Deseas continuar y registrar el cargue con el mes detectado (recomendado), o cancelar para revisar el archivo?</p>
+    <div class="modal-mes-btns">
+      <button class="btn-mes-cancelar" onclick="resolverModalMes(false)">Cancelar</button>
+      <button class="btn-mes-aceptar" id="btnModalMesAceptar" onclick="resolverModalMes(true)">Registrar con mes detectado</button>
+    </div>
+  </div>
+</div>
+
 <script src="../config/config.js"></script>
 <script src="../utils/auth.js"></script>
 <script src="../utils/etl_op_wms.js"></script>
 <script>
 applyTheme();
+let resolverModalMesFn = null;
+
+/**
+ * mostrarModalMes({labelSel, labelMes, distribucion})
+ * Reemplaza el confirm() nativo del navegador por un modal propio de NexusKPI.
+ * Retorna una Promise<boolean> — true si el usuario acepta el mes detectado.
+ */
+function mostrarModalMes({ labelSel, labelMes, distribucion }) {
+  document.getElementById('modalMesTxt').innerHTML =
+    `Seleccionaste <b>${labelSel}</b>, pero las fechas del archivo corresponden principalmente a <b>${labelMes}</b>.`;
+  document.getElementById('modalMesTabla').innerHTML = (distribucion||[]).map(d=>{
+    const label = CONFIG.meses.find(m=>m.id===d.mes)?.label || d.mes;
+    return `<tr><td>${label}</td><td>${d.count}</td></tr>`;
+  }).join('') || `<tr><td colspan="2" style="color:var(--muted)">Sin fechas detectadas</td></tr>`;
+  document.getElementById('modalMes').classList.add('on');
+  return new Promise(resolve => { resolverModalMesFn = resolve; });
+}
+function resolverModalMes(valor) {
+  document.getElementById('modalMes').classList.remove('on');
+  if (resolverModalMesFn) { resolverModalMesFn(valor); resolverModalMesFn = null; }
+}
+
+/**
+ * actualizarBadgeMes(labelMes, distribucion)
+ * Deja visible de forma permanente el mes con el que quedó registrado el último
+ * cargue. Si hay 2 o 3 meses distintos en los datos, los lista separados por coma.
+ */
+function actualizarBadgeMes(labelMes, distribucion) {
+  const badge = document.getElementById('badgeMes');
+  let detalle = '';
+  if (distribucion && distribucion.length > 1) {
+    const listado = distribucion.map(d => {
+      const label = CONFIG.meses.find(m=>m.id===d.mes)?.label || d.mes;
+      return `${label} (${d.count})`;
+    }).join(', ');
+    detalle = `<br>Meses detectados en los datos: ${listado}`;
+  }
+  badge.innerHTML = `📌 Último archivo registrado como: <b>${labelMes}</b>${detalle}`;
+  badge.classList.add('show');
+}
 
 const FRASE_ESPERADA = 'WMS_BASE_CLICK COSMETICS';
 const TABLAS = { inventario:'op_inventario_ubicacion', densidad:'op_densidad_ubicacion', productividadPk:'op_productividad_pk', recogidas:'op_recogidas_pk_rango' };
@@ -289,18 +366,13 @@ async function subirKpi(){
     try{ result = await procesarWmsBase(file, mesSeleccionado, (pct,msg)=>showProg('progKpi','barKpi','progKpiTxt',20+Math.round(pct*.3),msg)); }
     catch(e){ throw new Error(traducirError(e.message)); }
 
-    const { inventario, densidad, productividadPk, recogidas, mesPredominante, mesConflicto } = result;
+    const { inventario, densidad, productividadPk, recogidas, mesPredominante, mesConflicto, distribucionMeses } = result;
     const mesId = mesPredominante || mesSeleccionado;
     const labelMes = CONFIG.meses.find(m=>m.id===mesId)?.label||mesId;
     const labelSel = CONFIG.meses.find(m=>m.id===mesSeleccionado)?.label||mesSeleccionado;
 
     if(mesConflicto){
-      const continuar = confirm(
-        `⚠️ Seleccionó el mes "${labelSel}" pero las fechas del archivo (FechaCreacionCaja / FechaRegistro) corresponden principalmente a "${labelMes}".\n\n`+
-        `Nota: InventarioxUbicacion trae fechas históricas de creación de caja, por lo que puede diferir del mes de corte real.\n\n`+
-        `¿Desea continuar y registrarlo como "${labelMes}" (recomendado)?\n\n`+
-        `Presione Aceptar para registrar como ${labelMes}.\nPresione Cancelar para detener el cargue y revisar el archivo.`
-      );
+      const continuar = await mostrarModalMes({ labelSel, labelMes, distribucion: distribucionMeses });
       if(!continuar){
         hideProg('progKpi');
         showRes('resKpi','warn',`⚠️ Cargue detenido. Las fechas del archivo corresponden principalmente a <b>${labelMes}</b>. Revisa la selección del mes y vuelve a intentarlo.`);
@@ -340,6 +412,7 @@ async function subirKpi(){
       `Total en cuarentena: <b>${totalCua}</b>`
     );
     addLog(`✓ ${labelMes}: ${totalOk} registros · ${totalCua} en cuarentena`,'ok');
+    actualizarBadgeMes(labelMes, distribucionMeses);
 
     cuarentenaPorHoja = { inventario: inventario.inconsistencias, productividadPk: productividadPk.inconsistencias };
     mostrarCuarentena();

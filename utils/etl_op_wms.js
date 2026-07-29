@@ -102,6 +102,17 @@ function opwDetectarMesPredominante(fechasISO) {
 }
 
 /**
+ * opwDistribucionMeses(fechasISO[], top=3)
+ * Igual que opDistribucionMeses en etl_op_seguimiento.js: retorna los N meses con más
+ * fechas (con su conteo), para mostrarle al usuario el desglose completo en el cargue.
+ */
+function opwDistribucionMeses(fechasISO, top = 3) {
+  const conteo = {};
+  fechasISO.forEach(f => { if (!f) return; const mes = f.slice(0, 7); conteo[mes] = (conteo[mes] || 0) + 1; });
+  return Object.entries(conteo).sort((a, b) => b[1] - a[1]).slice(0, top).map(([mes, count]) => ({ mes, count }));
+}
+
+/**
  * opwAsignarSecuencia(records, keyFn)
  * Igual que en etl_op_seguimiento.js: la llave natural puede repetirse dentro
  * del mismo Excel (ej. la misma ubicación con varias cajas, o el mismo pedido
@@ -287,10 +298,16 @@ async function procesarWmsBase(file, periodoId, onProgress) {
   if (onProgress) onProgress(80, 'Procesando RecogidasPkxRango…');
   const recogidas = opwProcesarRecogidasPkRango(wb, periodoId);
 
-  // Mes predominante: prioriza InventarioxUbicacion (FechaCreacionCaja), luego ProductividadxPk
-  const fechasBase = inventario.fechasISO.length ? inventario.fechasISO : productividadPk.fechasISO;
+  // Mes predominante: se prioriza RecogidasPkxRango.FechaRegistro (refleja la actividad
+  // real de picking del período, la fuente más representativa del "mes de corte"),
+  // con fallback a ProductividadxPk y por último InventarioxUbicacion.FechaCreacionCaja
+  // (esta última es la más ruidosa: es la fecha en que se creó cada caja en bodega,
+  // que puede ser de meses muy anteriores al corte del archivo — no es confiable sola).
+  const fechasBase = recogidas.fechasISO.length ? recogidas.fechasISO
+    : (productividadPk.fechasISO.length ? productividadPk.fechasISO : inventario.fechasISO);
   const mesPredominante = opwDetectarMesPredominante(fechasBase);
   const mesConflicto = !!(mesPredominante && mesPredominante !== periodoId);
+  const distribucionMeses = opwDistribucionMeses(fechasBase, 3);
 
   const stats = {
     inventario: { total: inventario.records.length, cuarentena: inventario.inconsistencias.length },
@@ -300,7 +317,7 @@ async function procesarWmsBase(file, periodoId, onProgress) {
   };
 
   if (onProgress) onProgress(100, 'Completado');
-  return { inventario, densidad, productividadPk, recogidas, mesPredominante, mesConflicto, stats };
+  return { inventario, densidad, productividadPk, recogidas, mesPredominante, mesConflicto, distribucionMeses, stats };
 }
 
 if (typeof window !== 'undefined') {

@@ -133,6 +133,18 @@ function opDetectarMesPredominante(fechasISO) {
 }
 
 /**
+ * opDistribucionMeses(fechasISO[], top=3)
+ * Retorna los N meses 'YYYY-MM' con más fechas (con su conteo), de mayor a menor.
+ * Se usa para mostrarle al usuario el desglose completo (no solo el mes ganador)
+ * cuando el mes seleccionado en el cargue no coincide con el mes de las fechas.
+ */
+function opDistribucionMeses(fechasISO, top = 3) {
+  const conteo = {};
+  fechasISO.forEach(f => { if (!f) return; const mes = f.slice(0, 7); conteo[mes] = (conteo[mes] || 0) + 1; });
+  return Object.entries(conteo).sort((a, b) => b[1] - a[1]).slice(0, top).map(([mes, count]) => ({ mes, count }));
+}
+
+/**
  * opAsignarSecuencia(records, keyFn)
  * La llave natural (periodo_id + columnas de negocio) puede repetirse dentro
  * del mismo archivo Excel (ej. la misma referencia recibida dos veces el mismo
@@ -412,6 +424,7 @@ async function procesarSeguimientoClick(file, periodoId, onProgress) {
   const todasFechas = recibo.fechasISO.length ? recibo.fechasISO : alistamiento.fechasISO;
   const mesPredominante = opDetectarMesPredominante(todasFechas);
   const mesConflicto = !!(mesPredominante && mesPredominante !== periodoId);
+  const distribucionMeses = opDistribucionMeses(todasFechas, 3);
 
   if (onProgress) onProgress(90, 'Consolidando…');
 
@@ -422,7 +435,7 @@ async function procesarSeguimientoClick(file, periodoId, onProgress) {
   };
 
   if (onProgress) onProgress(100, 'Completado');
-  return { recibo, alistamiento, pickingWms, mesPredominante, mesConflicto, stats };
+  return { recibo, alistamiento, pickingWms, mesPredominante, mesConflicto, distribucionMeses, stats };
 }
 
 // Exponer en window para uso desde op_cargue_seguimiento.html
