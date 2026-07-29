@@ -263,6 +263,13 @@ function opProcesarAlistamiento(wb, periodoId) {
     certificador: idx(['CERTIFICADOR']),
     inicioAduana: idx(['INICIO ADUANA']),
     finAduana: idx(['FIN ADUANA']),
+    // Nuevas columnas (aditivas) para el KPI "Nivel de Servicio" en Picking.
+    // Nota: "ALISTADO", "PICK", "ALISTADO 2" y "CERTIFI" en archivos reales grandes
+    // son columnas auxiliares de fórmulas del Excel origen (texto concatenado tipo
+    // comprobante+sku), NO cantidades — por eso el nivel de servicio se calcula con
+    // "PARCIAL ?" (OK/PARCIAL), que sí es un dato limpio.
+    status: idx(['STATUS']),
+    parcial: idx(['PARCIAL']),
   };
 
   const records = [], inconsistencias = [], fechasISO = [];
@@ -298,6 +305,8 @@ function opProcesarAlistamiento(wb, periodoId) {
       certificador: r[C.certificador] ?? null,
       inicio_aduana: opFmtHora(opParseHoraSimple(r[C.inicioAduana])),
       fin_aduana: opFmtHora(opParseHoraSimple(r[C.finAduana])),
+      status: r[C.status] ? String(r[C.status]).trim() : null,
+      parcial: r[C.parcial] ? String(r[C.parcial]).trim() : null,
       ola_id: dia ? `${periodoId}-${dia}` : null,
       periodo_id: periodoId,
       is_inconsistente: esInc,

@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="../styles/base.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <style>
     :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
     .content{padding:1.5rem;max-width:1280px;margin:0 auto;width:100%}
@@ -18,22 +19,44 @@
     .filtros select,.filtros input{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.8rem;padding:.4rem .65rem;outline:none;cursor:pointer}
     .filtros label{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:.25rem}
 
-    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.85rem;margin-bottom:1.25rem}
-    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;animation:fadeUp .35s ease both}
+    /* Grid fijo de 4 columnas (mismo fix aplicado en Recibo / Productividad Recibo). */
+    .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1.25rem}
+    @media(max-width:900px){.metrics-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:520px){.metrics-grid{grid-template-columns:1fr}}
+    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;animation:fadeUp .35s ease both;min-width:0}
     .metric-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
     .metric-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800}
+    .metric-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem}
 
-    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:340px;display:flex;flex-direction:column;margin-bottom:1.25rem}
-    .chart-card h3{font-size:.85rem;font-weight:700;margin-bottom:.6rem}
-    .chart-wrap{flex:1;position:relative}
+    .charts-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:1rem;margin-bottom:1.25rem}
+    @media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:340px;display:flex;flex-direction:column;margin-bottom:1.25rem;min-width:0;min-height:0}
+    .chart-card h3{font-size:.85rem;font-weight:700;margin-bottom:.6rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+    .chart-card.donut-card{max-width:560px;margin-left:auto;margin-right:auto}
+    .chart-wrap{flex:1;position:relative;min-width:0;min-height:0;overflow:hidden}
 
-    .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+    .btn-maximizar{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);cursor:pointer;font-size:.85rem;padding:.2rem .5rem;line-height:1.3;font-family:'DM Sans',sans-serif;font-weight:600}
+    .btn-maximizar:hover{border-color:var(--op-accent);color:var(--op-accent)}
+    .modal-grafica{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000;padding:2rem}
+    .modal-grafica.on{display:flex}
+    .modal-grafica-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);width:min(1540px,96vw);height:min(774px,92vh);display:flex;flex-direction:column;padding:1.25rem}
+    .modal-grafica-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem}
+    .modal-grafica-body{flex:1;position:relative;min-height:0;overflow:hidden}
+
+    .tbl-buscar{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.78rem;padding:.4rem .65rem;outline:none;min-width:220px}
+    .tbl-buscar:focus{border-color:var(--op-accent)}
+    .sec-title{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;margin:1.25rem 0 .6rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+
+    .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1.25rem}
     .tbl-scroll{overflow-x:auto;max-height:480px;overflow-y:auto}
     table{width:100%;border-collapse:collapse;font-size:.78rem}
     thead th{text-align:left;padding:.5rem .7rem;font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;white-space:nowrap}
     tbody tr{border-bottom:1px solid var(--border)}
     tbody tr:hover{background:var(--surface2)}
-    tbody td{padding:.42rem .7rem}
+    tbody td{padding:.42rem .7rem;white-space:nowrap}
+    tfoot td{padding:.55rem .7rem;font-weight:700;background:var(--surface2);border-top:2px solid var(--border)}
+    .badge-ok{background:rgba(0,255,136,.15);color:var(--ok);border-radius:999px;padding:.15rem .55rem;font-size:.7rem;font-weight:600}
+    .badge-warn{background:rgba(242,153,74,.15);color:var(--warn);border-radius:999px;padding:.15rem .55rem;font-size:.7rem;font-weight:600}
   </style>
 </head>
 <body>
@@ -59,37 +82,123 @@
     <div class="filtros">
       <div><label>Mes</label><select id="fMes" onchange="render()"></select></div>
       <div><label>Cliente/Tercero</label><select id="fCliente" onchange="render()"><option value="">Todos</option></select></div>
+      <div><label>Status</label><select id="fEstado" onchange="render()"><option value="">Todos</option></select></div>
     </div>
 
     <div class="metrics-grid" id="metricsGrid"></div>
 
     <div class="chart-card">
-      <h3>Comprobantes Alistados por Día</h3>
+      <h3><span>Comprobantes Alistados por Día</span>
+        <button class="btn-maximizar" onclick="abrirGraficaModal('cDia','Comprobantes Alistados por Día')" title="Maximizar">⛶ Maximizar</button>
+      </h3>
       <div class="chart-wrap"><canvas id="cDia"></canvas></div>
     </div>
     <div class="chart-card">
-      <h3>Líneas de Picking WMS por Día</h3>
+      <h3><span>Líneas de Picking WMS por Día</span>
+        <button class="btn-maximizar" onclick="abrirGraficaModal('cLineas','Líneas de Picking WMS por Día')" title="Maximizar">⛶ Maximizar</button>
+      </h3>
       <div class="chart-wrap"><canvas id="cLineas"></canvas></div>
     </div>
+    <div class="chart-card donut-card">
+      <h3><span>Distribución por Status</span></h3>
+      <div class="chart-wrap"><canvas id="cStatus"></canvas></div>
+    </div>
 
+    <div class="sec-title">
+      <span>📦 Productos Más Pickeados (Picking WMS)</span>
+      <input type="text" id="prodBuscar" class="tbl-buscar" placeholder="🔍 Filtrar por producto…" oninput="renderProductosTable()"/>
+    </div>
     <div class="tbl-wrap">
       <div class="tbl-scroll">
         <table>
-          <thead><tr><th>Día</th><th>Comprobante</th><th>Tercero</th><th>SKU</th><th>Cajas</th><th>Operario</th><th>Inicio</th><th>Fin</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Producto</th><th>Referencia(s)</th><th>Líneas</th><th>Cantidad Pickeada</th><th>% del Total</th></tr></thead>
+          <tbody id="prodBody"></tbody>
+          <tfoot>
+            <tr>
+              <td>Total <span id="prodTotFilas" style="font-weight:400;color:var(--muted)"></span></td><td></td>
+              <td id="prodTotLineas"></td><td id="prodTotCant"></td><td id="prodTotPct"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <div class="sec-title">
+      <span>📋 Detalle Alistamiento</span>
+      <input type="text" id="detBuscar" class="tbl-buscar" placeholder="🔍 Filtrar por comprobante, tercero, SKU u operario…" oninput="renderDetalleTable()"/>
+    </div>
+    <div class="tbl-wrap">
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr>
+            <th>Día</th><th>Comprobante</th><th>Tercero</th><th>SKU</th><th>Facturado</th><th>Cajas</th>
+            <th>Operario</th><th>Inicio</th><th>Fin</th><th>Status</th><th>Parcial</th>
+          </tr></thead>
           <tbody id="tblBody"></tbody>
+          <tfoot>
+            <tr>
+              <td>Total <span id="detTotFilas" style="font-weight:400;color:var(--muted)"></span></td><td></td><td></td><td></td>
+              <td id="detTotFact"></td><td id="detTotCajas"></td><td></td><td></td><td></td><td></td><td></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
   </main>
 </div>
 
+<div class="modal-grafica" id="modalGrafica" onclick="if(event.target===this) cerrarGraficaModal()">
+  <div class="modal-grafica-box">
+    <div class="modal-grafica-hdr">
+      <span id="modalGraficaTitulo"></span>
+      <button class="btn-maximizar" onclick="cerrarGraficaModal()" title="Minimizar">✕ Cerrar</button>
+    </div>
+    <div class="modal-grafica-body"><canvas id="modalGraficaCanvas"></canvas></div>
+  </div>
+</div>
+
 <script src="../config/config.js"></script>
 <script src="../utils/auth.js"></script>
 <script>
 applyTheme();
+if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
 let alistamiento = [], pickingWms = [];
 let charts = {};
+let modalChartInstance = null;
+let lastChartConfigs = {};
+let lastProductos = [];   // usado por renderProductosTable() para el filtro de búsqueda
+let lastCantidadTotal = 0;
+let lastAlistamientoFiltrada = []; // usado por renderDetalleTable()
+const numCO = n => (n||0).toLocaleString('es-CO');
+const DL_BARRA = { color:'#FFFFFF', font:{weight:'800', size:11}, textStrokeColor:'rgba(0,0,0,.6)', textStrokeWidth:3 };
+
 function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+/**
+ * abrirGraficaModal(chartId, titulo)
+ * Reutiliza la config plana (type/data/options) guardada al crear cada chart —no la
+ * instancia viva de Chart.js v4 (chart.options es un Proxy interno que rompe al
+ * copiarse, ver fix aplicado en Recibo / Productividad Recibo tras el mismo bug).
+ */
+function abrirGraficaModal(chartId, titulo) {
+  const cfg = lastChartConfigs[chartId];
+  if (!cfg) return;
+  document.getElementById('modalGraficaTitulo').textContent = titulo;
+  document.getElementById('modalGrafica').classList.add('on');
+  const huerfano = Chart.getChart('modalGraficaCanvas');
+  if (huerfano) huerfano.destroy();
+  if (modalChartInstance) { modalChartInstance.destroy(); modalChartInstance = null; }
+  modalChartInstance = new Chart(document.getElementById('modalGraficaCanvas'), {
+    type: cfg.type,
+    data: cfg.data,
+    options: { ...cfg.options, maintainAspectRatio:false, responsive:true }
+  });
+}
+function cerrarGraficaModal() {
+  document.getElementById('modalGrafica').classList.remove('on');
+  if (modalChartInstance) { modalChartInstance.destroy(); modalChartInstance = null; }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarGraficaModal(); });
 
 function poblarFiltros() {
   const meses = [...new Set(alistamiento.map(r=>r.periodo_id))].sort();
@@ -102,12 +211,16 @@ function poblarFiltros() {
 
   const clientes = [...new Set(alistamiento.map(r=>r.nombre_tercero).filter(Boolean))].sort();
   document.getElementById('fCliente').innerHTML = `<option value="">Todos</option>` + clientes.map(c=>`<option value="${c}">${c}</option>`).join('');
+
+  const estados = [...new Set(alistamiento.map(r=>r.status).filter(Boolean))].sort();
+  document.getElementById('fEstado').innerHTML = `<option value="">Todos</option>` + estados.map(s=>`<option value="${s}">${s}</option>`).join('');
 }
 
 function filtrarAlistamiento() {
   const mes = document.getElementById('fMes').value;
   const cliente = document.getElementById('fCliente').value;
-  return alistamiento.filter(r => (!mes || r.periodo_id===mes) && (!cliente || r.nombre_tercero===cliente));
+  const estado = document.getElementById('fEstado').value;
+  return alistamiento.filter(r => (!mes || r.periodo_id===mes) && (!cliente || r.nombre_tercero===cliente) && (!estado || r.status===estado));
 }
 function filtrarPickingWms() {
   const mes = document.getElementById('fMes').value;
@@ -121,39 +234,138 @@ function render() {
   const comprobantes = new Set(ali.map(r=>r.comprobante).filter(Boolean));
   const cajas = ali.reduce((s,r)=>s+(r.cantidad_cajas||0),0);
   const lineasWms = pk.length;
+  const totalFacturado = ali.reduce((s,r)=>s+(r.facturado||0),0);
+
+  // Nivel de Servicio: se calcula sobre la columna "PARCIAL ?" (OK vs PARCIAL), que es
+  // el único dato limpio disponible para esto — "ALISTADO"/"PICK"/"ALISTADO 2" son
+  // columnas auxiliares de fórmulas del Excel origen, no cantidades reales.
+  const conParcial = ali.filter(r=>r.parcial==='OK' || r.parcial==='PARCIAL');
+  const okCount = ali.filter(r=>r.parcial==='OK').length;
+  const parcialCount = ali.filter(r=>r.parcial==='PARCIAL').length;
+  const nivelServicio = conParcial.length ? Math.round(okCount/conParcial.length*1000)/10 : null;
 
   document.getElementById('metricsGrid').innerHTML = `
     <div class="metric-card" style="animation-delay:.02s"><div class="metric-label">Comprobantes</div><div class="metric-value">${comprobantes.size}</div></div>
-    <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Cajas Alistadas</div><div class="metric-value">${cajas.toLocaleString('es-CO')}</div></div>
-    <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Líneas Picking WMS</div><div class="metric-value">${lineasWms.toLocaleString('es-CO')}</div></div>
+    <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Cajas Alistadas</div><div class="metric-value">${numCO(cajas)}</div></div>
+    <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Líneas Picking WMS</div><div class="metric-value">${numCO(lineasWms)}</div></div>
     <div class="metric-card" style="animation-delay:.11s"><div class="metric-label">SKUs Distintos</div><div class="metric-value">${new Set(ali.map(r=>r.sku).filter(Boolean)).size}</div></div>
+    <div class="metric-card" style="animation-delay:.14s"><div class="metric-label">Total Facturado (uds)</div><div class="metric-value">${numCO(totalFacturado)}</div></div>
+    <div class="metric-card" style="animation-delay:.17s"><div class="metric-label">Nivel de Servicio</div><div class="metric-value" style="color:var(--ok)">${nivelServicio ?? '—'}${nivelServicio!==null?'<span style="font-size:.9rem">%</span>':''}</div><div class="metric-sub">${okCount} OK / ${parcialCount} Parcial</div></div>
   `;
 
+  // Color de ejes (fechas/valores) resuelto contra el tema activo — el gris tenue por
+  // defecto de Chart.js casi no se veía (mismo ajuste aplicado en Recibo).
+  const colorEjes = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#E8F0FE';
+
+  // Chart: Comprobantes Alistados por Día
   const porDiaComprob = {};
   ali.forEach(r => { if(!r.dia) return; porDiaComprob[r.dia] = porDiaComprob[r.dia] || new Set(); porDiaComprob[r.dia].add(r.comprobante); });
   const diasC = Object.keys(porDiaComprob).sort();
   destroyChart('cDia');
-  charts.cDia = new Chart(document.getElementById('cDia'), {
+  const cDiaCfg = {
     type:'line',
-    data:{ labels:diasC, datasets:[{ label:'Comprobantes', data:diasC.map(d=>porDiaComprob[d].size), borderColor:'#F2994A', backgroundColor:'rgba(242,153,74,.15)', fill:true, tension:.3 }] },
-    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{color:'rgba(255,255,255,.04)'}} } }
-  });
+    data:{ labels:diasC, datasets:[{ label:'Comprobantes', data:diasC.map(d=>porDiaComprob[d].size), borderColor:'#F2994A', backgroundColor:'rgba(242,153,74,.15)', fill:true, tension:.3, pointRadius:3 }] },
+    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes}}, y:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes}} },
+      plugins:{ datalabels:{ ...DL_BARRA, color:colorEjes, textStrokeWidth:0, align:'top', anchor:'end', formatter:v=>v } } }
+  };
+  charts.cDia = new Chart(document.getElementById('cDia'), cDiaCfg);
+  lastChartConfigs.cDia = cDiaCfg;
 
+  // Chart: Líneas de Picking WMS por Día
   const porDiaLineas = {};
   pk.forEach(r => { if(!r.fecha_registro) return; porDiaLineas[r.fecha_registro] = (porDiaLineas[r.fecha_registro]||0)+1; });
   const diasL = Object.keys(porDiaLineas).sort();
   destroyChart('cLineas');
-  charts.cLineas = new Chart(document.getElementById('cLineas'), {
+  const cLineasCfg = {
     type:'bar',
     data:{ labels:diasL, datasets:[{ label:'Líneas Picking WMS', data:diasL.map(d=>porDiaLineas[d]), backgroundColor:'#00D4FF' }] },
-    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{color:'rgba(255,255,255,.04)'}} } }
+    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes}}, y:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes}} },
+      plugins:{ datalabels:{ ...DL_BARRA, anchor:'end', align:'top', formatter:v=>numCO(v) } } }
+  };
+  charts.cLineas = new Chart(document.getElementById('cLineas'), cLineasCfg);
+  lastChartConfigs.cLineas = cLineasCfg;
+
+  // Chart: distribución por Status
+  const porStatus = {};
+  ali.forEach(r => { const s = r.status || 'Sin status'; porStatus[s] = (porStatus[s]||0)+1; });
+  const statusEntries = Object.entries(porStatus).sort((a,b)=>b[1]-a[1]);
+  destroyChart('cStatus');
+  charts.cStatus = new Chart(document.getElementById('cStatus'), {
+    type:'doughnut',
+    data:{ labels:statusEntries.map(s=>s[0]), datasets:[{ data:statusEntries.map(s=>s[1]), backgroundColor:['#00D4FF','#00FF88','#F2994A','#B77CFF','#FF4D6D','#8090A8'] }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ datalabels:{ color:'#0B0F1A', font:{weight:'700', size:11}, formatter:v=>numCO(v) } } }
   });
 
-  document.getElementById('tblBody').innerHTML = ali.slice(0,500).map(r=>`<tr>
+  // Tabla: Productos Más Pickeados (agregado desde op_picking_wms, ya cargado)
+  const porProd = {};
+  pk.forEach(r => {
+    const p = r.descripcion || '(sin descripción)';
+    if (!porProd[p]) porProd[p] = { refs:new Set(), lineas:0, cantidad:0 };
+    if (r.referencia) porProd[p].refs.add(r.referencia);
+    porProd[p].lineas++;
+    porProd[p].cantidad += (r.cantidad||0);
+  });
+  lastProductos = Object.entries(porProd).sort((a,b)=>b[1].cantidad-a[1].cantidad);
+  lastCantidadTotal = pk.reduce((s,r)=>s+(r.cantidad||0),0);
+  renderProductosTable();
+
+  // Detalle Alistamiento
+  lastAlistamientoFiltrada = ali;
+  renderDetalleTable();
+}
+
+/**
+ * renderProductosTable()
+ * Pinta "Productos Más Pickeados" a partir de lastProductos (calculado en render()),
+ * aplicando el filtro de texto de #prodBuscar. Fila de totales dinámica.
+ */
+function renderProductosTable() {
+  const q = (document.getElementById('prodBuscar')?.value || '').trim().toLowerCase();
+  const filas = q ? lastProductos.filter(([p]) => p.toLowerCase().includes(q)) : lastProductos;
+
+  document.getElementById('prodBody').innerHTML = filas.map(([p,v])=>`<tr>
+    <td>${p}</td><td>${[...v.refs].slice(0,3).join(', ')}${v.refs.size>3?` (+${v.refs.size-3})`:''}</td>
+    <td>${v.lineas}</td><td>${numCO(v.cantidad)}</td>
+    <td>${lastCantidadTotal?Math.round(v.cantidad/lastCantidadTotal*1000)/10:0}%</td>
+  </tr>`).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
+
+  const totLineas = filas.reduce((s,[,v])=>s+v.lineas,0);
+  const totCant = filas.reduce((s,[,v])=>s+v.cantidad,0);
+  const totPct = lastCantidadTotal ? Math.round(totCant/lastCantidadTotal*1000)/10 : 0;
+  document.getElementById('prodTotFilas').textContent = `(${filas.length} producto${filas.length===1?'':'s'})`;
+  document.getElementById('prodTotLineas').textContent = totLineas;
+  document.getElementById('prodTotCant').textContent = numCO(totCant);
+  document.getElementById('prodTotPct').textContent = totPct + '%';
+}
+
+/**
+ * renderDetalleTable()
+ * Pinta la tabla de detalle de Alistamiento a partir de lastAlistamientoFiltrada,
+ * aplicando el filtro de texto de #detBuscar (comprobante, tercero, SKU, operario).
+ */
+function renderDetalleTable() {
+  const q = (document.getElementById('detBuscar')?.value || '').trim().toLowerCase();
+  const filas = q ? lastAlistamientoFiltrada.filter(r =>
+    String(r.comprobante||'').toLowerCase().includes(q) ||
+    String(r.nombre_tercero||'').toLowerCase().includes(q) ||
+    String(r.sku||'').toLowerCase().includes(q) ||
+    String(r.operario||'').toLowerCase().includes(q)
+  ) : lastAlistamientoFiltrada;
+
+  document.getElementById('tblBody').innerHTML = filas.slice(0,500).map(r=>`<tr>
     <td>${r.dia||'—'}</td><td>${r.comprobante||'—'}</td><td>${r.nombre_tercero||'—'}</td><td>${r.sku||'—'}</td>
-    <td>${(r.cantidad_cajas||0).toLocaleString('es-CO')}</td><td>${r.operario||'—'}</td>
-    <td>${r.inicio_picking||'—'}</td><td>${r.fin_picking||'—'}</td><td>${r.estado||'—'}</td>
-  </tr>`).join('') || `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
+    <td>${numCO(r.facturado)}</td><td>${numCO(r.cantidad_cajas)}</td><td>${r.operario||'—'}</td>
+    <td>${r.inicio_picking||'—'}</td><td>${r.fin_picking||'—'}</td>
+    <td>${r.status||'—'}</td>
+    <td>${r.parcial?`<span class="badge ${r.parcial==='OK'?'badge-ok':'badge-warn'}">${r.parcial}</span>`:'—'}</td>
+  </tr>`).join('') || `<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
+
+  const totFact = filas.reduce((s,r)=>s+(r.facturado||0),0);
+  const totCajas = filas.reduce((s,r)=>s+(r.cantidad_cajas||0),0);
+  document.getElementById('detTotFilas').textContent = `(${filas.length} línea${filas.length===1?'':'s'}${filas.length!==lastAlistamientoFiltrada.length?` de ${lastAlistamientoFiltrada.length}`:''})`;
+  document.getElementById('detTotFact').textContent = numCO(totFact);
+  document.getElementById('detTotCajas').textContent = numCO(totCajas);
 }
 
 async function cargarDatos() {
