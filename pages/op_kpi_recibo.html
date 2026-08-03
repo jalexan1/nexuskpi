@@ -272,17 +272,19 @@ function filtrar() {
 
 function render() {
   const data = filtrar();
-  // "Total Recibos" = documentos distintos (un recibo real), NO filas — cada documento
-  // puede traer varias líneas de referencia/SKU. Verificado con el coordinador de Recibo:
-  // 230 filas reales = 103 documentos distintos (recibos reales) sobre marzo.
   const totalRecibos = new Set(data.map(r=>r.documento).filter(Boolean)).size;
-  const conCita = data.filter(r=>r.tiene_cita).length;
-  const sinCita = data.length - conCita;
+  // Con Cita / Sin Cita se cuentan por DOCUMENTO distinto (no por línea) — la cita se
+  // agenda por recibo/camión, no por cada referencia dentro de él. Verificado: los 103
+  // documentos de marzo son 100% consistentes (ninguno mezcla líneas con y sin cita).
+  const citaPorDoc = new Map();
+  data.forEach(r => { if (r.documento && !citaPorDoc.has(r.documento)) citaPorDoc.set(r.documento, r.tiene_cita); });
+  const conCita = [...citaPorDoc.values()].filter(Boolean).length;
+  const sinCita = totalRecibos - conCita;
   const uds = data.reduce((s,r)=>s+(r.cantidad_recibo_unidades||0),0);
   const cajas = data.reduce((s,r)=>s+(r.cantidad_recibo_cajas||0),0);
   const tiempos = data.map(r=>horasEntre(r.hora_inicio_descargue,r.hora_final_descargue)).filter(t=>t!==null && t>0 && t<24);
   const tProm = tiempos.length ? Math.round(tiempos.reduce((a,b)=>a+b,0)/tiempos.length*100)/100 : null;
-  const tPromMin = tProm !== null ? Math.round(tProm*60) : null; // minutos, para la tarjeta (mismo cálculo, solo cambia la unidad mostrada)
+  const tPromMin = tProm !== null ? Math.round(tProm*60) : null;
 
   // Fill Rate: Cantidad Pedido Unidades vs Cantidad Recibo Unidades (aprobado con el usuario)
   const pedUds = data.reduce((s,r)=>s+(r.cantidad_pedido_unidades||0),0);
@@ -291,8 +293,8 @@ function render() {
 
   document.getElementById('metricsGrid').innerHTML = `
     <div class="metric-card" style="animation-delay:.02s"><div class="metric-label">Total Recibos</div><div class="metric-value">${totalRecibos}</div><div class="metric-sub">${data.length} líneas de referencia</div></div>
-    <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Con Cita</div><div class="metric-value" style="color:var(--ok)">${conCita}</div><div class="metric-sub">${data.length?Math.round(conCita/data.length*100):0}% del total</div></div>
-    <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Sin Cita</div><div class="metric-value" style="color:var(--warn)">${sinCita}</div><div class="metric-sub">${data.length?Math.round(sinCita/data.length*100):0}% del total</div></div>
+    <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Con Cita</div><div class="metric-value" style="color:var(--ok)">${conCita}</div><div class="metric-sub">${totalRecibos?Math.round(conCita/totalRecibos*100):0}% de los recibos</div></div>
+    <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Sin Cita</div><div class="metric-value" style="color:var(--warn)">${sinCita}</div><div class="metric-sub">${totalRecibos?Math.round(sinCita/totalRecibos*100):0}% de los recibos</div></div>
     <div class="metric-card" style="animation-delay:.11s"><div class="metric-label">Unidades Recibidas</div><div class="metric-value">${uds.toLocaleString('es-CO')}</div></div>
     <div class="metric-card" style="animation-delay:.14s"><div class="metric-label">Cajas Recibidas</div><div class="metric-value">${Math.round(cajas).toLocaleString('es-CO')}</div></div>
     <div class="metric-card" style="animation-delay:.17s"><div class="metric-label">Tiempo Prom. Descargue</div><div class="metric-value">${tPromMin ?? '—'}<span style="font-size:.9rem">min</span></div></div>
