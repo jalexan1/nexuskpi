@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="../styles/base.css"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <style>
     :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
     .content{padding:1.5rem;max-width:1280px;margin:0 auto;width:100%}
@@ -14,31 +15,46 @@
     .pg-hdr h1{font-size:clamp(1.2rem,3vw,1.5rem);font-weight:800}
     .pg-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem;margin-bottom:1.25rem}
 
-    .tabs-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 1.25rem;gap:.1rem;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--topbar-h);z-index:90;margin:0 -1.5rem 1.25rem}
-    .tab-btn{padding:.75rem .95rem;font-size:.82rem;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
-    .tab-btn.on{color:var(--op-accent);border-bottom-color:var(--op-accent)}
-    .tab-panel{display:none}.tab-panel.on{display:block}
-
     .filtros{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem}
     .filtros select{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.8rem;padding:.4rem .65rem;outline:none;cursor:pointer}
     .filtros label{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:.25rem}
 
-    .metrics-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.85rem;margin-bottom:1.25rem}
-    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;animation:fadeUp .35s ease both}
+    /* Grid fijo (mismo fix aplicado en Recibo / Productividad Recibo / Picking). */
+    .metrics-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.85rem;margin-bottom:1.25rem}
+    @media(max-width:900px){.metrics-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:520px){.metrics-grid{grid-template-columns:1fr}}
+    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;animation:fadeUp .35s ease both;min-width:0}
     .metric-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
     .metric-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800}
+    .metric-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem}
 
-    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:420px;display:flex;flex-direction:column;margin-bottom:1.25rem}
-    .chart-card h3{font-size:.85rem;font-weight:700;margin-bottom:.6rem}
-    .chart-wrap{flex:1;position:relative}
+    .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem}
+    @media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:360px;display:flex;flex-direction:column;margin-bottom:1.25rem;min-width:0;min-height:0}
+    .chart-card h3{font-size:.85rem;font-weight:700;margin-bottom:.6rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+    .chart-wrap{flex:1;position:relative;min-width:0;min-height:0;overflow:hidden}
+    .chart-note{font-size:.68rem;color:var(--muted);margin-top:.4rem}
 
-    .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+    .btn-maximizar{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);cursor:pointer;font-size:.85rem;padding:.2rem .5rem;line-height:1.3;font-family:'DM Sans',sans-serif;font-weight:600}
+    .btn-maximizar:hover{border-color:var(--op-accent);color:var(--op-accent)}
+    .modal-grafica{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000;padding:2rem}
+    .modal-grafica.on{display:flex}
+    .modal-grafica-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);width:min(1540px,96vw);height:min(774px,92vh);display:flex;flex-direction:column;padding:1.25rem}
+    .modal-grafica-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem}
+    .modal-grafica-body{flex:1;position:relative;min-height:0;overflow:hidden}
+
+    .tbl-buscar{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.78rem;padding:.4rem .65rem;outline:none;min-width:220px}
+    .tbl-buscar:focus{border-color:var(--op-accent)}
+    .sec-title{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;margin:1.25rem 0 .6rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem}
+
+    .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1.25rem}
     .tbl-scroll{overflow-x:auto;max-height:480px;overflow-y:auto}
-    table{width:100%;border-collapse:collapse;font-size:.79rem}
-    thead th{text-align:left;padding:.5rem .7rem;font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0}
+    table{width:100%;border-collapse:collapse;font-size:.78rem}
+    thead th{text-align:left;padding:.5rem .7rem;font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;white-space:nowrap}
     tbody tr{border-bottom:1px solid var(--border)}
     tbody tr:hover{background:var(--surface2)}
-    tbody td{padding:.46rem .7rem}
+    tbody td{padding:.42rem .7rem;white-space:nowrap}
+    tfoot td{padding:.55rem .7rem;font-weight:700;background:var(--surface2);border-top:2px solid var(--border)}
     .sin-asignar{color:var(--muted);font-style:italic}
   </style>
 </head>
@@ -59,7 +75,7 @@
     <div class="pg-hdr">
       <div class="eyebrow">⚡ Operatividad · Productividad Picking</div>
       <h1>Productividad Picking</h1>
-      <p>Líneas y cajas alistadas por operario (ALISTAMIENTO), complementado con ProductividadxPk del WMS.</p>
+      <p>Tasa de productividad (Cajas/Hora), cantidad pickeada y órdenes por operario — calculado a partir de ALISTAMIENTO y PICKING WMS (SEGUIMIENTO CLICK).</p>
     </div>
 
     <div class="filtros">
@@ -70,29 +86,118 @@
     <div class="metrics-grid" id="metricsGrid"></div>
 
     <div class="chart-card">
-      <h3>Ranking de Operarios — Cajas Alistadas</h3>
+      <h3><span>Productividad Diaria (Cajas/Hora)</span>
+        <button class="btn-maximizar" onclick="abrirGraficaModal('cTendencia','Productividad Diaria (Cajas/Hora)')" title="Maximizar">⛶ Maximizar</button>
+      </h3>
+      <div class="chart-wrap"><canvas id="cTendencia"></canvas></div>
+      <div class="chart-note">Solo se grafican días con al menos 1 hora acumulada de TIEMPO REAL (evita tasas infladas por muestras muy pequeñas).</div>
+    </div>
+
+    <div class="chart-card">
+      <h3><span>Ranking de Operarios — Cajas Alistadas</span>
+        <button class="btn-maximizar" onclick="abrirGraficaModal('cRanking','Ranking de Operarios — Cajas Alistadas')" title="Maximizar">⛶ Maximizar</button>
+      </h3>
       <div class="chart-wrap"><canvas id="cRanking"></canvas></div>
     </div>
 
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3><span>Cantidad Pickeada (Unidades)</span>
+          <button class="btn-maximizar" onclick="abrirGraficaModal('cCantidad','Cantidad Pickeada (Unidades)')" title="Maximizar">⛶ Maximizar</button>
+        </h3>
+        <div class="chart-wrap"><canvas id="cCantidad"></canvas></div>
+        <div class="chart-note">Fuente: PICKING WMS (columna CANTIDAD), cruzado por operario/empleado. No incluye cuentas de sistema (ver nota en tabla de detalle).</div>
+      </div>
+      <div class="chart-card">
+        <h3><span>Órdenes Pickeadas (Comprobantes)</span>
+          <button class="btn-maximizar" onclick="abrirGraficaModal('cOrdenes','Órdenes Pickeadas (Comprobantes)')" title="Maximizar">⛶ Maximizar</button>
+        </h3>
+        <div class="chart-wrap"><canvas id="cOrdenes"></canvas></div>
+      </div>
+    </div>
+
+    <div class="sec-title">
+      <span>👷 Detalle por Operario</span>
+      <input type="text" id="tblBuscar" class="tbl-buscar" placeholder="🔍 Filtrar por operario…" oninput="renderTabla()"/>
+    </div>
     <div class="tbl-wrap">
       <div class="tbl-scroll">
         <table>
-          <thead><tr><th>Operario</th><th>Comprobantes</th><th>Líneas</th><th>Cajas</th><th>Tiempo Total (min)</th></tr></thead>
+          <thead><tr>
+            <th>Operario</th><th>Comprobantes</th><th>Líneas</th><th>Cajas</th>
+            <th>Cant. Pickeada (uds)</th><th>Tiempo Total (min)</th><th>Tiempo Promedio (min/línea)</th><th>Cajas/Hora</th>
+          </tr></thead>
           <tbody id="tblBody"></tbody>
+          <tfoot>
+            <tr>
+              <td>Total <span id="totFilas" style="font-weight:400;color:var(--muted)"></span></td>
+              <td id="totComp"></td><td id="totLineas"></td><td id="totCajas"></td><td id="totCant"></td><td id="totTiempo"></td><td></td><td></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
+    <p style="font-size:.7rem;color:var(--muted);margin-top:.5rem">Nota: "ADUANADOR 1111" y "CONSULTOR COCCS" aparecen como empleado en PICKING WMS pero no como operario en ALISTAMIENTO — se excluyen de los rankings de productividad por no corresponder a un operario de picking; su revisión queda registrada en Auditoría de Cargues.</p>
   </main>
+</div>
+
+<div class="modal-grafica" id="modalGrafica" onclick="if(event.target===this) cerrarGraficaModal()">
+  <div class="modal-grafica-box">
+    <div class="modal-grafica-hdr">
+      <span id="modalGraficaTitulo"></span>
+      <button class="btn-maximizar" onclick="cerrarGraficaModal()" title="Minimizar">✕ Cerrar</button>
+    </div>
+    <div class="modal-grafica-body"><canvas id="modalGraficaCanvas"></canvas></div>
+  </div>
 </div>
 
 <script src="../config/config.js"></script>
 <script src="../utils/auth.js"></script>
 <script>
 applyTheme();
-let alistamiento = [];
+if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
+let alistamiento = [], pickingWms = [];
 let charts = {};
+let modalChartInstance = null;
+let lastChartConfigs = {};
+let lastFilas = [];              // orden de operarios a pintar en la tabla
+let porOperarioSnapshot = {};    // datos agregados del último render(), usado por renderTabla()
 const SIN_OPERARIO = 'Sin operario asignado';
+// Cuentas de sistema/soporte detectadas en PICKING WMS que no corresponden a operarios de
+// picking (no aparecen nunca en ALISTAMIENTO.OPERARIO). Se excluyen de los rankings de
+// productividad para no distorsionarlos; su revisión formal queda en Auditoría de Cargues.
+const CUENTAS_SISTEMA = ['ADUANADOR 1111', 'CONSULTOR COCCS'];
+const MIN_HORAS_CONFIABLE = 1; // umbral para no mostrar tasas infladas por muestras muy pequeñas
+const numCO = n => (n||0).toLocaleString('es-CO');
+const DL_BARRA = { color:'#FFFFFF', font:{weight:'800', size:11}, textStrokeColor:'rgba(0,0,0,.6)', textStrokeWidth:3 };
+
 function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+/**
+ * abrirGraficaModal(chartId, titulo)
+ * Reutiliza la config plana (type/data/options) guardada al crear cada chart —no la
+ * instancia viva de Chart.js v4 (chart.options es un Proxy interno que rompe al
+ * copiarse, mismo fix aplicado en Recibo / Productividad Recibo / Picking).
+ */
+function abrirGraficaModal(chartId, titulo) {
+  const cfg = lastChartConfigs[chartId];
+  if (!cfg) return;
+  document.getElementById('modalGraficaTitulo').textContent = titulo;
+  document.getElementById('modalGrafica').classList.add('on');
+  const huerfano = Chart.getChart('modalGraficaCanvas');
+  if (huerfano) huerfano.destroy();
+  if (modalChartInstance) { modalChartInstance.destroy(); modalChartInstance = null; }
+  modalChartInstance = new Chart(document.getElementById('modalGraficaCanvas'), {
+    type: cfg.type,
+    data: cfg.data,
+    options: { ...cfg.options, maintainAspectRatio:false, responsive:true }
+  });
+}
+function cerrarGraficaModal() {
+  document.getElementById('modalGrafica').classList.remove('on');
+  if (modalChartInstance) { modalChartInstance.destroy(); modalChartInstance = null; }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarGraficaModal(); });
 
 function poblarFiltros() {
   const meses = [...new Set(alistamiento.map(r=>r.periodo_id))].sort();
@@ -107,7 +212,7 @@ function poblarFiltros() {
   document.getElementById('fOperario').innerHTML = `<option value="">Todos</option>` + ops.map(o=>`<option value="${o}">${o}</option>`).join('');
 }
 
-function filtrar() {
+function filtrarAlistamiento() {
   const mes = document.getElementById('fMes').value;
   const op = document.getElementById('fOperario').value;
   return alistamiento.filter(r => {
@@ -115,50 +220,160 @@ function filtrar() {
     return (!mes || r.periodo_id===mes) && (!op || opNombre===op);
   });
 }
+function filtrarPickingWms() {
+  const mes = document.getElementById('fMes').value;
+  const op = document.getElementById('fOperario').value;
+  return pickingWms.filter(r => (!mes || r.periodo_id===mes) && (!op || (r.empleado||'')===op));
+}
 
 function render() {
-  const data = filtrar();
+  const data = filtrarAlistamiento();
+  const pk = filtrarPickingWms().filter(r => !CUENTAS_SISTEMA.includes((r.empleado||'').trim()));
+
   const porOperario = {};
   data.forEach(r => {
     const op = r.operario || SIN_OPERARIO;
-    porOperario[op] = porOperario[op] || { comprobantes:new Set(), lineas:0, cajas:0, tiempoMin:0 };
+    porOperario[op] = porOperario[op] || { comprobantes:new Set(), lineas:0, cajas:0, tiempoMin:0, cantidadPk:0 };
     if (r.comprobante) porOperario[op].comprobantes.add(r.comprobante);
     porOperario[op].lineas++;
     porOperario[op].cajas += (r.cantidad_cajas||0);
     const t = parseFloat(r.tiempo_real); if (!isNaN(t)) porOperario[op].tiempoMin += t;
   });
+  // Cruce con PICKING WMS: op_alistamiento.operario y op_picking_wms.empleado comparten
+  // el mismo espacio de nombres (verificado 10/10 sobre datos reales) — se usa para sumar
+  // la cantidad pickeada en unidades por operario.
+  pk.forEach(r => {
+    const op = r.empleado || SIN_OPERARIO;
+    if (!porOperario[op]) porOperario[op] = { comprobantes:new Set(), lineas:0, cajas:0, tiempoMin:0, cantidadPk:0 };
+    porOperario[op].cantidadPk += (r.cantidad||0);
+  });
 
   const nombrados = Object.keys(porOperario).filter(o=>o!==SIN_OPERARIO);
   const sinAsignar = porOperario[SIN_OPERARIO];
   const totalCajas = data.reduce((s,r)=>s+(r.cantidad_cajas||0),0);
+  const totalCantidadPk = pk.reduce((s,r)=>s+(r.cantidad||0),0);
+  const totalTiempoMin = data.reduce((s,r)=>{ const t=parseFloat(r.tiempo_real); return s+(isNaN(t)?0:t); },0);
+  const totalHoras = totalTiempoMin/60;
+  const cajasHoraGlobal = totalHoras>=MIN_HORAS_CONFIABLE ? Math.round(totalCajas/totalHoras*10)/10 : null;
+  const tiempoPromedioGlobal = data.length ? Math.round(totalTiempoMin/data.length*10)/10 : 0;
 
   document.getElementById('metricsGrid').innerHTML = `
     <div class="metric-card" style="animation-delay:.02s"><div class="metric-label">Operarios Activos</div><div class="metric-value">${nombrados.length}</div></div>
-    <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Líneas Alistadas</div><div class="metric-value">${data.length.toLocaleString('es-CO')}</div></div>
-    <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Cajas Alistadas</div><div class="metric-value">${totalCajas.toLocaleString('es-CO')}</div></div>
-    <div class="metric-card" style="animation-delay:.11s"><div class="metric-label">Sin Operario Asignado</div><div class="metric-value" style="color:var(--muted)">${sinAsignar?sinAsignar.lineas:0}</div></div>
+    <div class="metric-card" style="animation-delay:.04s"><div class="metric-label">Líneas Alistadas</div><div class="metric-value">${numCO(data.length)}</div></div>
+    <div class="metric-card" style="animation-delay:.06s"><div class="metric-label">Cajas Alistadas</div><div class="metric-value">${numCO(totalCajas)}</div></div>
+    <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Cantidad Pickeada (uds)</div><div class="metric-value">${numCO(totalCantidadPk)}</div></div>
+    <div class="metric-card" style="animation-delay:.10s"><div class="metric-label">Tiempo Promedio (min/línea)</div><div class="metric-value">${tiempoPromedioGlobal}</div></div>
+    <div class="metric-card" style="animation-delay:.12s"><div class="metric-label">Productividad (Cajas/Hora)</div><div class="metric-value" style="color:var(--ok)">${cajasHoraGlobal ?? '—'}</div>${cajasHoraGlobal===null?'<div class="metric-sub">Muestra insuficiente (&lt; 1h)</div>':''}</div>
   `;
 
-  const ranking = nombrados.map(o=>({op:o, ...porOperario[o]})).sort((a,b)=>b.cajas-a.cajas).slice(0,20);
-  destroyChart('cRanking');
-  charts.cRanking = new Chart(document.getElementById('cRanking'), {
-    type:'bar',
-    data:{ labels:ranking.map(r=>r.op), datasets:[{ label:'Cajas Alistadas', data:ranking.map(r=>r.cajas), backgroundColor:'#F2994A' }] },
-    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}}, y:{grid:{display:false}} } }
-  });
+  const colorEjes = getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#E8F0FE';
 
-  const filas = [...nombrados.sort((a,b)=>porOperario[b].cajas-porOperario[a].cajas)];
-  if (sinAsignar) filas.push(SIN_OPERARIO);
+  // Chart: Productividad Diaria (Cajas/Hora) — desde ALISTAMIENTO (tiempo_real), no
+  // depende de que se haya cargado el archivo WMS Base.
+  const porDia = {};
+  data.forEach(r => {
+    if (!r.dia) return;
+    porDia[r.dia] = porDia[r.dia] || { cajas:0, tiempoMin:0 };
+    porDia[r.dia].cajas += (r.cantidad_cajas||0);
+    const t = parseFloat(r.tiempo_real); if (!isNaN(t)) porDia[r.dia].tiempoMin += t;
+  });
+  const diasValidos = Object.keys(porDia).filter(d => porDia[d].tiempoMin/60 >= MIN_HORAS_CONFIABLE).sort();
+  destroyChart('cTendencia');
+  const cTendenciaCfg = {
+    type:'line',
+    data:{ labels:diasValidos, datasets:[{ label:'Cajas/Hora', data:diasValidos.map(d=>Math.round(porDia[d].cajas/(porDia[d].tiempoMin/60)*10)/10), borderColor:'#F2994A', backgroundColor:'rgba(242,153,74,.15)', fill:true, tension:.3, pointRadius:3 }] },
+    options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes}}, y:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes}} },
+      plugins:{ datalabels:{ ...DL_BARRA, color:colorEjes, textStrokeWidth:0, align:'top', anchor:'end', formatter:v=>v } } }
+  };
+  charts.cTendencia = new Chart(document.getElementById('cTendencia'), cTendenciaCfg);
+  lastChartConfigs.cTendencia = cTendenciaCfg;
+
+  // Chart: Ranking de Operarios — Cajas Alistadas
+  const rankingCajas = nombrados.map(o=>({op:o, ...porOperario[o]})).sort((a,b)=>b.cajas-a.cajas).slice(0,20);
+  destroyChart('cRanking');
+  const cRankingCfg = {
+    type:'bar',
+    data:{ labels:rankingCajas.map(r=>r.op), datasets:[{ label:'Cajas Alistadas', data:rankingCajas.map(r=>r.cajas), backgroundColor:'#F2994A' }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes}}, y:{grid:{display:false}, ticks:{color:colorEjes}} },
+      plugins:{ datalabels:{ ...DL_BARRA, anchor:'end', align:'end', formatter:v=>numCO(v) } } }
+  };
+  charts.cRanking = new Chart(document.getElementById('cRanking'), cRankingCfg);
+  lastChartConfigs.cRanking = cRankingCfg;
+
+  // Chart: Cantidad Pickeada (unidades) — desde PICKING WMS
+  const rankingCantidad = nombrados.map(o=>({op:o, cantidad:porOperario[o].cantidadPk})).filter(r=>r.cantidad>0).sort((a,b)=>b.cantidad-a.cantidad).slice(0,20);
+  destroyChart('cCantidad');
+  const cCantidadCfg = {
+    type:'bar',
+    data:{ labels:rankingCantidad.map(r=>r.op), datasets:[{ label:'Cantidad Pickeada (uds)', data:rankingCantidad.map(r=>r.cantidad), backgroundColor:'#00D4FF' }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes}}, y:{grid:{display:false}, ticks:{color:colorEjes}} },
+      plugins:{ datalabels:{ ...DL_BARRA, anchor:'end', align:'end', formatter:v=>numCO(v) } } }
+  };
+  charts.cCantidad = new Chart(document.getElementById('cCantidad'), cCantidadCfg);
+  lastChartConfigs.cCantidad = cCantidadCfg;
+
+  // Chart: Órdenes Pickeadas (comprobantes distintos)
+  const rankingOrdenes = nombrados.map(o=>({op:o, ordenes:porOperario[o].comprobantes.size})).sort((a,b)=>b.ordenes-a.ordenes).slice(0,20);
+  destroyChart('cOrdenes');
+  const cOrdenesCfg = {
+    type:'bar',
+    data:{ labels:rankingOrdenes.map(r=>r.op), datasets:[{ label:'Órdenes Pickeadas', data:rankingOrdenes.map(r=>r.ordenes), backgroundColor:'#B77CFF' }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes}}, y:{grid:{display:false}, ticks:{color:colorEjes}} },
+      plugins:{ datalabels:{ ...DL_BARRA, anchor:'end', align:'end', formatter:v=>numCO(v) } } }
+  };
+  charts.cOrdenes = new Chart(document.getElementById('cOrdenes'), cOrdenesCfg);
+  lastChartConfigs.cOrdenes = cOrdenesCfg;
+
+  // Tabla detalle por operario
+  porOperarioSnapshot = porOperario;
+  lastFilas = [...nombrados.sort((a,b)=>porOperario[b].cajas-porOperario[a].cajas)];
+  if (sinAsignar) lastFilas.push(SIN_OPERARIO);
+  renderTabla();
+}
+
+/**
+ * renderTabla()
+ * Pinta el detalle por operario a partir de lastFilas + porOperarioSnapshot (calculados
+ * en render()), aplicando el filtro de texto de #tblBuscar. Fila de totales dinámica.
+ */
+function renderTabla() {
+  const q = (document.getElementById('tblBuscar')?.value || '').trim().toLowerCase();
+  const filas = q ? lastFilas.filter(op => op.toLowerCase().includes(q)) : lastFilas;
+
   document.getElementById('tblBody').innerHTML = filas.map(op=>{
-    const d = porOperario[op];
+    const d = porOperarioSnapshot[op];
     const cls = op===SIN_OPERARIO ? 'sin-asignar' : '';
-    return `<tr class="${cls}"><td>${op}</td><td>${d.comprobantes.size}</td><td>${d.lineas}</td><td>${d.cajas.toLocaleString('es-CO')}</td><td>${Math.round(d.tiempoMin)}</td></tr>`;
-  }).join('') || `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
+    const horas = d.tiempoMin/60;
+    const cajasHora = horas>=MIN_HORAS_CONFIABLE ? (Math.round(d.cajas/horas*10)/10) : null;
+    const tiempoProm = d.lineas ? Math.round(d.tiempoMin/d.lineas*10)/10 : 0;
+    return `<tr class="${cls}">
+      <td>${op}</td><td>${d.comprobantes.size}</td><td>${d.lineas}</td><td>${numCO(d.cajas)}</td>
+      <td>${numCO(d.cantidadPk)}</td><td>${Math.round(d.tiempoMin)}</td><td>${tiempoProm}</td>
+      <td${cajasHora===null?' title="Muestra insuficiente (menos de 1 hora medida)"':''}>${cajasHora ?? '—'}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
+
+  const totComp = filas.reduce((s,op)=>s+porOperarioSnapshot[op].comprobantes.size,0);
+  const totLineas = filas.reduce((s,op)=>s+porOperarioSnapshot[op].lineas,0);
+  const totCajas = filas.reduce((s,op)=>s+porOperarioSnapshot[op].cajas,0);
+  const totCant = filas.reduce((s,op)=>s+porOperarioSnapshot[op].cantidadPk,0);
+  const totTiempo = filas.reduce((s,op)=>s+porOperarioSnapshot[op].tiempoMin,0);
+  document.getElementById('totFilas').textContent = `(${filas.length} operario${filas.length===1?'':'s'})`;
+  document.getElementById('totComp').textContent = totComp;
+  document.getElementById('totLineas').textContent = numCO(totLineas);
+  document.getElementById('totCajas').textContent = numCO(totCajas);
+  document.getElementById('totCant').textContent = numCO(totCant);
+  document.getElementById('totTiempo').textContent = Math.round(totTiempo);
 }
 
 async function cargarDatos() {
-  try { alistamiento = await sb.rest('GET','op_alistamiento?order=periodo_id.asc,dia.asc') || []; }
-  catch(e) { alistamiento = []; console.error(e); }
+  try {
+    const [a,p] = await Promise.all([
+      sb.rest('GET','op_alistamiento?order=periodo_id.asc,dia.asc'),
+      sb.rest('GET','op_picking_wms?order=periodo_id.asc,fecha_registro.asc'),
+    ]);
+    alistamiento = a||[]; pickingWms = p||[];
+  } catch(e) { alistamiento=[]; pickingWms=[]; console.error(e); }
   poblarFiltros();
   render();
 }
