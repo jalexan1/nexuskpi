@@ -272,6 +272,10 @@ function filtrar() {
 
 function render() {
   const data = filtrar();
+  // "Total Recibos" = documentos distintos (un recibo real), NO filas — cada documento
+  // puede traer varias líneas de referencia/SKU. Verificado con el coordinador de Recibo:
+  // 230 filas reales = 103 documentos distintos (recibos reales) sobre marzo.
+  const totalRecibos = new Set(data.map(r=>r.documento).filter(Boolean)).size;
   const conCita = data.filter(r=>r.tiene_cita).length;
   const sinCita = data.length - conCita;
   const uds = data.reduce((s,r)=>s+(r.cantidad_recibo_unidades||0),0);
@@ -285,7 +289,7 @@ function render() {
   const fillRate = pedUds ? Math.round((uds/pedUds)*1000)/10 : null;
 
   document.getElementById('metricsGrid').innerHTML = `
-    <div class="metric-card" style="animation-delay:.02s"><div class="metric-label">Total Recibos</div><div class="metric-value">${data.length}</div></div>
+    <div class="metric-card" style="animation-delay:.02s"><div class="metric-label">Total Recibos</div><div class="metric-value">${totalRecibos}</div><div class="metric-sub">${data.length} líneas de referencia</div></div>
     <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Con Cita</div><div class="metric-value" style="color:var(--ok)">${conCita}</div><div class="metric-sub">${data.length?Math.round(conCita/data.length*100):0}% del total</div></div>
     <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Sin Cita</div><div class="metric-value" style="color:var(--warn)">${sinCita}</div><div class="metric-sub">${data.length?Math.round(sinCita/data.length*100):0}% del total</div></div>
     <div class="metric-card" style="animation-delay:.11s"><div class="metric-label">Unidades Recibidas</div><div class="metric-value">${uds.toLocaleString('es-CO')}</div></div>

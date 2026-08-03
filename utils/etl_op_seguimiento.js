@@ -234,7 +234,10 @@ function opProcesarRecibos(wb, periodoId) {
       hora_final_descargue: opFmtHora(opParseHoraSimple(r[C.horaFinal])),
       hora_tt_recibo_txt: tt.txt,
       hora_tt_recibo: tt.ts,
-      tiene_cita: !!tt.ts,
+      // "Con cita" se determina por si HORA CITA trae valor — NO por si HORA TT RECIBO
+      // parseó (son columnas distintas; usar HORA TT RECIBO daba 153/77 en vez de los
+      // 177/53 reales verificados con el coordinador de Recibo contra el archivo real).
+      tiene_cita: r[C.horaCita] !== null && r[C.horaCita] !== undefined && String(r[C.horaCita]).trim() !== '',
       certificacion: r[C.cert] ?? null,
       recibo: Number(r[C.recibo]) || null,
       proveedor2: String(r[C.prov2] || '').trim() || null,
