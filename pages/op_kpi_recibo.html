@@ -282,6 +282,7 @@ function render() {
   const cajas = data.reduce((s,r)=>s+(r.cantidad_recibo_cajas||0),0);
   const tiempos = data.map(r=>horasEntre(r.hora_inicio_descargue,r.hora_final_descargue)).filter(t=>t!==null && t>0 && t<24);
   const tProm = tiempos.length ? Math.round(tiempos.reduce((a,b)=>a+b,0)/tiempos.length*100)/100 : null;
+  const tPromMin = tProm !== null ? Math.round(tProm*60) : null; // minutos, para la tarjeta (mismo cálculo, solo cambia la unidad mostrada)
 
   // Fill Rate: Cantidad Pedido Unidades vs Cantidad Recibo Unidades (aprobado con el usuario)
   const pedUds = data.reduce((s,r)=>s+(r.cantidad_pedido_unidades||0),0);
@@ -294,7 +295,7 @@ function render() {
     <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Sin Cita</div><div class="metric-value" style="color:var(--warn)">${sinCita}</div><div class="metric-sub">${data.length?Math.round(sinCita/data.length*100):0}% del total</div></div>
     <div class="metric-card" style="animation-delay:.11s"><div class="metric-label">Unidades Recibidas</div><div class="metric-value">${uds.toLocaleString('es-CO')}</div></div>
     <div class="metric-card" style="animation-delay:.14s"><div class="metric-label">Cajas Recibidas</div><div class="metric-value">${Math.round(cajas).toLocaleString('es-CO')}</div></div>
-    <div class="metric-card" style="animation-delay:.17s"><div class="metric-label">Tiempo Prom. Descargue</div><div class="metric-value">${tProm ?? '—'}<span style="font-size:.9rem">h</span></div></div>
+    <div class="metric-card" style="animation-delay:.17s"><div class="metric-label">Tiempo Prom. Descargue</div><div class="metric-value">${tPromMin ?? '—'}<span style="font-size:.9rem">min</span></div></div>
     <div class="metric-card" style="animation-delay:.20s"><div class="metric-label">Fill Rate (Ped. vs Recibido)</div><div class="metric-value">${fillRate ?? '—'}${fillRate!==null?'<span style="font-size:.9rem">%</span>':''}</div><div class="metric-sub">Brecha: ${brechaUds.toLocaleString('es-CO')} uds</div></div>
   `;
 
