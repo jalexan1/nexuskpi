@@ -239,6 +239,10 @@ function render() {
   const operariosNombrados = Object.keys(porOperario).filter(o=>o!==SIN_OPERARIO);
   const sinAsignar = porOperario[SIN_OPERARIO];
 
+  // "Total Recepciones" = documentos distintos (mismo criterio que "Total Recibos"
+  // en la pantalla Recibo, para que ambas pantallas hablen el mismo idioma). data.length
+  // sigue disponible como referencia de líneas en el subtexto de la tarjeta.
+  const totalRecepciones = new Set(data.map(r=>r.documento).filter(Boolean)).size;
   const totalCajas = data.reduce((s,r)=>s+(r.cantidad_recibo_cajas||0),0);
   const totalHoras = operariosNombrados.reduce((s,o)=>s+porOperario[o].horas,0);
   const totalUdsConHora = operariosNombrados.reduce((s,o)=>s+porOperario[o].udsConHora,0);
@@ -248,7 +252,7 @@ function render() {
 
   document.getElementById('metricsGrid').innerHTML = `
     <div class="metric-card" style="animation-delay:.02s"><div class="metric-label">Operarios Activos</div><div class="metric-value">${operariosNombrados.length}</div></div>
-    <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Total Recepciones</div><div class="metric-value">${data.length}</div></div>
+    <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Total Recepciones</div><div class="metric-value">${totalRecepciones}</div><div class="metric-sub">${data.length} líneas de referencia</div></div>
     <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Total Unidades</div><div class="metric-value">${numCO(data.reduce((s,r)=>s+(r.cantidad_recibo_unidades||0),0))}</div></div>
     <div class="metric-card" style="animation-delay:.11s"><div class="metric-label">Total Cajas</div><div class="metric-value">${numCO(Math.round(totalCajas))}</div></div>
     <div class="metric-card" style="animation-delay:.14s"><div class="metric-label">Productividad (Uds/Hora)</div><div class="metric-value" style="color:var(--ok)">${prodGlobalUdsHora ?? '—'}</div><div class="metric-sub">${numCO(Math.round(totalHoras*100)/100)} horas medidas</div></div>
@@ -299,7 +303,10 @@ function render() {
     porDia[r.fecha_recibo].horas += h;
     porDia[r.fecha_recibo].uds += (r.cantidad_recibo_unidades||0);
   });
-  const dias = Object.keys(porDia).sort();
+  // Mismo umbral que en el ranking/tabla: se excluyen días con menos de 1 hora
+  // acumulada de horas válidas, para no mostrar una tasa Uds/Hora inflada por una
+  // muestra casi nula (mismo tipo de bug ya corregido para Michael Avellaneda).
+  const dias = Object.keys(porDia).filter(d => porDia[d].horas >= MIN_HORAS_CONFIABLE).sort();
   destroyChart('cTendencia');
   // Mismo ajuste que en Recibo: las fechas del eje X casi no se veían con el gris tenue
   // por defecto de Chart.js, se resuelve el color contra el tema activo (--text).
