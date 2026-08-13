@@ -394,7 +394,8 @@ window.addEventListener('load', async()=>{
   const user=await checkAuth('admin'); if(!user) return;
   renderUser();
   const sel=document.getElementById('uploadMes');
-  sel.innerHTML=CONFIG.meses.map((m,i)=>`<option value="${m.id}" ${i===CONFIG.meses.length-1?'selected':''}>${m.label}</option>`).join('');
+  const _meses=mesesHastaHoy();
+  sel.innerHTML=_meses.map((m,i)=>`<option value="${m.id}" ${i===_meses.length-1?'selected':''}>${m.label}</option>`).join('');
   cargarPeriodos();
   const ol=document.getElementById('overlay');
   setTimeout(()=>ol.classList.add('out'),200);

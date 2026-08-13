@@ -425,7 +425,7 @@ async function cargarPeriodos() {
     const ids  = [...new Set((rows||[]).map(r => r.periodo_id))];
     const sel  = $('sel-periodo');
     sel.innerHTML = '';
-    const todos = ids.length > 0 ? ids : CONFIG.meses.map(m => m.id);
+    const todos = ids.length > 0 ? ids : mesesHastaHoy().map(m => m.id);
     todos.forEach(id => {
       const cfg = CONFIG.meses.find(m => m.id === id);
       const opt = document.createElement('option');

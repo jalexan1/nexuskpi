@@ -31,11 +31,21 @@ const CONFIG = Object.freeze({
     }),
   }),
 
+  // Meses del año completo (con nombre) para que cualquier lookup de label
+  // (CONFIG.meses.find) resuelva bien apenas empiecen a llegar datos de un
+  // mes nuevo. Cuáles de estos se OFRECEN para cargue/selección se controla
+  // aparte con mesesHastaHoy() (ver más abajo) — no editar esa lógica aquí.
   meses: [
     { id: '2026-03', label: 'Marzo 2026' },
     { id: '2026-04', label: 'Abril 2026' },
     { id: '2026-05', label: 'Mayo 2026'  },
     { id: '2026-06', label: 'Junio 2026' },
+    { id: '2026-07', label: 'Julio 2026' },
+    { id: '2026-08', label: 'Agosto 2026' },
+    { id: '2026-09', label: 'Septiembre 2026' },
+    { id: '2026-10', label: 'Octubre 2026' },
+    { id: '2026-11', label: 'Noviembre 2026' },
+    { id: '2026-12', label: 'Diciembre 2026' },
   ],
 
   kpis: [
@@ -67,3 +77,17 @@ const CONFIG = Object.freeze({
     ],
   }),
 });
+
+/**
+ * mesesHastaHoy() — meses de CONFIG.meses que ya "llegaron" (id <= mes actual
+ * del calendario real, según la fecha del dispositivo). Úsala en cualquier
+ * selector de cargue/tabs para NO ofrecer meses futuros (ej. si hoy estamos
+ * en agosto-2026, no se muestran septiembre-diciembre todavía).
+ * No requiere tocar este archivo cada mes: apenas el reloj cruce a
+ * septiembre, ese mes aparece solo porque ya está en CONFIG.meses arriba.
+ */
+function mesesHastaHoy() {
+  const hoy = new Date();
+  const actual = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+  return CONFIG.meses.filter(m => m.id <= actual);
+}
