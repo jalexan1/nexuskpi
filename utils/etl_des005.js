@@ -2,17 +2,30 @@
  * etl_des005.js — NexusKPI · KPI-DES-005 · On-Time Delivery (OTD %)
  * Firma: procesarOTD(file, periodoId, onProgress)
  *
- * LÓGICA DEFINITIVA v2 (decision operativa confirmada Jun-2026):
+ * LÓGICA DEFINITIVA v3 (fix incidencia coordinador de operaciones — Ago-2026):
  *   Fuente  : Hoja ALISTAMIENTO del archivo SEGUIMIENTO_CLICK_MES.xlsx
  *
- *   FORMULA OTD:
- *     diasDespacho = FECHA DESPACHO - DIA  (dias calendario)
- *     ontime = diasDespacho <= 2
- *     tardia  = diasDespacho > 2  |  sin FECHA DESPACHO
+ *   FORMULA OTD (según ficha oficial KPI-DES-005):
+ *     diasHabilesDespacho = # de días hábiles entre DIA y FECHA DESPACHO
+ *                            (se excluyen domingos y festivos colombianos,
+ *                             tomados de CONFIG.jornada.festivos — misma
+ *                             fuente que usa KPI-DES-008)
+ *     ontime = diasHabilesDespacho <= 2
+ *     tardia  = diasHabilesDespacho > 2  |  sin FECHA DESPACHO
  *
- *   Razon del cambio: ON-TIME L&S almacenaba (DIA - SOLICITUD) donde SOLICITUD
- *   se llenaba igual a FECHA DESPACHO, resultando siempre <= 0 (100% OTD ficticio).
- *   La fuente correcta y disponible es DIA + FECHA DESPACHO directamente.
+ *   Historial:
+ *   v1: ON-TIME L&S almacenaba (DIA - SOLICITUD) donde SOLICITUD se llenaba
+ *       igual a FECHA DESPACHO, resultando siempre <= 0 (100% OTD ficticio).
+ *   v2 (Jun-2026): se corrigió usando FECHA DESPACHO - DIA directamente, pero
+ *       en DÍAS CALENDARIO — no descontaba domingos/festivos como exige la
+ *       ficha del indicador ("Criterio de Exclusión: días no laborables").
+ *       Efecto detectado: pedidos generados los sábados quedaban con OTD
+ *       ~0% de forma sistemática porque el domingo siempre se contaba en
+ *       contra (ej. validado con datos reales de Jun-2026: OTD medido
+ *       41.6% vs. 61.5% real al excluir domingo/festivo — 149 pedidos mal
+ *       clasificados como tardíos).
+ *   v3 (actual): cuenta días hábiles (excluye domingo y festivos), igual
+ *       criterio que KPI-DES-008.
  *
  *   STATUS validos: DESPACHADO - ENTREGADO - DEV TIEMPO - EN REPARTO
  *   Deduplicar por Comprobante (un pedido puede tener N filas de SKUs)
@@ -21,7 +34,7 @@
  *   Transportador: SERVIENTREGA / CLICK / L&S
  *   Ciudad - Novedad
  *
- *   ontime_dias en detalle = diasDespacho (FECHA_DESPACHO - DIA, entero >= 0)
+ *   ontime_dias en detalle = diasHabilesDespacho (entero >= 0, días hábiles)
  */
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -44,18 +57,53 @@ function _parseFechaOtd(val) {
   return null;
 }
 
+// Festivos colombianos 2026 (fallback si CONFIG no está disponible en el scope)
+const FESTIVOS_OTD_FALLBACK = new Set([
+  '2026-01-01','2026-01-12','2026-03-23','2026-04-02','2026-04-03',
+  '2026-05-01','2026-05-18','2026-06-08','2026-06-29','2026-07-20',
+  '2026-08-07','2026-08-17','2026-10-12','2026-11-02','2026-11-16',
+  '2026-12-08','2026-12-25',
+]);
+
+function _getFestivosOtd() {
+  if (typeof CONFIG !== 'undefined' && CONFIG.jornada && CONFIG.jornada.festivos) {
+    return CONFIG.jornada.festivos;
+  }
+  return FESTIVOS_OTD_FALLBACK;
+}
+
+function _esHabilOtd(dateObj, festivos) {
+  const dow = dateObj.getDay(); // 0 = domingo
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth()+1).padStart(2,'0');
+  const d = String(dateObj.getDate()).padStart(2,'0');
+  return dow !== 0 && !festivos.has(`${y}-${m}-${d}`);
+}
+
 /**
- * Calcula dias calendario entre DIA y FECHA DESPACHO.
+ * Calcula días HÁBILES entre DIA y FECHA DESPACHO (excluye domingos y festivos
+ * colombianos — CONFIG.jornada.festivos, misma fuente que KPI-DES-008).
+ * Cuenta días hábiles estrictamente posteriores a fechaDia hasta fechaDespacho
+ * inclusive (fechaDia = día 0, no se cuenta a sí mismo).
  * Retorna: { ontime: bool, dias: int|null }
- *   ontime = diasDespacho <= 2
- *   sin fecha despacho o fecha invalida → tardia (dias = null)
+ *   ontime = diasHabilesDespacho <= 2
+ *   sin fecha despacho, fecha invalida, o despacho anterior a DIA → tardia (dias = null)
  */
 function _calcOtdDespacho(fechaDia, fechaDespacho) {
   if (!fechaDia || !fechaDespacho) return { ontime: false, dias: null };
-  const tDia      = new Date(fechaDia      + 'T12:00:00').getTime();
-  const tDespacho = new Date(fechaDespacho + 'T12:00:00').getTime();
-  if (isNaN(tDia) || isNaN(tDespacho)) return { ontime: false, dias: null };
-  const dias = Math.round((tDespacho - tDia) / 86400000);
+  const tDia      = new Date(fechaDia      + 'T12:00:00');
+  const tDespacho = new Date(fechaDespacho + 'T12:00:00');
+  if (isNaN(tDia.getTime()) || isNaN(tDespacho.getTime())) return { ontime: false, dias: null };
+  if (tDespacho.getTime() < tDia.getTime()) return { ontime: false, dias: null };
+  if (tDespacho.getTime() === tDia.getTime()) return { ontime: true, dias: 0 };
+
+  const festivos = _getFestivosOtd();
+  let dias = 0;
+  const cursor = new Date(tDia);
+  while (cursor.getTime() < tDespacho.getTime()) {
+    cursor.setDate(cursor.getDate() + 1);
+    if (_esHabilOtd(cursor, festivos)) dias++;
+  }
   return { ontime: dias <= 2, dias };
 }
 

@@ -224,7 +224,7 @@ async function subirKpi() {
     const result = await procesarNivelServicio(file, periodoSelector, onProgress);
 
     const { periodoId, periodoDetectado, nsPct, undPedidas, undDesp, undCortadas,
-            numPedidos, semanas, dias, skus, sinMatch, conCapeo } = result;
+            numPedidos, semanas, dias, skus, sinMatch, conCapeo, cuarentena } = result;
 
     const labelPeriodo = CONFIG.meses.find(m => m.id === periodoId)?.label || periodoId;
     const labelSel     = CONFIG.meses.find(m => m.id === periodoSelector)?.label || periodoSelector;
@@ -276,9 +276,16 @@ async function subirKpi() {
       `✂️ Cortadas: <b>${undCortadas.toLocaleString('es-CO')}</b><br>` +
       `📅 Semanas: <b>${semanas}</b> · 📆 Días: <b>${dias}</b> · 🏷️ SKUs: <b>${skus}</b>` +
       (sinMatch > 0 ? `<br>⚠️ Sin match WMS: <b>${sinMatch}</b> pedidos` : '') +
-      (conCapeo  > 0 ? `<br>ℹ️ Con capeo: <b>${conCapeo}</b> pedidos` : '')
+      (conCapeo  > 0 ? `<br>ℹ️ Con capeo: <b>${conCapeo}</b> pedidos` : '') +
+      (cuarentena && cuarentena.length > 0
+        ? `<br>🧯 <b>${cuarentena.length}</b> comprobante(s) en CUARENTENA (fecha DIA inconsistente, excluidos del NS) — revisar en kpi_ns_cuarentena: ` +
+          cuarentena.map(c => c.comprobante).join(', ')
+        : '')
     );
     addLog(`✓ ${labelPeriodo}: NS ${nsPct.toFixed(2)}% · ${numPedidos} pedidos · ${skus} SKUs`, 'ok');
+    if (cuarentena && cuarentena.length > 0) {
+      addLog(`🧯 ${cuarentena.length} comprobante(s) en cuarentena: ${cuarentena.map(c => c.comprobante).join(', ')}`, 'warn');
+    }
     cargarPeriodos();
 
   } catch(e) {

@@ -135,8 +135,12 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
   log(`✅ ALISTAMIENTO: ${rowsAlist.length} líneas totales → ${b2b.length} líneas B2B en ${_labelPeriodo(periodoId)}`);
   if (!b2b.length) throw new Error(`No hay líneas B2B para ${_labelPeriodo(periodoId)} en ALISTAMIENTO.`);
 
-  // Agrupar por Comprobante → { fecha, pedidas, skus }
-  const pedidosMap = new Map();
+  // Agrupar por Comprobante → { fecha, pedidas, skus, fechas }
+  // IMPORTANTE: un Comprobante debe tener una única fecha DIA. Si el mismo
+  // Comprobante aparece con más de una fecha DIA distinta (pedido duplicado /
+  // re-cargado en el archivo fuente — incidencia detectada el 26-27/06/2026),
+  // NO se fusiona: se separa a cuarentena para no inflar el denominador de NS.
+  const pedidosMapRaw = new Map();
   for (const r of b2b) {
     const comp     = String(r['Comprobante'] || '').trim();
     const facturado = Number(r['Facturado']) || 0;
@@ -146,9 +150,12 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
     const sku   = String(r['SKU'] || '').trim();
     const desc  = String(r['Descripción'] || r['Descripcion'] || '').trim();
 
-    if (!pedidosMap.has(comp)) pedidosMap.set(comp, { fecha, pedidas: 0, skus: new Map() });
-    const p = pedidosMap.get(comp);
+    if (!pedidosMapRaw.has(comp)) {
+      pedidosMapRaw.set(comp, { fecha, pedidas: 0, skus: new Map(), fechas: new Set() });
+    }
+    const p = pedidosMapRaw.get(comp);
     if (!p.fecha && fecha) p.fecha = fecha;
+    if (fecha) p.fechas.add(fecha);
     p.pedidas += facturado;
     if (sku) {
       const s = p.skus.get(sku) || { desc, pedidas: 0 };
@@ -156,7 +163,32 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
       p.skus.set(sku, s);
     }
   }
-  log(`📦 ${pedidosMap.size} pedidos únicos B2B`);
+
+  // ── Paso 1b: separar comprobantes con fecha DIA inconsistente (cuarentena) ──
+  const pedidosMap  = new Map();
+  const cuarentena   = []; // { comprobante, fechas: [...], pedidas, motivo }
+  for (const [comp, p] of pedidosMapRaw) {
+    if (p.fechas.size > 1) {
+      cuarentena.push({
+        comprobante: comp,
+        periodo_id:  periodoId,
+        fechas:      Array.from(p.fechas).sort(),
+        pedidas:     p.pedidas,
+        motivo:      'Comprobante con más de una fecha DIA distinta en ALISTAMIENTO — no se fusiona, requiere revisión manual del archivo fuente.',
+      });
+      continue;
+    }
+    pedidosMap.set(comp, p);
+  }
+
+  if (cuarentena.length > 0) {
+    log(`⚠️ ${cuarentena.length} comprobante(s) EXCLUIDO(S) por fecha DIA inconsistente (cuarentena) — no se fusionan en el cálculo de NS:`);
+    for (const c of cuarentena) {
+      log(`   • ${c.comprobante} → fechas: ${c.fechas.join(', ')} · ${c.pedidas} und. pedidas`);
+    }
+  }
+
+  log(`📦 ${pedidosMap.size} pedidos únicos B2B válidos${cuarentena.length ? ` (+ ${cuarentena.length} en cuarentena)` : ''}`);
 
   // ── Paso 2: PICKING WMS ───────────────────────────────────────────────────
   log('🔍 Procesando hoja PICKING WMS…');
@@ -249,6 +281,33 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
     }
   }
 
+  // ── Paso 4b: kpi_ns_cuarentena — comprobantes excluidos por fecha DIA inconsistente
+  // No es bloqueante: si la tabla no existe todavía en Supabase (falta la migración)
+  // o el insert falla por restricción de clave primaria, NO se detiene el proceso —
+  // se registra en el log para que el analista lo revise manualmente.
+  try {
+    await sb.rest('DELETE', `kpi_ns_cuarentena?periodo_id=eq.${periodoId}`);
+  } catch(e) { /* tabla puede no existir aún — no bloquea */ }
+
+  if (cuarentena.length > 0) {
+    try {
+      await sb.rest('POST', 'kpi_ns_cuarentena', cuarentena.map(c => ({
+        periodo_id:  c.periodo_id,
+        comprobante: c.comprobante,
+        fechas:      c.fechas.join(', '),
+        pedidas:     c.pedidas,
+        motivo:      c.motivo,
+      })), { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
+      log(`🧯 ${cuarentena.length} comprobante(s) enviados a kpi_ns_cuarentena para revisión manual.`);
+    } catch(e) {
+      // No dejar que un fallo de PK/tabla faltante tumbe el cálculo del KPI.
+      // Se excluye igual del cálculo (ya se excluyó arriba) y se informa por log.
+      log(`⚠️ No se pudo registrar la cuarentena en Supabase (${e.message}). ` +
+          `Los ${cuarentena.length} comprobante(s) igual quedaron EXCLUIDOS del cálculo de NS — repórtalos manualmente:`);
+      for (const c of cuarentena) log(`   • ${c.comprobante} (${c.fechas.join(', ')})`);
+    }
+  }
+
   // ── Paso 5: kpi_ns_resumen ────────────────────────────────────────────────
   log('💾 Guardando datos en Supabase…');
   const resumenRows = [{
@@ -328,6 +387,9 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
   log(`\n🏁 Completado — ${_labelPeriodo(periodoId)}`);
   log(`   NS: ${nsPeriodo.toFixed(2)}% — ${_semaforoNS(nsPeriodo)}`);
   log(`   ${totalPedidas.toLocaleString()} pedidas | ${totalDesp.toLocaleString()} desp | ${totalCortadas.toLocaleString()} cortadas`);
+  if (cuarentena.length > 0) {
+    log(`   ⚠️ ${cuarentena.length} comprobante(s) en cuarentena (excluidos del cálculo) — ver kpi_ns_cuarentena.`);
+  }
 
   return {
     periodoId, periodoDetectado,
@@ -336,6 +398,7 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
     undPedidas: totalPedidas, undDesp: totalDesp, undCortadas: totalCortadas,
     numPedidos: totalPedidos, semanas: semanaMap.size,
     dias: diarioMap.size, skus: skuMap.size, sinMatch, conCapeo,
+    cuarentena,
   };
 }
 
