@@ -223,6 +223,7 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
   const diarioMap = new Map();
   const semanaMap = new Map();
   const skuMap    = new Map();
+  const detalleRows = []; // NUEVO — grano pedido×SKU, para drill-down (kpi_ns_pedidos_sku_detalle)
   let totalPedidas = 0, totalDesp = 0, totalCortadas = 0, totalPedidos = 0;
   let sinMatch = 0, conCapeo = 0;
 
@@ -244,8 +245,9 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
     totalPedidos  += 1;
 
     // Diario
-    const dE = diarioMap.get(p.fecha) || { pedidas:0, desp:0, cortadas:0, num_pedidos:0 };
+    const dE = diarioMap.get(p.fecha) || { pedidas:0, desp:0, cortadas:0, num_pedidos:0, afectados:0 };
     dE.pedidas += p.pedidas; dE.desp += desp; dE.cortadas += cort; dE.num_pedidos++;
+    if (cort > 0) dE.afectados++;   // NUEVO — este pedido tuvo al menos una unidad cortada
     diarioMap.set(p.fecha, dE);
 
     // Semanal
@@ -256,11 +258,29 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
 
     // SKU
     for (const [ref, skuData] of p.skus) {
-      const pkSKU   = pk ? (pk.porSKU.get(ref) || 0) : 0;
-      const skuDesp = Math.min(pkSKU, skuData.pedidas);
-      const sE2 = skuMap.get(ref) || { desc: skuData.desc, pedidas:0, desp:0, num_ordenes:0 };
+      const pkSKU    = pk ? (pk.porSKU.get(ref) || 0) : 0;
+      const skuDesp  = Math.min(pkSKU, skuData.pedidas);
+      const skuCort  = skuData.pedidas - skuDesp;
+      const sE2 = skuMap.get(ref) || { desc: skuData.desc, pedidas:0, desp:0, num_ordenes:0, afectadas:0 };
       sE2.pedidas += skuData.pedidas; sE2.desp += skuDesp; sE2.num_ordenes++;
+      if (skuCort > 0) sE2.afectadas++;   // NUEVO — esta orden tuvo corte de este SKU
       skuMap.set(ref, sE2);
+
+      // NUEVO — fila de detalle granular pedido×SKU para el drill-down.
+      // Se guarda SIEMPRE (no solo cuando hay corte) para que la tabla de
+      // detalle pueda mostrar también las líneas BIEN de un pedido parcial.
+      detalleRows.push({
+        periodo_id:    periodoId,
+        fecha:         p.fecha,
+        comprobante:   comp,
+        sku:           ref,
+        descripcion:   skuData.desc || null,
+        pedidas:       skuData.pedidas,
+        despachadas:   skuDesp,
+        cortadas:      skuCort,
+        estado:        skuCort === 0 ? 'BIEN' : (skuDesp > 0 ? 'PARCIAL' : 'PENDIENTE'),
+        sin_match_wms: !pk,
+      });
     }
   }
 
@@ -279,6 +299,14 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
         `Vuelve a cargar el archivo de ${_labelPeriodo(periodoId)}. (${e.message})`
       );
     }
+  }
+
+  // NUEVAS (migración 013) — no bloqueantes: si el analista aún no corrió la
+  // migración en Supabase, el cargue del KPI principal NO se detiene por esto.
+  for (const tabla of ['kpi_ns_diario_afectados', 'kpi_ns_skus_afectados', 'kpi_ns_pedidos_sku_detalle']) {
+    try {
+      await sb.rest('DELETE', `${tabla}?periodo_id=eq.${periodoId}`);
+    } catch(e) { /* tabla puede no existir aún (falta migración 013) — no bloquea */ }
   }
 
   // ── Paso 4b: kpi_ns_cuarentena — comprobantes excluidos por fecha DIA inconsistente
@@ -383,6 +411,46 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
     }
   }
   log(`✅ kpi_ns_skus: ${okSku} SKUs`);
+
+  // ── Paso 8: kpi_ns_diario_afectados / kpi_ns_skus_afectados (migración 013) ─
+  // No bloqueantes: si la tabla no existe aún, se informa mediante log y el
+  // cargue del KPI principal (pasos 5-7, ya completados arriba) queda intacto.
+  const diarioAfectadosRows = [];
+  for (const [fecha, d] of diarioMap) {
+    diarioAfectadosRows.push({ periodo_id: periodoId, fecha, pedidos_afectados: d.afectados });
+  }
+  try {
+    await sb.rest('POST', 'kpi_ns_diario_afectados', diarioAfectadosRows,
+      { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
+    log(`✅ kpi_ns_diario_afectados: ${diarioAfectadosRows.length} días`);
+  } catch(e) {
+    log(`⚠️ No se pudo guardar kpi_ns_diario_afectados (¿falta correr la migración 013?): ${e.message}`);
+  }
+
+  const skusAfectadosRows = [];
+  for (const [ref, s] of skuMap) {
+    skusAfectadosRows.push({ periodo_id: periodoId, referencia: ref, ordenes_afectadas: s.afectadas });
+  }
+  try {
+    await sb.rest('POST', 'kpi_ns_skus_afectados', skusAfectadosRows,
+      { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
+    log(`✅ kpi_ns_skus_afectados: ${skusAfectadosRows.length} SKUs`);
+  } catch(e) {
+    log(`⚠️ No se pudo guardar kpi_ns_skus_afectados (¿falta correr la migración 013?): ${e.message}`);
+  }
+
+  // ── Paso 9: kpi_ns_pedidos_sku_detalle (migración 013) — detalle granular ──
+  let okDetalle = 0;
+  try {
+    for (let i = 0; i < detalleRows.length; i += 100) {
+      await sb.rest('POST', 'kpi_ns_pedidos_sku_detalle', detalleRows.slice(i, i + 100),
+        { 'Prefer': 'return=minimal' });
+      okDetalle += Math.min(100, detalleRows.length - i);
+    }
+    log(`✅ kpi_ns_pedidos_sku_detalle: ${okDetalle} líneas (pedido×SKU)`);
+  } catch(e) {
+    log(`⚠️ No se pudo guardar kpi_ns_pedidos_sku_detalle en la línea ${okDetalle} (¿falta correr la migración 013?): ${e.message}`);
+  }
 
   log(`\n🏁 Completado — ${_labelPeriodo(periodoId)}`);
   log(`   NS: ${nsPeriodo.toFixed(2)}% — ${_semaforoNS(nsPeriodo)}`);

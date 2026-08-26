@@ -101,6 +101,20 @@
     .cell-hi{background:rgba(255,77,109,.15);color:var(--error);font-weight:700;border-radius:3px;padding:1px 5px}
     .cell-mid{background:rgba(255,176,32,.15);color:var(--warn);font-weight:700;border-radius:3px;padding:1px 5px}
 
+    /* ── Panel de detalle (drill-down pedidos/órdenes afectadas) ── */
+    .det-panel{display:none;margin-top:.75rem}
+    .det-panel.open{display:block}
+    .det-panel-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;margin-bottom:.65rem}
+    .det-panel-title{font-size:.82rem;font-weight:700;color:var(--text)}
+    .det-panel-sub{font-size:.7rem;color:var(--muted);margin-top:.1rem}
+    .search-inp{background:var(--surface2);border:1.5px solid var(--border2);border-radius:var(--r-sm);
+      padding:.38rem .75rem;font-size:.78rem;color:var(--text);outline:none;width:220px;font-family:'DM Sans',sans-serif}
+    .search-inp:focus{border-color:var(--accent)}
+    .row-clickable{cursor:pointer}
+    .row-clickable:hover{background:rgba(0,212,255,.06)}
+    .row-active{background:rgba(0,212,255,.12) !important}
+    @media(max-width:599px){.search-inp{width:100%}}
+
     /* ── Toggle detalle ── */
     .tog-hdr{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem;cursor:pointer;user-select:none;margin-bottom:4px}
     .tog-hdr:hover{border-color:var(--accent)}
@@ -295,31 +309,83 @@
 
     <!-- ══ DETALLE DIARIO ════════════════════════════════════════════════════ -->
     <div class="tab-panel" id="tab-detalle">
+      <div class="tbl-ctrl">
+        <span class="flt-count">💡 Clic en una fila con pedidos afectados para ver el detalle</span>
+      </div>
       <div class="tbl-wrap-inner"><div class="tbl-scroll">
         <table>
           <thead><tr>
-            <th>Fecha</th><th># Pedidos</th><th>Und. Pedidas</th>
+            <th>Fecha</th><th># Pedidos</th><th># Ped. Afectados</th><th>Und. Pedidas</th>
             <th>Und. Desp.</th><th>Und. Cortadas</th><th>NS%</th><th>Estado</th><th>Nota</th>
           </tr></thead>
           <tbody id="tblDiarioBody"></tbody>
         </table>
       </div></div>
+
+      <!-- Panel de detalle (drill-down) — oculto hasta hacer clic en un día -->
+      <div class="det-panel" id="detPanelDia">
+        <div class="det-panel-hdr">
+          <div>
+            <div class="det-panel-title" id="detDiaTitulo">Detalle de pedidos</div>
+            <div class="det-panel-sub" id="detDiaSub"></div>
+          </div>
+          <div style="display:flex;gap:.5rem;align-items:center">
+            <input class="search-inp" type="text" placeholder="Buscar comprobante o SKU…"
+              oninput="filtrarTabla('detDiaBody',this.value)"/>
+            <button class="btn btn-sm" onclick="cerrarPanel('dia')">✕ Cerrar</button>
+          </div>
+        </div>
+        <div class="tbl-wrap-inner"><div class="tbl-scroll">
+          <table>
+            <thead><tr>
+              <th>Comprobante</th><th>SKU</th><th>Descripción</th>
+              <th>Pedidas</th><th>Despachadas</th><th>Cortadas</th><th>Estado</th>
+            </tr></thead>
+            <tbody id="detDiaBody"></tbody>
+          </table>
+        </div></div>
+      </div>
     </div>
 
     <!-- ══ SKUs CON CORTES ═══════════════════════════════════════════════════ -->
     <div class="tab-panel" id="tab-skus">
       <div class="tbl-ctrl">
         <span class="flt-count" id="skuCount"></span>
+        <span class="flt-count">💡 Clic en un SKU con órdenes afectadas para ver el detalle</span>
       </div>
       <div class="tbl-wrap-inner"><div class="tbl-scroll">
         <table>
           <thead><tr>
             <th>#</th><th>SKU</th><th>Descripción</th>
-            <th>Und. Pedidas</th><th>Und. Cortadas</th><th># Órdenes</th><th>NS SKU</th>
+            <th>Und. Pedidas</th><th>Und. Cortadas</th><th># Órdenes</th><th># Ord. Afectadas</th><th>NS SKU</th>
           </tr></thead>
           <tbody id="tblSkuBody"></tbody>
         </table>
       </div></div>
+
+      <!-- Panel de detalle (drill-down) — oculto hasta hacer clic en un SKU -->
+      <div class="det-panel" id="detPanelSku">
+        <div class="det-panel-hdr">
+          <div>
+            <div class="det-panel-title" id="detSkuTitulo">Detalle de órdenes</div>
+            <div class="det-panel-sub" id="detSkuSub"></div>
+          </div>
+          <div style="display:flex;gap:.5rem;align-items:center">
+            <input class="search-inp" type="text" placeholder="Buscar comprobante…"
+              oninput="filtrarTabla('detSkuBody',this.value)"/>
+            <button class="btn btn-sm" onclick="cerrarPanel('sku')">✕ Cerrar</button>
+          </div>
+        </div>
+        <div class="tbl-wrap-inner"><div class="tbl-scroll">
+          <table>
+            <thead><tr>
+              <th>Comprobante</th><th>Fecha</th>
+              <th>Pedidas</th><th>Despachadas</th><th>Cortadas</th><th>Estado</th>
+            </tr></thead>
+            <tbody id="detSkuBody"></tbody>
+          </table>
+        </div></div>
+      </div>
     </div>
 
   </main>
@@ -335,6 +401,12 @@ let dataResumen = {};   // periodoId → { resumen (fila global), semanales[] }
 let dataDiario  = {};   // periodoId → []
 let dataSkus    = {};   // periodoId → []
 let charts      = {};
+
+// NUEVO — migración 013 (drill-down pedidos/órdenes afectados por corte)
+let dataDiarioAfectados = {}; // periodoId → { fecha → pedidos_afectados }
+let dataSkusAfectados   = {}; // periodoId → { referencia → ordenes_afectadas }
+let dataDetalle         = {}; // periodoId → { rows: [...], loaded: bool } — carga bajo demanda
+let detActivo           = { dia: null, sku: null }; // fecha/sku actualmente abierto, para resaltar fila
 
 // ── Tabs ───────────────────────────────────────────────────────────────────
 function tab(id, btn) {
@@ -355,12 +427,33 @@ async function cargarDatos() {
   btn.disabled = true; btn.textContent = '⏳';
   document.getElementById('statusDatos').textContent = 'Cargando…';
   try {
-    // Traer las tres tablas en paralelo
+    // Traer las tres tablas principales en paralelo (críticas — si fallan, se corta el cargue)
     const [rowsResumen, rowsDiario, rowsSkus] = await Promise.all([
       sb.rest('GET', 'kpi_ns_resumen?order=periodo_id.asc,fecha_inicio.asc'),
       sb.rest('GET', 'kpi_ns_diario?order=periodo_id.asc,fecha.asc'),
       sb.rest('GET', 'kpi_ns_skus?order=periodo_id.asc,und_cortadas.desc'),
     ]);
+
+    // NUEVO (migración 013) — tablas de "afectados", no críticas: si el
+    // analista aún no corrió la migración o no ha reprocesado ningún mes
+    // con el ETL nuevo, la página sigue funcionando igual que antes,
+    // simplemente sin la columna de afectados poblada.
+    dataDiarioAfectados = {};
+    dataSkusAfectados   = {};
+    try {
+      const rowsDiaAf = await sb.rest('GET', 'kpi_ns_diario_afectados?order=periodo_id.asc,fecha.asc');
+      rowsDiaAf.forEach(r => {
+        if (!dataDiarioAfectados[r.periodo_id]) dataDiarioAfectados[r.periodo_id] = {};
+        dataDiarioAfectados[r.periodo_id][r.fecha] = r.pedidos_afectados;
+      });
+    } catch(e) { /* migración 013 no aplicada aún — se omite la columna */ }
+    try {
+      const rowsSkuAf = await sb.rest('GET', 'kpi_ns_skus_afectados?order=periodo_id.asc');
+      rowsSkuAf.forEach(r => {
+        if (!dataSkusAfectados[r.periodo_id]) dataSkusAfectados[r.periodo_id] = {};
+        dataSkusAfectados[r.periodo_id][r.referencia] = r.ordenes_afectadas;
+      });
+    } catch(e) { /* migración 013 no aplicada aún — se omite la columna */ }
 
     // Agrupar por periodo_id
     dataResumen = {};
@@ -610,13 +703,20 @@ function renderCharts(mesId) {
 function renderDetalleDiario() {
   const mesId = document.getElementById('selA').value;
   const dias  = dataDiario[mesId] || [];
+  const afMap = dataDiarioAfectados[mesId] || {};
   document.getElementById('tblDiarioBody').innerHTML = dias.length
     ? dias.map(d => {
         const p = parseFloat(d.ns_pct);
         const rowCls = d.anomalo ? 'row-anomalo' : '';
-        return `<tr class="${rowCls}">
+        const afectados = afMap[d.fecha];
+        const tieneAfectados = afectados != null && afectados > 0;
+        const clickCls  = tieneAfectados ? 'row-clickable' : '';
+        const activeCls = (detActivo.dia === d.fecha) ? 'row-active' : '';
+        const onclick   = tieneAfectados ? `onclick="abrirDetalleDia('${mesId}','${d.fecha}')"` : '';
+        return `<tr class="${rowCls} ${clickCls} ${activeCls}" data-fecha="${d.fecha}" ${onclick}>
           <td><b>${d.fecha || '—'}</b>${d.anomalo ? ' ⚠️' : ''}</td>
           <td>${fmt(d.num_pedidos)}</td>
+          <td class="${tieneAfectados ? 'c-err' : ''}">${afectados != null ? fmt(afectados) : '—'}${tieneAfectados ? ' 🔍' : ''}</td>
           <td>${fmt(d.und_pedidas)}</td>
           <td class="c-ok">${fmt(d.und_desp)}</td>
           <td class="${d.und_cortadas > 0 ? 'c-err' : 'c-ok'}">${fmt(d.und_cortadas)}</td>
@@ -625,29 +725,149 @@ function renderDetalleDiario() {
           <td style="font-size:.72rem;color:var(--muted)">${d.nota_anomalia || '—'}</td>
         </tr>`;
       }).join('')
-    : `<tr><td colspan="8"><div class="empty"><div class="empty-icon">📭</div><p>Sin datos diarios para este mes</p></div></td></tr>`;
+    : `<tr><td colspan="9"><div class="empty"><div class="empty-icon">📭</div><p>Sin datos diarios para este mes</p></div></td></tr>`;
+
+  // Si el mes cambió, el panel de detalle de un mes anterior ya no aplica
+  if (detActivo.dia && !dias.some(d => d.fecha === detActivo.dia)) cerrarPanel('dia');
 }
 
 // ── SKUs con cortes ─────────────────────────────────────────────────────────
 function renderSkus() {
   const mesId = document.getElementById('selA').value;
   const skus  = dataSkus[mesId] || [];
+  const afMap = dataSkusAfectados[mesId] || {};
   document.getElementById('skuCount').textContent = `${skus.length} SKUs`;
   document.getElementById('tblSkuBody').innerHTML = skus.length
     ? skus.map((s, i) => {
         const p   = parseFloat(s.ns_pct);
         const cls = s.und_cortadas > 500 ? 'cell-hi' : s.und_cortadas > 100 ? 'cell-mid' : '';
-        return `<tr>
+        const afectadas = afMap[s.referencia];
+        const tieneAfectadas = afectadas != null && afectadas > 0;
+        const clickCls  = tieneAfectadas ? 'row-clickable' : '';
+        const activeCls = (detActivo.sku === s.referencia) ? 'row-active' : '';
+        const onclick   = tieneAfectadas ? `onclick="abrirDetalleSku('${mesId}','${s.referencia.replace(/'/g,"\\'")}')"` : '';
+        return `<tr class="${clickCls} ${activeCls}" data-sku="${s.referencia}" ${onclick}>
           <td>${i + 1}</td>
           <td><b>${s.referencia}</b></td>
           <td style="font-size:.74rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${s.descripcion || ''}">${s.descripcion || '—'}</td>
           <td>${fmt(s.und_pedidas)}</td>
           <td><span class="${cls}">${fmt(s.und_cortadas)}</span></td>
           <td>${fmt(s.num_ordenes)}</td>
+          <td class="${tieneAfectadas ? 'c-err' : ''}">${afectadas != null ? fmt(afectadas) : '—'}${tieneAfectadas ? ' 🔍' : ''}</td>
           <td>${tagNS(p)} <span style="font-size:.72rem;color:var(--muted)">${fmtP(p)}</span></td>
         </tr>`;
       }).join('')
-    : `<tr><td colspan="7"><div class="empty"><div class="empty-icon">🏷️</div><p>Sin cortes de SKU registrados</p></div></td></tr>`;
+    : `<tr><td colspan="8"><div class="empty"><div class="empty-icon">🏷️</div><p>Sin cortes de SKU registrados</p></div></td></tr>`;
+
+  if (detActivo.sku && !skus.some(s => s.referencia === detActivo.sku)) cerrarPanel('sku');
+}
+
+// ── Drill-down: carga lazy del detalle granular pedido×SKU por periodo ──────
+async function cargarDetallePeriodo(mesId) {
+  if (dataDetalle[mesId]?.loaded) return dataDetalle[mesId].rows;
+  const rows = await sb.rest('GET',
+    `kpi_ns_pedidos_sku_detalle?periodo_id=eq.${mesId}&order=fecha.asc&limit=10000`);
+  dataDetalle[mesId] = { rows: rows || [], loaded: true };
+  return dataDetalle[mesId].rows;
+}
+
+function badgeEstado(estado) {
+  if (estado === 'BIEN')      return '<span class="tag tag-ok">BIEN</span>';
+  if (estado === 'PARCIAL')   return '<span class="tag tag-warn">PARCIAL</span>';
+  if (estado === 'PENDIENTE') return '<span class="tag tag-crit">PENDIENTE</span>';
+  return '—';
+}
+
+// ── Drill-down: clic en un día de Detalle Diario ────────────────────────────
+async function abrirDetalleDia(mesId, fecha) {
+  detActivo.dia = fecha;
+  renderDetalleDiario();
+
+  const panel = document.getElementById('detPanelDia');
+  panel.classList.add('open');
+  document.getElementById('detDiaTitulo').textContent = `Detalle de pedidos afectados — ${fecha}`;
+  document.getElementById('detDiaSub').textContent = 'Cargando…';
+  document.getElementById('detDiaBody').innerHTML =
+    `<tr><td colspan="7" style="text-align:center;padding:1.25rem;color:var(--muted)">⏳ Cargando…</td></tr>`;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  try {
+    const rows = await cargarDetallePeriodo(mesId);
+    const filas = rows.filter(r => r.fecha === fecha && r.estado !== 'BIEN');
+    document.getElementById('detDiaSub').textContent =
+      `${filas.length} línea(s) pedido×SKU con corte de un total de ${rows.filter(r => r.fecha === fecha).length} líneas del día`;
+    document.getElementById('detDiaBody').innerHTML = filas.length
+      ? filas.map(r => `<tr>
+          <td><b>${r.comprobante || '—'}</b></td>
+          <td>${r.sku || '—'}</td>
+          <td style="font-size:.74rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.descripcion || ''}">${r.descripcion || '—'}</td>
+          <td>${fmt(r.pedidas)}</td>
+          <td class="c-ok">${fmt(r.despachadas)}</td>
+          <td class="c-err">${fmt(r.cortadas)}</td>
+          <td>${badgeEstado(r.estado)}${r.sin_match_wms ? ' <span style="font-size:.65rem;color:var(--muted)">· sin WMS</span>' : ''}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="7"><div class="empty"><div class="empty-icon">📭</div><p>Sin líneas con corte para este día</p></div></td></tr>`;
+  } catch(e) {
+    document.getElementById('detDiaSub').textContent = '';
+    document.getElementById('detDiaBody').innerHTML =
+      `<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--error)">⚠️ ${e.message}</td></tr>`;
+  }
+}
+
+// ── Drill-down: clic en un SKU de SKUs con Cortes ───────────────────────────
+async function abrirDetalleSku(mesId, referencia) {
+  detActivo.sku = referencia;
+  renderSkus();
+
+  const panel = document.getElementById('detPanelSku');
+  panel.classList.add('open');
+  document.getElementById('detSkuTitulo').textContent = `Detalle de órdenes afectadas — ${referencia}`;
+  document.getElementById('detSkuSub').textContent = 'Cargando…';
+  document.getElementById('detSkuBody').innerHTML =
+    `<tr><td colspan="6" style="text-align:center;padding:1.25rem;color:var(--muted)">⏳ Cargando…</td></tr>`;
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  try {
+    const rows = await cargarDetallePeriodo(mesId);
+    const filas = rows.filter(r => r.sku === referencia && r.estado !== 'BIEN');
+    document.getElementById('detSkuSub').textContent = `${filas.length} orden(es) con corte de este SKU`;
+    document.getElementById('detSkuBody').innerHTML = filas.length
+      ? filas.map(r => `<tr>
+          <td><b>${r.comprobante || '—'}</b></td>
+          <td>${r.fecha || '—'}</td>
+          <td>${fmt(r.pedidas)}</td>
+          <td class="c-ok">${fmt(r.despachadas)}</td>
+          <td class="c-err">${fmt(r.cortadas)}</td>
+          <td>${badgeEstado(r.estado)}${r.sin_match_wms ? ' <span style="font-size:.65rem;color:var(--muted)">· sin WMS</span>' : ''}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="6"><div class="empty"><div class="empty-icon">📭</div><p>Sin órdenes con corte para este SKU</p></div></td></tr>`;
+  } catch(e) {
+    document.getElementById('detSkuSub').textContent = '';
+    document.getElementById('detSkuBody').innerHTML =
+      `<tr><td colspan="6" style="text-align:center;padding:1rem;color:var(--error)">⚠️ ${e.message}</td></tr>`;
+  }
+}
+
+function cerrarPanel(tipo) {
+  if (tipo === 'dia') {
+    detActivo.dia = null;
+    document.getElementById('detPanelDia').classList.remove('open');
+    renderDetalleDiario();
+  } else {
+    detActivo.sku = null;
+    document.getElementById('detPanelSku').classList.remove('open');
+    renderSkus();
+  }
+}
+
+// ── Filtro de texto dentro de una tabla de detalle ──────────────────────────
+function filtrarTabla(tbodyId, q) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  const term = q.toLowerCase();
+  Array.from(tbody.rows).forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(term) ? '' : 'none';
+  });
 }
 
 // ── Comparativo ─────────────────────────────────────────────────────────────
