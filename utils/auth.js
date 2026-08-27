@@ -60,7 +60,10 @@ const sb = {
   },
 
   // REST helper para todas las páginas
-  async rest(method, path, body = null, extraHeaders = {}) {
+  // opts.noRedirect = true → si la sesión falla, NO navega a login (para
+  // procesos largos como el ETL, donde eso mataría el proceso a medias sin
+  // dejar rastro). El llamador recibe el error normal y decide qué hacer.
+  async rest(method, path, body = null, extraHeaders = {}, opts = {}) {
     const doCall = () => {
       const token = _getToken();
       const headers = {
@@ -70,9 +73,9 @@ const sb = {
         'Prefer':        'return=representation',
         ...extraHeaders,
       };
-      const opts = { method, headers };
-      if (body) opts.body = JSON.stringify(body);
-      return fetch(`${CONFIG.supabase.url}/rest/v1/${path}`, opts);
+      const callOpts = { method, headers };
+      if (body) callOpts.body = JSON.stringify(body);
+      return fetch(`${CONFIG.supabase.url}/rest/v1/${path}`, callOpts);
     };
 
     let r = await doCall();
@@ -86,7 +89,7 @@ const sb = {
 
     if (!r.ok) {
       const txt = await r.text();
-      if (r.status === 401) {
+      if (r.status === 401 && !opts.noRedirect) {
         // El refresh también falló (o no había refresh_token): la sesión
         // ya no es válida, mandamos a login en vez de dejar la página
         // rota mostrando errores sueltos.

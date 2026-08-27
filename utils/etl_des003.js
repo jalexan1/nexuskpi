@@ -101,14 +101,19 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
 
   // POST con 1 reintento automático (pausa breve) — usado por las tablas de
   // la migración 013, que son propensas a fallos transitorios de red.
+  // noRedirect:true es CRÍTICO aquí: si la sesión expira a mitad del cargue
+  // (78 lotes pueden tardar), NO queremos que la página navegue sola a
+  // login — eso mataría el proceso en silencio sin dejar ningún rastro.
+  // En su lugar, el fallo se captura como un error normal y queda
+  // registrado en la tabla de fallidas.
   async function postConReintento(tabla, filas, headers) {
     try {
-      await sb.rest('POST', tabla, filas, headers);
+      await sb.rest('POST', tabla, filas, headers, { noRedirect: true });
       return { ok: true };
     } catch(e1) {
       await new Promise(r => setTimeout(r, 400));
       try {
-        await sb.rest('POST', tabla, filas, headers);
+        await sb.rest('POST', tabla, filas, headers, { noRedirect: true });
         return { ok: true };
       } catch(e2) {
         return { ok: false, error: e2 };
@@ -455,6 +460,12 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
   }
 
   // ── Paso 9: kpi_ns_pedidos_sku_detalle (migración 013) — detalle granular ──
+  // Este ciclo puede tener decenas de lotes; refrescamos el token ANTES de
+  // arrancar para empezar con una sesión fresca y reducir el riesgo de que
+  // expire a mitad de camino (el timer de auto-refresh de auth.js sigue
+  // corriendo en paralelo, esto es una capa extra de seguridad).
+  if (typeof sb.refresh === 'function') { try { await sb.refresh(); } catch(e) {} }
+
   // Cada lote de 100 filas tiene su PROPIO manejo de error con 1 reintento. Si
   // un lote falla incluso tras el reintento, se registra (con su motivo
   // exacto) y el ciclo CONTINÚA con los lotes siguientes — antes, un solo
