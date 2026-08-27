@@ -112,8 +112,45 @@
     .search-inp:focus{border-color:var(--accent)}
     .row-clickable{cursor:pointer}
     .row-clickable:hover{background:rgba(0,212,255,.06)}
-    .row-active{background:rgba(0,212,255,.12) !important}
+    .row-active{background:rgba(0,212,255,.28) !important;box-shadow:inset 4px 0 0 0 var(--accent)}
     @media(max-width:599px){.search-inp{width:100%}}
+
+    /* ── Paginador (paneles de detalle) ── */
+    .pag-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.6rem;
+      padding:.6rem .2rem;font-size:.72rem;color:var(--muted)}
+    .pag-size{display:flex;align-items:center;gap:.4rem}
+    .pag-size select{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;
+      color:var(--text);font-size:.72rem;padding:.2rem .4rem;font-family:'DM Sans',sans-serif}
+    .pag-nav{display:flex;align-items:center;gap:.35rem}
+    .pag-btn{background:var(--surface2);border:1px solid var(--border2);border-radius:6px;color:var(--text);
+      font-size:.72rem;padding:.25rem .55rem;cursor:pointer}
+    .pag-btn:hover:not(:disabled){border-color:var(--accent)}
+    .pag-btn:disabled{opacity:.35;cursor:not-allowed}
+
+    /* ── Filtro tipo Excel/PrimeFaces por columna ── */
+    th.filtrable{position:relative;padding-right:1.5rem !important}
+    .th-filtro-btn{position:absolute;right:.3rem;top:50%;transform:translateY(-50%);background:none;border:none;
+      color:var(--muted);cursor:pointer;font-size:.7rem;padding:.15rem;line-height:1}
+    .th-filtro-btn:hover{color:var(--text)}
+    .th-filtro-btn.activo{color:var(--accent)}
+    .filtro-pop{position:absolute;top:100%;left:0;z-index:50;background:var(--surface2);
+      border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:0 8px 24px rgba(0,0,0,.4);
+      width:220px;max-height:320px;display:flex;flex-direction:column;font-weight:400;text-transform:none;
+      letter-spacing:normal}
+    .filtro-pop-search{padding:.5rem;border-bottom:1px solid var(--border)}
+    .filtro-pop-search input{width:100%;background:var(--surface3,var(--bg));border:1px solid var(--border2);
+      border-radius:6px;padding:.3rem .5rem;font-size:.72rem;color:var(--text);outline:none;
+      font-family:'DM Sans',sans-serif}
+    .filtro-pop-acciones{display:flex;justify-content:space-between;padding:.35rem .5rem;font-size:.68rem}
+    .filtro-pop-acciones a{color:var(--accent);cursor:pointer;text-decoration:none}
+    .filtro-pop-lista{overflow-y:auto;padding:.3rem .5rem;flex:1}
+    .filtro-pop-item{display:flex;align-items:center;gap:.4rem;padding:.2rem 0;font-size:.72rem;color:var(--text);
+      cursor:pointer}
+    .filtro-pop-item input{margin:0;cursor:pointer}
+    .filtro-pop-footer{padding:.4rem .5rem;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:.4rem}
+    .filtro-pop-footer button{font-size:.7rem;padding:.25rem .6rem;border-radius:6px;cursor:pointer;border:1px solid var(--border2)}
+    .filtro-pop-footer .btn-aplicar{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .filtro-pop-footer .btn-limpiar{background:none;color:var(--muted)}
 
     /* ── Toggle detalle ── */
     .tog-hdr{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem;cursor:pointer;user-select:none;margin-bottom:4px}
@@ -314,9 +351,16 @@
       </div>
       <div class="tbl-wrap-inner"><div class="tbl-scroll">
         <table>
-          <thead><tr>
-            <th>Fecha</th><th># Pedidos</th><th># Ped. Afectados</th><th>Und. Pedidas</th>
-            <th>Und. Desp.</th><th>Und. Cortadas</th><th>NS%</th><th>Estado</th><th>Nota</th>
+          <thead><tr id="thDetalleRow">
+            <th class="filtrable" data-col="fecha">Fecha</th>
+            <th class="filtrable" data-col="num_pedidos"># Pedidos</th>
+            <th class="filtrable" data-col="afectados"># Ped. Afectados</th>
+            <th class="filtrable" data-col="und_pedidas">Und. Pedidas</th>
+            <th class="filtrable" data-col="und_desp">Und. Desp.</th>
+            <th class="filtrable" data-col="und_cortadas">Und. Cortadas</th>
+            <th class="filtrable" data-col="ns_pct">NS%</th>
+            <th class="filtrable" data-col="estado_txt">Estado</th>
+            <th>Nota</th>
           </tr></thead>
           <tbody id="tblDiarioBody"></tbody>
         </table>
@@ -331,7 +375,7 @@
           </div>
           <div style="display:flex;gap:.5rem;align-items:center">
             <input class="search-inp" type="text" placeholder="Buscar comprobante o SKU…"
-              oninput="filtrarTabla('detDiaBody',this.value)"/>
+              oninput="onBuscarDetalle('dia',this.value)"/>
             <button class="btn btn-sm" onclick="cerrarPanel('dia')">✕ Cerrar</button>
           </div>
         </div>
@@ -344,6 +388,7 @@
             <tbody id="detDiaBody"></tbody>
           </table>
         </div></div>
+        <div class="pag-bar" id="pagBarDia"></div>
       </div>
     </div>
 
@@ -355,9 +400,15 @@
       </div>
       <div class="tbl-wrap-inner"><div class="tbl-scroll">
         <table>
-          <thead><tr>
-            <th>#</th><th>SKU</th><th>Descripción</th>
-            <th>Und. Pedidas</th><th>Und. Cortadas</th><th># Órdenes</th><th># Ord. Afectadas</th><th>NS SKU</th>
+          <thead><tr id="thSkusRow">
+            <th>#</th>
+            <th class="filtrable" data-col="referencia">SKU</th>
+            <th class="filtrable" data-col="descripcion">Descripción</th>
+            <th class="filtrable" data-col="und_pedidas">Und. Pedidas</th>
+            <th class="filtrable" data-col="und_cortadas">Und. Cortadas</th>
+            <th class="filtrable" data-col="num_ordenes"># Órdenes</th>
+            <th class="filtrable" data-col="afectadas"># Ord. Afectadas</th>
+            <th class="filtrable" data-col="ns_pct">NS SKU</th>
           </tr></thead>
           <tbody id="tblSkuBody"></tbody>
         </table>
@@ -372,7 +423,7 @@
           </div>
           <div style="display:flex;gap:.5rem;align-items:center">
             <input class="search-inp" type="text" placeholder="Buscar comprobante…"
-              oninput="filtrarTabla('detSkuBody',this.value)"/>
+              oninput="onBuscarDetalle('sku',this.value)"/>
             <button class="btn btn-sm" onclick="cerrarPanel('sku')">✕ Cerrar</button>
           </div>
         </div>
@@ -385,14 +436,15 @@
             <tbody id="detSkuBody"></tbody>
           </table>
         </div></div>
+        <div class="pag-bar" id="pagBarSku"></div>
       </div>
     </div>
 
   </main>
 </div>
 
-<script src="../config/config.js"></script>
-<script src="../utils/auth.js"></script>
+<script src="../config/config.js?v=20260827c"></script>
+<script src="../utils/auth.js?v=20260827c"></script>
 <script>
 applyTheme();
 
@@ -699,10 +751,139 @@ function renderCharts(mesId) {
   });
 }
 
+// ── Filtros tipo Excel por columna (Detalle Diario / SKUs con Cortes) ──────
+let filtrosCol = { detalle: {}, skus: {} }; // colKey → Set(valores seleccionados); ausente = sin filtro
+
+const COLS_DETALLE = {
+  fecha:        d => d.fecha || '—',
+  num_pedidos:  d => fmt(d.num_pedidos),
+  afectados:    d => { const af = (dataDiarioAfectados[document.getElementById('selA').value]||{})[d.fecha]; return af != null ? fmt(af) : '—'; },
+  und_pedidas:  d => fmt(d.und_pedidas),
+  und_desp:     d => fmt(d.und_desp),
+  und_cortadas: d => fmt(d.und_cortadas),
+  ns_pct:       d => fmtP(parseFloat(d.ns_pct)),
+  estado_txt:   d => { const p = parseFloat(d.ns_pct); return p >= 98 ? 'BIEN' : p >= 90 ? 'ALERTA' : 'CRÍTICO'; },
+};
+const COLS_SKUS = {
+  referencia:   s => s.referencia || '—',
+  descripcion:  s => s.descripcion || '—',
+  und_pedidas:  s => fmt(s.und_pedidas),
+  und_cortadas: s => fmt(s.und_cortadas),
+  num_ordenes:  s => fmt(s.num_ordenes),
+  afectadas:    s => { const af = (dataSkusAfectados[document.getElementById('selA').value]||{})[s.referencia]; return af != null ? fmt(af) : '—'; },
+  ns_pct:       s => fmtP(parseFloat(s.ns_pct)),
+};
+
+function pasaFiltros(tabla, row) {
+  const cols = tabla === 'detalle' ? COLS_DETALLE : COLS_SKUS;
+  const activos = filtrosCol[tabla];
+  for (const colKey in activos) {
+    const set = activos[colKey];
+    if (!set || set.size === 0) continue;
+    if (!set.has(cols[colKey](row))) return false;
+  }
+  return true;
+}
+
+function initFiltrosColumnas() {
+  document.querySelectorAll('#thDetalleRow th.filtrable, #thSkusRow th.filtrable').forEach(th => {
+    const tabla  = th.closest('#thDetalleRow') ? 'detalle' : 'skus';
+    const colKey = th.dataset.col;
+    const btn = document.createElement('button');
+    btn.className = 'th-filtro-btn';
+    btn.type = 'button';
+    btn.textContent = '▾';
+    btn.onclick = (e) => { e.stopPropagation(); toggleFiltroPopover(tabla, colKey, btn); };
+    th.appendChild(btn);
+  });
+}
+
+function toggleFiltroPopover(tabla, colKey, btnEl) {
+  const existente = document.querySelector('.filtro-pop');
+  const mismoOwner = existente && existente.dataset.owner === (tabla + colKey);
+  if (existente) { existente.remove(); document.removeEventListener('click', _cerrarPopoverAfuera); }
+  if (mismoOwner) return;
+
+  const mesId = document.getElementById('selA').value;
+  const rowsBase = tabla === 'detalle' ? (dataDiario[mesId] || []) : (dataSkus[mesId] || []);
+  const accessor = (tabla === 'detalle' ? COLS_DETALLE : COLS_SKUS)[colKey];
+  const valores = [...new Set(rowsBase.map(accessor))].sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+  const seleccionActual = filtrosCol[tabla][colKey];
+
+  const pop = document.createElement('div');
+  pop.className = 'filtro-pop';
+  pop.dataset.owner = tabla + colKey;
+  pop.innerHTML = `
+    <div class="filtro-pop-search"><input type="text" placeholder="Buscar…" oninput="_filtrarListaPopover(this)"/></div>
+    <div class="filtro-pop-acciones">
+      <a onclick="_marcarTodosPopover(this,true)">Seleccionar todo</a>
+      <a onclick="_marcarTodosPopover(this,false)">Limpiar</a>
+    </div>
+    <div class="filtro-pop-lista">
+      ${valores.map(v => `<label class="filtro-pop-item">
+        <input type="checkbox" value="${v.replace(/"/g, '&quot;')}" ${(!seleccionActual || seleccionActual.has(v)) ? 'checked' : ''}/>
+        <span>${v}</span>
+      </label>`).join('')}
+    </div>
+    <div class="filtro-pop-footer">
+      <button class="btn-limpiar" onclick="limpiarFiltroColumna('${tabla}','${colKey}')">Quitar filtro</button>
+      <button class="btn-aplicar" onclick="aplicarFiltroColumna('${tabla}','${colKey}',this)">Aplicar</button>
+    </div>`;
+  btnEl.parentElement.appendChild(pop);
+  setTimeout(() => document.addEventListener('click', _cerrarPopoverAfuera), 0);
+}
+
+function _cerrarPopoverAfuera(e) {
+  const pop = document.querySelector('.filtro-pop');
+  if (pop && !pop.contains(e.target) && !e.target.classList.contains('th-filtro-btn')) {
+    pop.remove();
+    document.removeEventListener('click', _cerrarPopoverAfuera);
+  }
+}
+function _filtrarListaPopover(input) {
+  const term = input.value.toLowerCase();
+  input.closest('.filtro-pop').querySelectorAll('.filtro-pop-item').forEach(item => {
+    item.style.display = item.textContent.toLowerCase().includes(term) ? '' : 'none';
+  });
+}
+function _marcarTodosPopover(a, marcar) {
+  a.closest('.filtro-pop').querySelectorAll('.filtro-pop-item').forEach(item => {
+    if (item.style.display !== 'none') item.querySelector('input').checked = marcar;
+  });
+}
+function aplicarFiltroColumna(tabla, colKey, btn) {
+  const pop = btn.closest('.filtro-pop');
+  const checks = [...pop.querySelectorAll('.filtro-pop-lista input')];
+  const marcados = checks.filter(c => c.checked).map(c => c.value);
+  if (marcados.length === checks.length) delete filtrosCol[tabla][colKey];
+  else filtrosCol[tabla][colKey] = new Set(marcados);
+  pop.remove();
+  document.removeEventListener('click', _cerrarPopoverAfuera);
+  actualizarBotonesFiltro();
+  tabla === 'detalle' ? renderDetalleDiario() : renderSkus();
+}
+function limpiarFiltroColumna(tabla, colKey) {
+  delete filtrosCol[tabla][colKey];
+  const pop = document.querySelector('.filtro-pop');
+  if (pop) pop.remove();
+  document.removeEventListener('click', _cerrarPopoverAfuera);
+  actualizarBotonesFiltro();
+  tabla === 'detalle' ? renderDetalleDiario() : renderSkus();
+}
+function actualizarBotonesFiltro() {
+  document.querySelectorAll('#thDetalleRow th.filtrable, #thSkusRow th.filtrable').forEach(th => {
+    const tabla  = th.closest('#thDetalleRow') ? 'detalle' : 'skus';
+    const activo = !!filtrosCol[tabla][th.dataset.col];
+    const btn = th.querySelector('.th-filtro-btn');
+    if (btn) { btn.classList.toggle('activo', activo); btn.textContent = activo ? '▾•' : '▾'; }
+  });
+}
+
 // ── Detalle diario ─────────────────────────────────────────────────────────
 function renderDetalleDiario() {
   const mesId = document.getElementById('selA').value;
-  const dias  = dataDiario[mesId] || [];
+  const diasTodos = dataDiario[mesId] || [];
+  const dias = diasTodos.filter(d => pasaFiltros('detalle', d));
   const afMap = dataDiarioAfectados[mesId] || {};
   document.getElementById('tblDiarioBody').innerHTML = dias.length
     ? dias.map(d => {
@@ -725,18 +906,18 @@ function renderDetalleDiario() {
           <td style="font-size:.72rem;color:var(--muted)">${d.nota_anomalia || '—'}</td>
         </tr>`;
       }).join('')
-    : `<tr><td colspan="9"><div class="empty"><div class="empty-icon">📭</div><p>Sin datos diarios para este mes</p></div></td></tr>`;
+    : `<tr><td colspan="9"><div class="empty"><div class="empty-icon">📭</div><p>${diasTodos.length ? 'Ningún día coincide con los filtros activos' : 'Sin datos diarios para este mes'}</p></div></td></tr>`;
 
-  // Si el mes cambió, el panel de detalle de un mes anterior ya no aplica
   if (detActivo.dia && !dias.some(d => d.fecha === detActivo.dia)) cerrarPanel('dia');
 }
 
 // ── SKUs con cortes ─────────────────────────────────────────────────────────
 function renderSkus() {
   const mesId = document.getElementById('selA').value;
-  const skus  = dataSkus[mesId] || [];
+  const skusTodos = dataSkus[mesId] || [];
+  const skus = skusTodos.filter(s => pasaFiltros('skus', s));
   const afMap = dataSkusAfectados[mesId] || {};
-  document.getElementById('skuCount').textContent = `${skus.length} SKUs`;
+  document.getElementById('skuCount').textContent = `${skus.length} de ${skusTodos.length} SKUs`;
   document.getElementById('tblSkuBody').innerHTML = skus.length
     ? skus.map((s, i) => {
         const p   = parseFloat(s.ns_pct);
@@ -757,7 +938,7 @@ function renderSkus() {
           <td>${tagNS(p)} <span style="font-size:.72rem;color:var(--muted)">${fmtP(p)}</span></td>
         </tr>`;
       }).join('')
-    : `<tr><td colspan="8"><div class="empty"><div class="empty-icon">🏷️</div><p>Sin cortes de SKU registrados</p></div></td></tr>`;
+    : `<tr><td colspan="8"><div class="empty"><div class="empty-icon">🏷️</div><p>${skusTodos.length ? 'Ningún SKU coincide con los filtros activos' : 'Sin cortes de SKU registrados'}</p></div></td></tr>`;
 
   if (detActivo.sku && !skus.some(s => s.referencia === detActivo.sku)) cerrarPanel('sku');
 }
@@ -778,6 +959,75 @@ function badgeEstado(estado) {
   return '—';
 }
 
+// ── Paginador de los paneles de detalle (drill-down) ────────────────────────
+let paginacion = {
+  dia: { rows: [], filtroTexto: '', page: 1, size: 8 },
+  sku: { rows: [], filtroTexto: '', page: 1, size: 8 },
+};
+
+function renderPagina(tipo) {
+  const st = paginacion[tipo];
+  const bodyId  = tipo === 'dia' ? 'detDiaBody' : 'detSkuBody';
+  const pagBarId = tipo === 'dia' ? 'pagBarDia' : 'pagBarSku';
+  const cols = tipo === 'dia' ? 7 : 6;
+
+  const term = st.filtroTexto.toLowerCase();
+  const filtradas = term
+    ? st.rows.filter(r => Object.values(r).some(v => String(v ?? '').toLowerCase().includes(term)))
+    : st.rows;
+
+  const total = filtradas.length;
+  const totalPages = Math.max(1, Math.ceil(total / st.size));
+  if (st.page > totalPages) st.page = totalPages;
+  const desde = (st.page - 1) * st.size;
+  const pagina = filtradas.slice(desde, desde + st.size);
+
+  const body = document.getElementById(bodyId);
+  if (total === 0) {
+    body.innerHTML = `<tr><td colspan="${cols}"><div class="empty"><div class="empty-icon">📭</div><p>Sin registros para mostrar</p></div></td></tr>`;
+  } else if (tipo === 'dia') {
+    body.innerHTML = pagina.map(r => `<tr>
+        <td><b>${r.comprobante || '—'}</b></td>
+        <td>${r.sku || '—'}</td>
+        <td style="font-size:.74rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.descripcion || ''}">${r.descripcion || '—'}</td>
+        <td>${fmt(r.pedidas)}</td>
+        <td class="c-ok">${fmt(r.despachadas)}</td>
+        <td class="c-err">${fmt(r.cortadas)}</td>
+        <td>${badgeEstado(r.estado)}${r.sin_match_wms ? ' <span style="font-size:.65rem;color:var(--muted)">· sin WMS</span>' : ''}</td>
+      </tr>`).join('');
+  } else {
+    body.innerHTML = pagina.map(r => `<tr>
+        <td><b>${r.comprobante || '—'}</b></td>
+        <td>${r.fecha || '—'}</td>
+        <td>${fmt(r.pedidas)}</td>
+        <td class="c-ok">${fmt(r.despachadas)}</td>
+        <td class="c-err">${fmt(r.cortadas)}</td>
+        <td>${badgeEstado(r.estado)}${r.sin_match_wms ? ' <span style="font-size:.65rem;color:var(--muted)">· sin WMS</span>' : ''}</td>
+      </tr>`).join('');
+  }
+
+  const desdeShown = total === 0 ? 0 : desde + 1;
+  const hastaShown = Math.min(desde + st.size, total);
+  document.getElementById(pagBarId).innerHTML = `
+    <span>Mostrando ${desdeShown}–${hastaShown} de ${total}</span>
+    <div class="pag-size">
+      <span>Filas por página:</span>
+      <select onchange="cambiarTamanoPagina('${tipo}',this.value)">
+        ${[5, 10, 15, 30, 50].map(n => `<option value="${n}" ${n === st.size ? 'selected' : ''}>${n}</option>`).join('')}
+      </select>
+    </div>
+    <div class="pag-nav">
+      <button class="pag-btn" onclick="irPagina('${tipo}',1)" ${st.page <= 1 ? 'disabled' : ''}>«</button>
+      <button class="pag-btn" onclick="irPagina('${tipo}',${st.page - 1})" ${st.page <= 1 ? 'disabled' : ''}>‹</button>
+      <span>Página ${st.page} de ${totalPages}</span>
+      <button class="pag-btn" onclick="irPagina('${tipo}',${st.page + 1})" ${st.page >= totalPages ? 'disabled' : ''}>›</button>
+      <button class="pag-btn" onclick="irPagina('${tipo}',${totalPages})" ${st.page >= totalPages ? 'disabled' : ''}>»</button>
+    </div>`;
+}
+function cambiarTamanoPagina(tipo, size) { paginacion[tipo].size = Number(size); paginacion[tipo].page = 1; renderPagina(tipo); }
+function irPagina(tipo, page) { paginacion[tipo].page = page; renderPagina(tipo); }
+function onBuscarDetalle(tipo, texto) { paginacion[tipo].filtroTexto = texto; paginacion[tipo].page = 1; renderPagina(tipo); }
+
 // ── Drill-down: clic en un día de Detalle Diario ────────────────────────────
 async function abrirDetalleDia(mesId, fecha) {
   detActivo.dia = fecha;
@@ -789,6 +1039,7 @@ async function abrirDetalleDia(mesId, fecha) {
   document.getElementById('detDiaSub').textContent = 'Cargando…';
   document.getElementById('detDiaBody').innerHTML =
     `<tr><td colspan="7" style="text-align:center;padding:1.25rem;color:var(--muted)">⏳ Cargando…</td></tr>`;
+  document.getElementById('pagBarDia').innerHTML = '';
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   try {
@@ -796,17 +1047,8 @@ async function abrirDetalleDia(mesId, fecha) {
     const filas = rows.filter(r => r.fecha === fecha && r.estado !== 'BIEN');
     document.getElementById('detDiaSub').textContent =
       `${filas.length} línea(s) pedido×SKU con corte de un total de ${rows.filter(r => r.fecha === fecha).length} líneas del día`;
-    document.getElementById('detDiaBody').innerHTML = filas.length
-      ? filas.map(r => `<tr>
-          <td><b>${r.comprobante || '—'}</b></td>
-          <td>${r.sku || '—'}</td>
-          <td style="font-size:.74rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.descripcion || ''}">${r.descripcion || '—'}</td>
-          <td>${fmt(r.pedidas)}</td>
-          <td class="c-ok">${fmt(r.despachadas)}</td>
-          <td class="c-err">${fmt(r.cortadas)}</td>
-          <td>${badgeEstado(r.estado)}${r.sin_match_wms ? ' <span style="font-size:.65rem;color:var(--muted)">· sin WMS</span>' : ''}</td>
-        </tr>`).join('')
-      : `<tr><td colspan="7"><div class="empty"><div class="empty-icon">📭</div><p>Sin líneas con corte para este día</p></div></td></tr>`;
+    paginacion.dia = { rows: filas, filtroTexto: '', page: 1, size: paginacion.dia.size };
+    renderPagina('dia');
   } catch(e) {
     document.getElementById('detDiaSub').textContent = '';
     document.getElementById('detDiaBody').innerHTML =
@@ -825,22 +1067,15 @@ async function abrirDetalleSku(mesId, referencia) {
   document.getElementById('detSkuSub').textContent = 'Cargando…';
   document.getElementById('detSkuBody').innerHTML =
     `<tr><td colspan="6" style="text-align:center;padding:1.25rem;color:var(--muted)">⏳ Cargando…</td></tr>`;
+  document.getElementById('pagBarSku').innerHTML = '';
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
   try {
     const rows = await cargarDetallePeriodo(mesId);
     const filas = rows.filter(r => r.sku === referencia && r.estado !== 'BIEN');
     document.getElementById('detSkuSub').textContent = `${filas.length} orden(es) con corte de este SKU`;
-    document.getElementById('detSkuBody').innerHTML = filas.length
-      ? filas.map(r => `<tr>
-          <td><b>${r.comprobante || '—'}</b></td>
-          <td>${r.fecha || '—'}</td>
-          <td>${fmt(r.pedidas)}</td>
-          <td class="c-ok">${fmt(r.despachadas)}</td>
-          <td class="c-err">${fmt(r.cortadas)}</td>
-          <td>${badgeEstado(r.estado)}${r.sin_match_wms ? ' <span style="font-size:.65rem;color:var(--muted)">· sin WMS</span>' : ''}</td>
-        </tr>`).join('')
-      : `<tr><td colspan="6"><div class="empty"><div class="empty-icon">📭</div><p>Sin órdenes con corte para este SKU</p></div></td></tr>`;
+    paginacion.sku = { rows: filas, filtroTexto: '', page: 1, size: paginacion.sku.size };
+    renderPagina('sku');
   } catch(e) {
     document.getElementById('detSkuSub').textContent = '';
     document.getElementById('detSkuBody').innerHTML =
@@ -858,16 +1093,6 @@ function cerrarPanel(tipo) {
     document.getElementById('detPanelSku').classList.remove('open');
     renderSkus();
   }
-}
-
-// ── Filtro de texto dentro de una tabla de detalle ──────────────────────────
-function filtrarTabla(tbodyId, q) {
-  const tbody = document.getElementById(tbodyId);
-  if (!tbody) return;
-  const term = q.toLowerCase();
-  Array.from(tbody.rows).forEach(tr => {
-    tr.style.display = tr.textContent.toLowerCase().includes(term) ? '' : 'none';
-  });
 }
 
 // ── Comparativo ─────────────────────────────────────────────────────────────
@@ -941,6 +1166,7 @@ function renderComparativo() {
 window.addEventListener('load', async () => {
   const user = await checkAuth(); if (!user) return;
   renderUser();
+  initFiltrosColumnas();
   await cargarDatos();
   const ol = document.getElementById('overlay');
   setTimeout(() => ol.classList.add('out'), 100);
