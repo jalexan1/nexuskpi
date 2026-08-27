@@ -99,6 +99,23 @@ function _leerHoja(workbook, sheetName, colsBuscadas) {
 async function procesarNivelServicio(file, periodoId, onProgress) {
   const log = msg => { if (typeof onProgress === 'function') onProgress(msg); };
 
+  // POST con 1 reintento automático (pausa breve) — usado por las tablas de
+  // la migración 013, que son propensas a fallos transitorios de red.
+  async function postConReintento(tabla, filas, headers) {
+    try {
+      await sb.rest('POST', tabla, filas, headers);
+      return { ok: true };
+    } catch(e1) {
+      await new Promise(r => setTimeout(r, 400));
+      try {
+        await sb.rest('POST', tabla, filas, headers);
+        return { ok: true };
+      } catch(e2) {
+        return { ok: false, error: e2 };
+      }
+    }
+  }
+
   log('📂 Leyendo archivo con SheetJS…');
   const buf = await file.arrayBuffer();
   const wb  = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true });
@@ -419,37 +436,46 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
   for (const [fecha, d] of diarioMap) {
     diarioAfectadosRows.push({ periodo_id: periodoId, fecha, pedidos_afectados: d.afectados });
   }
-  try {
-    await sb.rest('POST', 'kpi_ns_diario_afectados', diarioAfectadosRows,
+  {
+    const r = await postConReintento('kpi_ns_diario_afectados', diarioAfectadosRows,
       { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
-    log(`✅ kpi_ns_diario_afectados: ${diarioAfectadosRows.length} días`);
-  } catch(e) {
-    log(`⚠️ No se pudo guardar kpi_ns_diario_afectados (¿falta correr la migración 013?): ${e.message}`);
+    if (r.ok) log(`✅ kpi_ns_diario_afectados: ${diarioAfectadosRows.length} días`);
+    else log(`⚠️ No se pudo guardar kpi_ns_diario_afectados (¿falta correr la migración 013?): ${r.error.message}`);
   }
 
   const skusAfectadosRows = [];
   for (const [ref, s] of skuMap) {
     skusAfectadosRows.push({ periodo_id: periodoId, referencia: ref, ordenes_afectadas: s.afectadas });
   }
-  try {
-    await sb.rest('POST', 'kpi_ns_skus_afectados', skusAfectadosRows,
+  {
+    const r = await postConReintento('kpi_ns_skus_afectados', skusAfectadosRows,
       { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
-    log(`✅ kpi_ns_skus_afectados: ${skusAfectadosRows.length} SKUs`);
-  } catch(e) {
-    log(`⚠️ No se pudo guardar kpi_ns_skus_afectados (¿falta correr la migración 013?): ${e.message}`);
+    if (r.ok) log(`✅ kpi_ns_skus_afectados: ${skusAfectadosRows.length} SKUs`);
+    else log(`⚠️ No se pudo guardar kpi_ns_skus_afectados (¿falta correr la migración 013?): ${r.error.message}`);
   }
 
   // ── Paso 9: kpi_ns_pedidos_sku_detalle (migración 013) — detalle granular ──
+  // Cada lote de 100 filas tiene su PROPIO manejo de error con 1 reintento. Si
+  // un lote falla incluso tras el reintento, se registra (con su motivo
+  // exacto) y el ciclo CONTINÚA con los lotes siguientes — antes, un solo
+  // lote fallido detenía todo el resto del mes sin avisar cuál ni por qué.
   let okDetalle = 0;
-  try {
-    for (let i = 0; i < detalleRows.length; i += 100) {
-      await sb.rest('POST', 'kpi_ns_pedidos_sku_detalle', detalleRows.slice(i, i + 100),
-        { 'Prefer': 'return=minimal' });
-      okDetalle += Math.min(100, detalleRows.length - i);
+  const detalleFallidas = []; // filas que no se pudieron guardar, con su motivo
+  for (let i = 0; i < detalleRows.length; i += 100) {
+    const lote = detalleRows.slice(i, i + 100);
+    const r = await postConReintento('kpi_ns_pedidos_sku_detalle', lote, { 'Prefer': 'return=minimal' });
+    if (r.ok) {
+      okDetalle += lote.length;
+    } else {
+      const motivo = r.error.message;
+      lote.forEach(fila => detalleFallidas.push({ ...fila, _motivo: motivo }));
+      log(`⚠️ Lote ${Math.floor(i / 100) + 1} de kpi_ns_pedidos_sku_detalle falló tras reintento (${lote.length} líneas) — ${motivo}`);
     }
+  }
+  if (detalleFallidas.length > 0) {
+    log(`⚠️ ${detalleFallidas.length} de ${detalleRows.length} líneas de detalle NO se guardaron — revisa la tabla de registros fallidos.`);
+  } else {
     log(`✅ kpi_ns_pedidos_sku_detalle: ${okDetalle} líneas (pedido×SKU)`);
-  } catch(e) {
-    log(`⚠️ No se pudo guardar kpi_ns_pedidos_sku_detalle en la línea ${okDetalle} (¿falta correr la migración 013?): ${e.message}`);
   }
 
   log(`\n🏁 Completado — ${_labelPeriodo(periodoId)}`);
@@ -467,6 +493,7 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
     numPedidos: totalPedidos, semanas: semanaMap.size,
     dias: diarioMap.size, skus: skuMap.size, sinMatch, conCapeo,
     cuarentena,
+    detalleFallidas, // NUEVO — filas de kpi_ns_pedidos_sku_detalle que no se pudieron guardar
   };
 }
 

@@ -68,6 +68,22 @@
     .lg-ok{color:var(--ok)}.lg-err{color:var(--error)}.lg-inf{color:var(--accent)}.lg-warn{color:var(--warn)}
     .log-btns{display:flex;gap:.45rem;margin-top:.6rem;flex-wrap:wrap}
 
+    /* ── Registros fallidos (migración 013) ── */
+    .fallidas-box{display:none;background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.3);
+      border-radius:var(--r-sm);padding:.75rem 1rem;margin-top:.75rem;font-size:.8rem;color:var(--error)}
+    .fallidas-box.show{display:block}
+    .fallidas-toggle{background:none;border:1.5px solid var(--error);color:var(--error);border-radius:6px;
+      font-size:.72rem;font-weight:600;padding:.25rem .7rem;cursor:pointer;margin-left:.5rem}
+    .fallidas-toggle:hover{background:rgba(255,77,109,.1)}
+    .fallidas-tbl-wrap{display:none;margin-top:.75rem;max-height:320px;overflow:auto;
+      border:1px solid var(--border);border-radius:var(--r-sm)}
+    .fallidas-tbl-wrap.open{display:block}
+    .fallidas-tbl-wrap table{width:100%;border-collapse:collapse;font-size:.72rem}
+    .fallidas-tbl-wrap th{position:sticky;top:0;background:var(--surface2);color:var(--muted);
+      text-align:left;padding:.4rem .6rem;white-space:nowrap}
+    .fallidas-tbl-wrap td{padding:.4rem .6rem;border-top:1px solid var(--border);color:var(--text)}
+    .log-card.colapsada .log-area,.log-card.colapsada .log-btns{display:none}
+
     /* ── Nav buttons (Ajuste 5) ── */
     .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
     .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
@@ -131,6 +147,16 @@
         <div class="prog-bar-wrap"><div class="prog-bar" id="barKpi" style="width:0%"></div></div>
       </div>
       <div class="result-box" id="resKpi"></div>
+      <div class="fallidas-box" id="fallidasBox"></div>
+      <div class="fallidas-tbl-wrap" id="fallidasTblWrap">
+        <table>
+          <thead><tr>
+            <th>Fecha</th><th>Comprobante</th><th>SKU</th><th>Descripción</th>
+            <th>Pedidas</th><th>Despachadas</th><th>Cortadas</th><th>Motivo del fallo</th>
+          </tr></thead>
+          <tbody id="fallidasTblBody"></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- ── Reprocesar ── -->
@@ -148,7 +174,7 @@
     </div>
 
     <!-- ── Log ── -->
-    <div class="log-card">
+    <div class="log-card" id="logCard">
       <h2>📋 Log de Cargues</h2>
       <div class="log-area" id="etlLog"></div>
       <div class="log-btns">
@@ -199,6 +225,60 @@ function addLog(msg, tipo = 'inf') {
   log.appendChild(d); log.scrollTop = log.scrollHeight;
 }
 
+// ── Registros fallidos de kpi_ns_pedidos_sku_detalle (migración 013) ───────
+function mostrarFilasFallidas(filas) {
+  const box = document.getElementById('fallidasBox');
+  const wrap = document.getElementById('fallidasTblWrap');
+  const body = document.getElementById('fallidasTblBody');
+
+  if (!filas || filas.length === 0) {
+    box.classList.remove('show');
+    wrap.classList.remove('open');
+    return;
+  }
+
+  // Agrupar por motivo para el mensaje (varios lotes pueden fallar por razones distintas)
+  const motivos = {};
+  filas.forEach(f => { motivos[f._motivo] = (motivos[f._motivo] || 0) + 1; });
+  const resumenMotivos = Object.entries(motivos)
+    .map(([m, n]) => `${n} línea(s) por: ${m}`).join(' · ');
+
+  box.innerHTML =
+    `⚠️ <b>${filas.length} línea(s) de detalle NO se pudieron guardar</b> — ${resumenMotivos}. ` +
+    `Esto no afecta el KPI principal (NS%, diario, SKUs), pero el drill-down de esos pedidos ` +
+    `quedará incompleto hasta corregirlo.` +
+    `<button class="fallidas-toggle" id="btnToggleFallidas" onclick="toggleFallidasTbl()">👁️ Ver registros afectados</button>`;
+  box.classList.add('show');
+
+  body.innerHTML = filas.map(f => `<tr>
+    <td>${f.fecha || '—'}</td>
+    <td>${f.comprobante || '—'}</td>
+    <td>${f.sku || '—'}</td>
+    <td>${f.descripcion || '—'}</td>
+    <td>${f.pedidas ?? '—'}</td>
+    <td>${f.despachadas ?? '—'}</td>
+    <td>${f.cortadas ?? '—'}</td>
+    <td>${f._motivo}</td>
+  </tr>`).join('');
+
+  // Empieza oculta — se abre solo al hacer clic en el botón
+  wrap.classList.remove('open');
+  document.getElementById('logCard').classList.remove('colapsada');
+}
+
+function toggleFallidasTbl() {
+  const wrap = document.getElementById('fallidasTblWrap');
+  const logCard = document.getElementById('logCard');
+  const btn = document.getElementById('btnToggleFallidas');
+  const abrir = !wrap.classList.contains('open');
+
+  wrap.classList.toggle('open', abrir);
+  // Al abrir la tabla de fallidas, se colapsa el log para darle prioridad visual
+  logCard.classList.toggle('colapsada', abrir);
+  btn.textContent = abrir ? '🙈 Ocultar registros afectados' : '👁️ Ver registros afectados';
+  if (abrir) wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
 // ── Cargue principal ──────────────────────────────────────────────────────
 async function subirKpi() {
   const file            = document.getElementById('fileKpi').files[0];
@@ -210,6 +290,7 @@ async function subirKpi() {
   btn.disabled = true;
   addLog(`Iniciando cargue: ${file.name}…`, 'inf');
   showProg('progKpi', 'barKpi', 'progKpiTxt', 5, 'Leyendo archivo…');
+  mostrarFilasFallidas([]); // limpia cualquier estado de fallidas de un cargue anterior
 
   try {
     // El ETL autodetecta el período; pasamos el selector como referencia
@@ -224,7 +305,7 @@ async function subirKpi() {
     const result = await procesarNivelServicio(file, periodoSelector, onProgress);
 
     const { periodoId, periodoDetectado, nsPct, undPedidas, undDesp, undCortadas,
-            numPedidos, semanas, dias, skus, sinMatch, conCapeo, cuarentena } = result;
+            numPedidos, semanas, dias, skus, sinMatch, conCapeo, cuarentena, detalleFallidas } = result;
 
     const labelPeriodo = CONFIG.meses.find(m => m.id === periodoId)?.label || periodoId;
     const labelSel     = CONFIG.meses.find(m => m.id === periodoSelector)?.label || periodoSelector;
@@ -286,6 +367,7 @@ async function subirKpi() {
     if (cuarentena && cuarentena.length > 0) {
       addLog(`🧯 ${cuarentena.length} comprobante(s) en cuarentena: ${cuarentena.map(c => c.comprobante).join(', ')}`, 'warn');
     }
+    mostrarFilasFallidas(detalleFallidas);
     cargarPeriodos();
 
   } catch(e) {
