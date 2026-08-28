@@ -333,12 +333,14 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
 
   // ── Paso 4b: kpi_ns_cuarentena — comprobantes excluidos por fecha DIA inconsistente
   // No es bloqueante: si la tabla no existe todavía en Supabase (falta la migración)
-  // o el insert falla por restricción de clave primaria, NO se detiene el proceso —
-  // se registra en el log para que el analista lo revise manualmente.
+  // o el insert falla por RLS/PK, NO se detiene el proceso — se registra en el
+  // log Y se marca cuarentenaGuardada:false para que la UI muestre el estado real.
   try {
-    await sb.rest('DELETE', `kpi_ns_cuarentena?periodo_id=eq.${periodoId}`);
+    await sb.rest('DELETE', `kpi_ns_cuarentena?periodo_id=eq.${periodoId}`, null, {}, { noRedirect: true });
   } catch(e) { /* tabla puede no existir aún — no bloquea */ }
 
+  let cuarentenaGuardada = true;
+  let cuarentenaError = null;
   if (cuarentena.length > 0) {
     try {
       await sb.rest('POST', 'kpi_ns_cuarentena', cuarentena.map(c => ({
@@ -347,11 +349,13 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
         fechas:      c.fechas.join(', '),
         pedidas:     c.pedidas,
         motivo:      c.motivo,
-      })), { 'Prefer': 'resolution=merge-duplicates,return=minimal' });
+      })), { 'Prefer': 'resolution=merge-duplicates,return=minimal' }, { noRedirect: true });
       log(`🧯 ${cuarentena.length} comprobante(s) enviados a kpi_ns_cuarentena para revisión manual.`);
     } catch(e) {
-      // No dejar que un fallo de PK/tabla faltante tumbe el cálculo del KPI.
+      // No dejar que un fallo de RLS/PK/tabla faltante tumbe el cálculo del KPI.
       // Se excluye igual del cálculo (ya se excluyó arriba) y se informa por log.
+      cuarentenaGuardada = false;
+      cuarentenaError = e.message;
       log(`⚠️ No se pudo registrar la cuarentena en Supabase (${e.message}). ` +
           `Los ${cuarentena.length} comprobante(s) igual quedaron EXCLUIDOS del cálculo de NS — repórtalos manualmente:`);
       for (const c of cuarentena) log(`   • ${c.comprobante} (${c.fechas.join(', ')})`);
@@ -504,6 +508,7 @@ async function procesarNivelServicio(file, periodoId, onProgress) {
     numPedidos: totalPedidos, semanas: semanaMap.size,
     dias: diarioMap.size, skus: skuMap.size, sinMatch, conCapeo,
     cuarentena,
+    cuarentenaGuardada, cuarentenaError, // NUEVO — estado real del guardado en Supabase
     detalleFallidas, // NUEVO — filas de kpi_ns_pedidos_sku_detalle que no se pudieron guardar
   };
 }

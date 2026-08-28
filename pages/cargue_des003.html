@@ -159,6 +159,23 @@
       </div>
     </div>
 
+    <!-- ── Cuarentena (comprobantes excluidos del NS por fecha DIA inconsistente) ── -->
+    <div class="cargue-card" id="cuarentenaCard" style="display:none">
+      <h2>🧯 Cuarentena — <span id="cuarentenaMes"></span></h2>
+      <p class="card-sub">
+        Comprobantes con más de una fecha DIA en el Excel fuente. Se excluyen del cálculo de NS
+        para no inflar el denominador, y quedan aquí para revisión manual.
+      </p>
+      <div class="fallidas-tbl-wrap open" style="max-height:280px">
+        <table>
+          <thead><tr>
+            <th>Comprobante</th><th>Fechas en conflicto</th><th>Und. Pedidas</th><th>Motivo</th><th>Guardado en Supabase</th>
+          </tr></thead>
+          <tbody id="cuarentenaTblBody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- ── Reprocesar ── -->
     <div class="repro-card">
       <h2>🔄 Períodos Cargados</h2>
@@ -279,6 +296,30 @@ function toggleFallidasTbl() {
   if (abrir) wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+// ── Cuarentena (comprobantes con fecha DIA inconsistente) ──────────────────
+function mostrarCuarentena(cuarentena, guardada, error, labelPeriodo) {
+  const card = document.getElementById('cuarentenaCard');
+  const body = document.getElementById('cuarentenaTblBody');
+
+  if (!cuarentena || cuarentena.length === 0) { card.style.display = 'none'; return; }
+
+  document.getElementById('cuarentenaMes').textContent = labelPeriodo || '';
+  const estadoTxt = guardada
+    ? '✅ Sí'
+    : `❌ No — ${error || 'error desconocido'}`;
+  const estadoCls = guardada ? 'c-ok' : 'c-err';
+
+  body.innerHTML = cuarentena.map(c => `<tr>
+    <td><b>${c.comprobante}</b></td>
+    <td>${c.fechas.join(', ')}</td>
+    <td>${(c.pedidas || 0).toLocaleString('es-CO')}</td>
+    <td style="font-size:.72rem;color:var(--muted)">${c.motivo}</td>
+    <td class="${estadoCls}">${estadoTxt}</td>
+  </tr>`).join('');
+
+  card.style.display = 'block';
+}
+
 // ── Cargue principal ──────────────────────────────────────────────────────
 async function subirKpi() {
   const file            = document.getElementById('fileKpi').files[0];
@@ -291,6 +332,7 @@ async function subirKpi() {
   addLog(`Iniciando cargue: ${file.name}…`, 'inf');
   showProg('progKpi', 'barKpi', 'progKpiTxt', 5, 'Leyendo archivo…');
   mostrarFilasFallidas([]); // limpia cualquier estado de fallidas de un cargue anterior
+  document.getElementById('cuarentenaCard').style.display = 'none';
 
   try {
     // El ETL autodetecta el período; pasamos el selector como referencia
@@ -305,7 +347,8 @@ async function subirKpi() {
     const result = await procesarNivelServicio(file, periodoSelector, onProgress);
 
     const { periodoId, periodoDetectado, nsPct, undPedidas, undDesp, undCortadas,
-            numPedidos, semanas, dias, skus, sinMatch, conCapeo, cuarentena, detalleFallidas } = result;
+            numPedidos, semanas, dias, skus, sinMatch, conCapeo, cuarentena,
+            cuarentenaGuardada, cuarentenaError, detalleFallidas } = result;
 
     const labelPeriodo = CONFIG.meses.find(m => m.id === periodoId)?.label || periodoId;
     const labelSel     = CONFIG.meses.find(m => m.id === periodoSelector)?.label || periodoSelector;
@@ -368,6 +411,7 @@ async function subirKpi() {
       addLog(`🧯 ${cuarentena.length} comprobante(s) en cuarentena: ${cuarentena.map(c => c.comprobante).join(', ')}`, 'warn');
     }
     mostrarFilasFallidas(detalleFallidas);
+    mostrarCuarentena(cuarentena, cuarentenaGuardada, cuarentenaError, labelPeriodo);
     cargarPeriodos();
 
   } catch(e) {

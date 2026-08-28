@@ -232,6 +232,7 @@
     <button class="tab-btn"   onclick="tab('detalle',this)"     style="touch-action:manipulation">📋 Detalle Diario</button>
     <button class="tab-btn"   onclick="tab('skus',this)"        style="touch-action:manipulation">🏷️ SKUs con Cortes</button>
     <button class="tab-btn"   onclick="tab('comparativo',this)" style="touch-action:manipulation">⚖️ Comparativo</button>
+    <button class="tab-btn"   onclick="tab('cuarentena',this)"  style="touch-action:manipulation">🧯 Cuarentena</button>
   </nav>
 
   <!-- ══ CONTENT ════════════════════════════════════════════════════════════ -->
@@ -342,6 +343,25 @@
       <div class="comp-grid" id="compWrap">
         <div class="empty"><div class="empty-icon">⚖️</div><p>Selecciona dos meses para comparar</p></div>
       </div>
+    </div>
+
+    <!-- ══ CUARENTENA ════════════════════════════════════════════════════════ -->
+    <!-- Tabla propia de este dashboard, independiente de la del cargue: lee
+         directo de kpi_ns_cuarentena en Supabase (persistente entre sesiones),
+         no reutiliza el arreglo en memoria del ETL. Siempre visible, incluso vacía. -->
+    <div class="tab-panel" id="tab-cuarentena">
+      <div class="tbl-ctrl">
+        <span class="flt-count" id="cuarentenaDashCount"></span>
+        <span class="flt-count">Comprobantes excluidos del cálculo de NS por fecha DIA inconsistente en el Excel fuente</span>
+      </div>
+      <div class="tbl-wrap-inner"><div class="tbl-scroll">
+        <table>
+          <thead><tr>
+            <th>Comprobante</th><th>Fechas en conflicto</th><th>Und. Pedidas</th><th>Motivo</th><th>Registrado</th>
+          </tr></thead>
+          <tbody id="tblCuarentenaBody"></tbody>
+        </table>
+      </div></div>
     </div>
 
     <!-- ══ DETALLE DIARIO ════════════════════════════════════════════════════ -->
@@ -471,6 +491,7 @@ function tab(id, btn) {
   if (id === 'comparativo') renderComparativo();
   if (id === 'detalle')     renderDetalleDiario();
   if (id === 'skus')        renderSkus();
+  if (id === 'cuarentena')  cargarCuarentenaDash();
 }
 
 // ── Cargar datos ───────────────────────────────────────────────────────────
@@ -564,6 +585,35 @@ function onMesChange() {
   // Actualizar también Detalle y SKUs si ya están activos
   if (document.getElementById('tab-detalle').classList.contains('on'))  renderDetalleDiario();
   if (document.getElementById('tab-skus').classList.contains('on'))     renderSkus();
+  if (document.getElementById('tab-cuarentena').classList.contains('on')) cargarCuarentenaDash();
+}
+
+// ── Cuarentena (tabla propia del dashboard — lee directo de Supabase) ──────
+// Independiente de la tabla que se muestra en cargue_des003.html: esa lee
+// del resultado en memoria de un cargue recién hecho; esta lee siempre de
+// kpi_ns_cuarentena en Supabase, así que persiste entre sesiones y muestra
+// el estado real acumulado del mes seleccionado, no solo de la última carga.
+async function cargarCuarentenaDash() {
+  const mesId = document.getElementById('selA').value;
+  const body  = document.getElementById('tblCuarentenaBody');
+  const count = document.getElementById('cuarentenaDashCount');
+  body.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:1.25rem;color:var(--muted)">⏳ Cargando…</td></tr>`;
+  try {
+    const rows = await sb.rest('GET', `kpi_ns_cuarentena?periodo_id=eq.${mesId}&order=comprobante.asc`);
+    count.textContent = `${(rows || []).length} comprobante(s) en cuarentena este mes`;
+    body.innerHTML = (rows && rows.length)
+      ? rows.map(r => `<tr>
+          <td><b>${r.comprobante}</b></td>
+          <td>${r.fechas || '—'}</td>
+          <td>${fmt(r.pedidas)}</td>
+          <td style="font-size:.74rem;color:var(--muted)">${r.motivo || '—'}</td>
+          <td>${r.created_at ? new Date(r.created_at).toLocaleString('es-CO') : '—'}</td>
+        </tr>`).join('')
+      : `<tr><td colspan="5"><div class="empty"><div class="empty-icon">🧯</div><p>Sin comprobantes en cuarentena para este mes</p></div></td></tr>`;
+  } catch(e) {
+    count.textContent = '';
+    body.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--error)">⚠️ ${e.message}</td></tr>`;
+  }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
