@@ -133,7 +133,7 @@
       color:var(--muted);cursor:pointer;font-size:.7rem;padding:.15rem;line-height:1}
     .th-filtro-btn:hover{color:var(--text)}
     .th-filtro-btn.activo{color:var(--accent)}
-    .filtro-pop{position:absolute;top:100%;left:0;z-index:50;background:var(--surface2);
+    .filtro-pop{position:fixed;z-index:200;background:var(--surface2);
       border:1px solid var(--border2);border-radius:var(--r-sm);box-shadow:0 8px 24px rgba(0,0,0,.4);
       width:220px;max-height:320px;display:flex;flex-direction:column;font-weight:400;text-transform:none;
       letter-spacing:normal}
@@ -879,7 +879,20 @@ function toggleFiltroPopover(tabla, colKey, btnEl) {
       <button class="btn-limpiar" onclick="limpiarFiltroColumna('${tabla}','${colKey}')">Quitar filtro</button>
       <button class="btn-aplicar" onclick="aplicarFiltroColumna('${tabla}','${colKey}',this)">Aplicar</button>
     </div>`;
-  btnEl.parentElement.appendChild(pop);
+  document.body.appendChild(pop);
+
+  // Posicionar por coordenadas del botón (fixed, así no lo recorta el
+  // overflow:auto de .tbl-scroll). Si no cabe abajo, se abre hacia arriba;
+  // si no cabe a la derecha, se alinea al borde derecho de la ventana.
+  const r = btnEl.getBoundingClientRect();
+  const anchoPop = 220, altoPop = Math.min(320, pop.scrollHeight || 260);
+  let left = r.left;
+  let top  = r.bottom + 4;
+  if (left + anchoPop > window.innerWidth - 8)  left = window.innerWidth - anchoPop - 8;
+  if (top + altoPop > window.innerHeight - 8)   top  = r.top - altoPop - 4;
+  pop.style.left = `${Math.max(8, left)}px`;
+  pop.style.top  = `${Math.max(8, top)}px`;
+
   setTimeout(() => document.addEventListener('click', _cerrarPopoverAfuera), 0);
 }
 

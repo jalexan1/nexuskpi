@@ -176,6 +176,18 @@
       </div>
     </div>
 
+    <!-- ── Verificación real contra Supabase (fuente de verdad, no memoria) ── -->
+    <div class="cargue-card" id="verifCard" style="display:none">
+      <h2>🔎 Verificación en base de datos — <span id="verifMes"></span></h2>
+      <p class="card-sub">
+        Esto consulta Supabase directamente después del cargue (no el resultado en memoria del
+        proceso), para confirmar objetivamente qué quedó guardado.
+      </p>
+      <div id="verifResumen" style="font-size:.82rem;line-height:1.9;margin-bottom:.75rem"></div>
+      <div id="verifHuecos"></div>
+      <div id="verifCuarentenaBD"></div>
+    </div>
+
     <!-- ── Reprocesar ── -->
     <div class="repro-card">
       <h2>🔄 Períodos Cargados</h2>
@@ -320,6 +332,62 @@ function mostrarCuarentena(cuarentena, guardada, error, labelPeriodo) {
   card.style.display = 'block';
 }
 
+// ── Verificación real contra Supabase (fuente de verdad, no memoria) ───────
+// Se corre automáticamente después de cada cargue. Consulta la base de
+// datos directamente — si algo no quedó guardado (por RLS, por sesión
+// vencida, por lo que sea), esto lo va a mostrar sin depender de que el
+// proceso en memoria haya "sabido" que falló.
+async function verificarEnBD(periodoId, labelPeriodo) {
+  const card = document.getElementById('verifCard');
+  const resumen = document.getElementById('verifResumen');
+  const huecosDiv = document.getElementById('verifHuecos');
+  const cuarDiv = document.getElementById('verifCuarentenaBD');
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  document.getElementById('verifMes').textContent = labelPeriodo || periodoId;
+  resumen.innerHTML = '⏳ Consultando Supabase…';
+  huecosDiv.innerHTML = '';
+  cuarDiv.innerHTML = '';
+
+  try {
+    const [diario, detalleFechas, cuarentenaBD] = await Promise.all([
+      sb.rest('GET', `kpi_ns_diario?periodo_id=eq.${periodoId}&select=fecha,num_pedidos&order=fecha.asc`),
+      sb.rest('GET', `kpi_ns_pedidos_sku_detalle?periodo_id=eq.${periodoId}&select=fecha&limit=10000`),
+      sb.rest('GET', `kpi_ns_cuarentena?periodo_id=eq.${periodoId}&order=comprobante.asc`),
+    ]);
+
+    const conteoPorFecha = {};
+    (detalleFechas || []).forEach(r => { conteoPorFecha[r.fecha] = (conteoPorFecha[r.fecha] || 0) + 1; });
+    const totalLineas = (detalleFechas || []).length;
+
+    const huecos = (diario || []).filter(d => d.num_pedidos > 0 && !conteoPorFecha[d.fecha]);
+
+    resumen.innerHTML =
+      `📊 <b>kpi_ns_pedidos_sku_detalle</b>: ${totalLineas.toLocaleString('es-CO')} líneas guardadas en Supabase para ${labelPeriodo}<br>` +
+      `📅 <b>${(diario || []).length}</b> días con datos en kpi_ns_diario`;
+
+    huecosDiv.innerHTML = huecos.length
+      ? `<div class="fallidas-box show">⚠️ <b>${huecos.length} día(s) con pedidos pero SIN ninguna línea de detalle guardada</b> — hueco real confirmado en base de datos:<br>` +
+        huecos.map(d => `• ${d.fecha} (${d.num_pedidos} pedidos, 0 líneas de detalle)`).join('<br>') + `</div>`
+      : `<div style="color:var(--ok);font-size:.82rem;margin-top:.4rem">✅ Sin huecos — todos los días con pedidos tienen su detalle guardado.</div>`;
+
+    if (cuarentenaBD && cuarentenaBD.length > 0) {
+      cuarDiv.innerHTML =
+        `<div style="margin-top:.75rem;font-size:.82rem"><b>🧯 kpi_ns_cuarentena tiene ${cuarentenaBD.length} registro(s) guardados en Supabase para este período:</b></div>` +
+        `<div class="fallidas-tbl-wrap open" style="max-height:220px;margin-top:.4rem"><table><thead><tr>` +
+        `<th>Comprobante</th><th>Fechas</th><th>Pedidas</th><th>Guardado</th></tr></thead><tbody>` +
+        cuarentenaBD.map(c => `<tr><td><b>${c.comprobante}</b></td><td>${c.fechas || '—'}</td><td>${fmtNum(c.pedidas)}</td>` +
+          `<td>${c.created_at ? new Date(c.created_at).toLocaleString('es-CO') : '—'}</td></tr>`).join('') +
+        `</tbody></table></div>`;
+    } else {
+      cuarDiv.innerHTML = `<div style="margin-top:.75rem;font-size:.82rem;color:var(--muted)">🧯 kpi_ns_cuarentena: 0 registros en Supabase para este período.</div>`;
+    }
+  } catch(e) {
+    resumen.innerHTML = `<span style="color:var(--error)">⚠️ No se pudo verificar contra Supabase: ${e.message}</span>`;
+  }
+}
+function fmtNum(n) { return (n || 0).toLocaleString('es-CO'); }
+
 // ── Cargue principal ──────────────────────────────────────────────────────
 async function subirKpi() {
   const file            = document.getElementById('fileKpi').files[0];
@@ -333,6 +401,7 @@ async function subirKpi() {
   showProg('progKpi', 'barKpi', 'progKpiTxt', 5, 'Leyendo archivo…');
   mostrarFilasFallidas([]); // limpia cualquier estado de fallidas de un cargue anterior
   document.getElementById('cuarentenaCard').style.display = 'none';
+  document.getElementById('verifCard').style.display = 'none';
 
   try {
     // El ETL autodetecta el período; pasamos el selector como referencia
@@ -413,6 +482,7 @@ async function subirKpi() {
     mostrarFilasFallidas(detalleFallidas);
     mostrarCuarentena(cuarentena, cuarentenaGuardada, cuarentenaError, labelPeriodo);
     cargarPeriodos();
+    verificarEnBD(periodoId, labelPeriodo); // fuente de verdad — consulta Supabase directo, no memoria
 
   } catch(e) {
     hideProg('progKpi');
@@ -445,6 +515,8 @@ async function cargarPeriodos() {
           </span>
         </div>
         <div style="display:flex;gap:.35rem">
+          <button class="btn btn-sm" style="touch-action:manipulation"
+            onclick="verificarEnBD('${r.periodo_id}','${lbl(r.periodo_id)}')">🔎 Verificar</button>
           <button class="btn btn-sm btn-danger" style="touch-action:manipulation"
             onclick="eliminarPeriodo('${r.periodo_id}','${lbl(r.periodo_id)}')">🗑️ Eliminar</button>
         </div>
