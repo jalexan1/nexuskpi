@@ -1007,11 +1007,25 @@ function renderSkus() {
 }
 
 // ── Drill-down: carga lazy del detalle granular pedido×SKU por periodo ──────
+// IMPORTANTE: Supabase impone su propio tope de filas por respuesta,
+// independiente del "limit" que pidamos — si se supera, trunca en silencio
+// sin avisar. Un solo GET con limit=10000 se veía "completo" pero en
+// realidad se cortaba (~1000 filas) y perdía los días de la segunda mitad
+// del mes. Por eso se pagina de verdad con limit/offset hasta agotar los
+// datos.
 async function cargarDetallePeriodo(mesId) {
   if (dataDetalle[mesId]?.loaded) return dataDetalle[mesId].rows;
-  const rows = await sb.rest('GET',
-    `kpi_ns_pedidos_sku_detalle?periodo_id=eq.${mesId}&order=fecha.asc&limit=10000`);
-  dataDetalle[mesId] = { rows: rows || [], loaded: true };
+  const PAGE = 1000;
+  let offset = 0, todos = [];
+  while (true) {
+    const pagina = await sb.rest('GET',
+      `kpi_ns_pedidos_sku_detalle?periodo_id=eq.${mesId}&order=fecha.asc,comprobante.asc&limit=${PAGE}&offset=${offset}`);
+    if (!pagina || pagina.length === 0) break;
+    todos = todos.concat(pagina);
+    if (pagina.length < PAGE) break;
+    offset += PAGE;
+  }
+  dataDetalle[mesId] = { rows: todos, loaded: true };
   return dataDetalle[mesId].rows;
 }
 

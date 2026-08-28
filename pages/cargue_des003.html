@@ -337,6 +337,23 @@ function mostrarCuarentena(cuarentena, guardada, error, labelPeriodo) {
 // datos directamente — si algo no quedó guardado (por RLS, por sesión
 // vencida, por lo que sea), esto lo va a mostrar sin depender de que el
 // proceso en memoria haya "sabido" que falló.
+// Paginación real contra Supabase — un solo GET con limit alto puede quedar
+// truncado en silencio por el tope de filas del proyecto, sin aviso ni
+// error. Esto trae TODO agotando limit/offset hasta que no queden más filas.
+async function fetchAllPaginado(pathBase) {
+  const PAGE = 1000;
+  let offset = 0, todos = [];
+  while (true) {
+    const sep = pathBase.includes('?') ? '&' : '?';
+    const pagina = await sb.rest('GET', `${pathBase}${sep}limit=${PAGE}&offset=${offset}`);
+    if (!pagina || pagina.length === 0) break;
+    todos = todos.concat(pagina);
+    if (pagina.length < PAGE) break;
+    offset += PAGE;
+  }
+  return todos;
+}
+
 async function verificarEnBD(periodoId, labelPeriodo) {
   const card = document.getElementById('verifCard');
   const resumen = document.getElementById('verifResumen');
@@ -352,7 +369,7 @@ async function verificarEnBD(periodoId, labelPeriodo) {
   try {
     const [diario, detalleFechas, cuarentenaBD] = await Promise.all([
       sb.rest('GET', `kpi_ns_diario?periodo_id=eq.${periodoId}&select=fecha,num_pedidos&order=fecha.asc`),
-      sb.rest('GET', `kpi_ns_pedidos_sku_detalle?periodo_id=eq.${periodoId}&select=fecha&limit=10000`),
+      fetchAllPaginado(`kpi_ns_pedidos_sku_detalle?periodo_id=eq.${periodoId}&select=fecha&order=fecha.asc`),
       sb.rest('GET', `kpi_ns_cuarentena?periodo_id=eq.${periodoId}&order=comprobante.asc`),
     ]);
 
