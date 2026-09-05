@@ -36,6 +36,38 @@
     @media (max-width:767px)  { #warehouseScene { display:none; } }
     @media (max-width:1023px) { #warehouseScene { height:110px; } }
 
+    /* HU005 — Tarjeta dorada Consolidado Gerencial (independiente del grid de 7 pasos) */
+    .gerencial-card{
+      position:relative; overflow:hidden; display:flex; align-items:center; gap:1.1rem;
+      background:linear-gradient(135deg,rgba(232,184,75,.14),rgba(184,134,11,.05) 60%,var(--surface));
+      border:1px solid rgba(232,184,75,.4); border-radius:var(--r-lg);
+      padding:1.15rem 1.4rem; margin-bottom:1.25rem; cursor:pointer; text-decoration:none;
+      transition:all .2s; animation:fadeUp .35s ease both;
+    }
+    .gerencial-card:hover{ border-color:#E8B84B; transform:translateY(-2px); box-shadow:0 10px 34px rgba(232,184,75,.18); }
+    .gerencial-card::before{
+      content:''; position:absolute; inset:0;
+      background:radial-gradient(ellipse 70% 90% at 95% 0%,rgba(232,184,75,.12),transparent 70%);
+      pointer-events:none;
+    }
+    .gerencial-icon{
+      width:52px; height:52px; border-radius:14px; flex-shrink:0;
+      background:rgba(232,184,75,.14); border:1px solid rgba(232,184,75,.4);
+      display:flex; align-items:center; justify-content:center; font-size:1.6rem;
+    }
+    .gerencial-body{ flex:1; min-width:0; }
+    .gerencial-title{
+      font-family:'Syne',sans-serif; font-weight:800; font-size:1.02rem; color:#E8B84B;
+      display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+    }
+    .gerencial-desc{ font-size:.78rem; color:var(--muted); margin-top:.2rem; }
+    .gerencial-arrow{ font-size:1.2rem; color:#E8B84B; flex-shrink:0; transition:transform .2s; }
+    .gerencial-card:hover .gerencial-arrow{ transform:translateX(4px); }
+    @media (max-width:479px){
+      .gerencial-card{ padding:1rem; gap:.75rem; }
+      .gerencial-icon{ width:42px; height:42px; font-size:1.3rem; }
+    }
+
     /* KPI Grid */
     .kpi-grid {
       display:grid;
@@ -176,6 +208,9 @@
         <div id="warehouseScene" aria-hidden="true"></div>
       </div>
 
+      <!-- HU005 — Tarjeta dorada Consolidado Gerencial, fuera del grid de 7 pasos -->
+      <div id="gerencialCardWrap"></div>
+
       <!-- Ajuste 1: buildGrid() filtra hidden:true → KPI-DEV-006 no aparece -->
       <div class="kpi-grid" id="kpiGrid"></div>
 
@@ -298,6 +333,22 @@
 <script>
   applyTheme();
 
+  /* HU005 — Tarjeta dorada Consolidado Gerencial x Mes */
+  function buildGerencialCard() {
+    const g = CONFIG.consolidadoGerencial;
+    const el = document.getElementById('gerencialCardWrap');
+    if (!g || !el) return;
+    el.innerHTML = g.activo ? `
+      <a href="${g.href}" class="gerencial-card">
+        <div class="gerencial-icon">${g.icon}</div>
+        <div class="gerencial-body">
+          <div class="gerencial-title">${g.name} <span class="badge badge-warn" style="color:#E8B84B;background:rgba(232,184,75,.12);border-color:rgba(232,184,75,.35)">Gerencial</span></div>
+          <div class="gerencial-desc">${g.desc}</div>
+        </div>
+        <div class="gerencial-arrow">→</div>
+      </a>` : '';
+  }
+
   /* Ajuste 1: filtra KPIs con hidden:true → KPI-DEV-006 no se renderiza */
   function buildGrid() {
     const visibles = CONFIG.kpis.filter(k => !k.hidden);
@@ -348,6 +399,7 @@
   window.addEventListener('load', async () => {
     const user = await checkAuth(); if (!user) return;
     renderUser();
+    buildGerencialCard();
     buildGrid();
     if (getRole() === 'admin') {
       document.getElementById('tabsNav').style.display = 'flex';

@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Consolidado Gerencial x Mes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <style>
+    /* ── Acento dorado gerencial (no toca --accent global) ── */
+    :root{ --ger-gold:#E8B84B; --ger-gold2:#B8860B; }
+
+    .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
+    .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
+    @media(max-width:479px){.nav-btn span{display:none}}
+
+    .kpi-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem;flex-wrap:wrap}
+    .kpi-hdr h1{font-size:clamp(1rem,3vw,1.3rem);font-weight:800;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;color:var(--ger-gold)}
+    .kpi-hdr-sub{font-size:.78rem;color:var(--muted);margin-top:.2rem}
+    .kpi-actions{display:flex;gap:.4rem;align-items:center;flex-shrink:0;flex-wrap:wrap}
+
+    .mes-bar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.75rem 1rem;background:var(--surface);border:1px solid rgba(232,184,75,.25);border-radius:var(--r);margin-bottom:1.25rem}
+    .mes-bar label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
+    .mes-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:.35rem .65rem;cursor:pointer;outline:none}
+    .mes-sel:focus{border-color:var(--ger-gold)}
+
+    /* ── KPI cards ejecutivas ── */
+    .ger-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.85rem;margin-bottom:1.25rem}
+    @media(max-width:479px){.ger-grid{grid-template-columns:1fr 1fr;gap:.55rem}}
+    .ger-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;display:flex;flex-direction:column;gap:.5rem;position:relative;overflow:hidden;animation:fadeUp .35s ease both}
+    .ger-card.verde{border-color:rgba(0,255,136,.3)}
+    .ger-card.amarillo{border-color:rgba(255,176,32,.35)}
+    .ger-card.rojo{border-color:rgba(255,77,109,.35)}
+    .ger-card.sindatos{opacity:.55}
+    .ger-top{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+    .ger-icon{font-size:1.15rem}
+    .ger-pill{font-size:.62rem;font-weight:700;padding:.15rem .55rem;border-radius:20px;border:1px solid;white-space:nowrap}
+    .ger-pill.verde{background:rgba(0,255,136,.12);color:var(--ok);border-color:var(--ok)}
+    .ger-pill.amarillo{background:rgba(255,176,32,.12);color:var(--warn);border-color:var(--warn)}
+    .ger-pill.rojo{background:rgba(255,77,109,.12);color:var(--error);border-color:var(--error)}
+    .ger-pill.sindatos{background:rgba(122,139,166,.1);color:var(--muted);border-color:var(--dim)}
+    .ger-code{font-family:'Syne',sans-serif;font-size:.66rem;font-weight:700;color:var(--muted);letter-spacing:.08em}
+    .ger-name{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;color:var(--text);line-height:1.25;min-height:2.1em}
+    .ger-valor{font-size:clamp(1.6rem,4vw,2rem);font-weight:900;line-height:1}
+    .ger-valor.verde{color:var(--ok)}.ger-valor.amarillo{color:var(--warn)}.ger-valor.rojo{color:var(--error)}.ger-valor.sindatos{color:var(--dim)}
+    .ger-delta{font-size:.72rem;color:var(--muted)}
+    .ger-delta.up{color:var(--ok)}.ger-delta.down{color:var(--error)}
+    .ger-meta{font-size:.66rem;color:var(--dim)}
+
+    /* ── Tabla consolidada ── */
+    .sec-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.25rem}
+    .sec-title{font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:.85rem;display:flex;align-items:center;gap:.5rem}
+    .sec-title .bar{width:4px;height:14px;border-radius:2px;flex-shrink:0;background:var(--ger-gold)}
+    .gt{width:100%;border-collapse:collapse}
+    .gt thead tr{background:var(--surface3)}
+    .gt th{padding:.55rem .75rem;font-size:.66rem;font-weight:700;text-align:left;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+    .gt th:not(:first-child), .gt td:not(:first-child){text-align:right}
+    .gt td{padding:.55rem .75rem;font-size:.82rem;border-bottom:1px solid var(--border)}
+    .gt td:first-child{font-weight:700}
+    .gt tbody tr:last-child td{border-bottom:none}
+    .gt tbody tr:hover{background:var(--surface2)}
+
+    /* ── Narrativa gerencial ── */
+    .narr-card{background:linear-gradient(135deg,rgba(232,184,75,.06),var(--surface) 55%);border:1px solid rgba(232,184,75,.3);border-radius:var(--r-lg);padding:1.4rem}
+    .narr-title{font-family:'Syne',sans-serif;font-size:.95rem;font-weight:800;color:var(--ger-gold);margin-bottom:.9rem;display:flex;align-items:center;gap:.5rem}
+    .narr-body p{font-size:.86rem;line-height:1.75;color:var(--text);margin-bottom:.85rem}
+    .narr-body p:last-child{margin-bottom:0}
+    .narr-body b{color:var(--ger-gold)}
+    .narr-body .c-ok{color:var(--ok);font-weight:700}
+    .narr-body .c-warn{color:var(--warn);font-weight:700}
+    .narr-body .c-err{color:var(--error);font-weight:700}
+
+    @media(max-width:767px){
+      .kpi-hdr{flex-direction:column;gap:.5rem}
+      .kpi-actions{flex-wrap:wrap}
+      .mes-bar{gap:.4rem}
+    }
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando consolidado…</p></div></div>
+
+<div class="page">
+  <header class="topbar">
+    <a href="menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span>
+    <span class="topbar-title">Consolidado Gerencial</span>
+    <div class="topbar-spacer"></div>
+    <div class="nav-btns">
+      <a href="menu.html" class="btn btn-sm nav-btn" title="Volver al menú principal">🏠 <span>Menú</span></a>
+    </div>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+      <button class="theme-btn" onclick="setTheme('sepia')" title="Sepia">📜</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="kpi-hdr">
+      <div>
+        <h1>🏆 Consolidado Gerencial x Mes</h1>
+        <div class="kpi-hdr-sub">Vista ejecutiva de todos los KPIs de la operación logística · Para la reunión Gerencial</div>
+      </div>
+      <div class="kpi-actions">
+        <button class="btn" onclick="cargarTodo()" id="btnRefresh">🔄 Actualizar</button>
+      </div>
+    </div>
+
+    <div class="mes-bar">
+      <label for="selMes">Mes</label>
+      <select class="mes-sel" id="selMes" onchange="renderMes()"></select>
+      <span class="flt-count" id="statusDatos" style="font-size:.72rem;color:var(--muted)"></span>
+    </div>
+
+    <div id="sinDatosBox" class="empty" style="display:none">
+      <div class="empty-icon">📭</div>
+      <p>Todavía no hay datos cargados para ningún KPI. Carga al menos un mes desde el Panel de Administración.</p>
+    </div>
+
+    <div id="contenido" style="display:none">
+      <!-- Tarjetas KPI -->
+      <div class="ger-grid" id="gerGrid"></div>
+
+      <!-- Tabla consolidada -->
+      <div class="sec-card">
+        <div class="sec-title"><span class="bar"></span> Tabla Consolidada</div>
+        <div class="tbl-wrap">
+          <div class="tbl-scroll">
+            <table class="gt">
+              <thead>
+                <tr>
+                  <th>KPI</th>
+                  <th>Mes Actual</th>
+                  <th>Mes Anterior</th>
+                  <th>Δ</th>
+                  <th>Meta</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="tblConsolidado"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Narrativa gerencial -->
+      <div class="narr-card">
+        <div class="narr-title">📖 Lectura Gerencial</div>
+        <div class="narr-body" id="narrativa"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+applyTheme();
+
+// ── Catálogo de KPIs del consolidado ────────────────────────────────────
+// Cada KPI define cómo traer sus datos (misma fuente que su pantalla de
+// detalle — tablas *_resumen / *_proceso ya existentes, cero tablas nuevas)
+// y cómo calificar el semáforo (todas las métricas elegidas son "mayor es
+// mejor"). KPI-INV-007 queda fuera: no tiene tabla propia con datos reales.
+const KPI_DEFS = [
+  {
+    code: 'KPI-REC-001', name: 'Recepción a Tiempo', icon: '📦',
+    unit: '%', metaTxt: '≥ 95%', sem: { verde: 95, amarillo: 80 },
+    async load() {
+      const rows = await sb.rest('GET', 'kpi_recibo_resumen?select=mes_id,trt_12h,total_oc,ok_12h,late_12h&order=mes_id.asc');
+      const map = {};
+      (rows || []).forEach(r => {
+        if (r.trt_12h == null) return;
+        map[r.mes_id] = { valor: parseFloat(r.trt_12h), ctx: `${r.ok_12h || 0}/${r.total_oc || 0} OC a tiempo` };
+      });
+      return map;
+    },
+  },
+  {
+    code: 'KPI-INV-002', name: 'Exactitud de Inventario', icon: '🗃️',
+    unit: '%', metaTxt: '≥ 99%', sem: { verde: 99, amarillo: 97 },
+    async load() {
+      const rows = await sb.rest('GET', 'kpi_inventario_detalle?select=periodo_id,es_exacto');
+      const acc = {};
+      (rows || []).forEach(r => {
+        if (!acc[r.periodo_id]) acc[r.periodo_id] = { tot: 0, ex: 0 };
+        acc[r.periodo_id].tot++;
+        if (r.es_exacto) acc[r.periodo_id].ex++;
+      });
+      const map = {};
+      Object.keys(acc).forEach(pid => {
+        const { tot, ex } = acc[pid];
+        if (!tot) return;
+        map[pid] = { valor: parseFloat(((ex / tot) * 100).toFixed(2)), ctx: `${ex}/${tot} SKUs exactos` };
+      });
+      return map;
+    },
+  },
+  {
+    code: 'KPI-DES-003', name: 'Nivel de Servicio CEDI', icon: '🏭',
+    unit: '%', metaTxt: '≥ 98%', sem: { verde: 98, amarillo: 90 },
+    async load() {
+      const rows = await sb.rest('GET', 'kpi_ns_resumen?semana=is.null&select=periodo_id,ns_pct,und_pedidas,und_desp,num_pedidos&order=periodo_id.asc');
+      const map = {};
+      (rows || []).forEach(r => {
+        if (r.ns_pct == null) return;
+        map[r.periodo_id] = { valor: parseFloat(r.ns_pct), ctx: `${(r.und_desp || 0).toLocaleString('es-CO')}/${(r.und_pedidas || 0).toLocaleString('es-CO')} und. desp.` };
+      });
+      return map;
+    },
+  },
+  {
+    code: 'KPI-ALI-004', name: 'Productividad Alistamiento', icon: '🔧',
+    unit: ' u/p/h', metaTxt: '≥ 450 u/p/h', sem: { verde: 450, amarillo: 200 },
+    async load() {
+      const rows = await sb.rest('GET', 'kpi_ali_resumen?semana=is.null&select=periodo_id,pa_und,und_alistadas,cajas_alistadas&order=periodo_id.asc');
+      const map = {};
+      (rows || []).forEach(r => {
+        if (r.pa_und == null) return;
+        map[r.periodo_id] = { valor: parseFloat(r.pa_und), ctx: `${(r.und_alistadas || 0).toLocaleString('es-CO')} und. alistadas` };
+      });
+      return map;
+    },
+  },
+  {
+    code: 'KPI-DES-005', name: 'On-Time Delivery (OTD)', icon: '🚚',
+    unit: '%', metaTxt: '≥ 95%', sem: { verde: 95, amarillo: 90 },
+    async load() {
+      const rows = await sb.rest('GET', `kpi_otd_proceso?proceso=eq.${encodeURIComponent('B2B+B2C')}&select=periodo_id,otd_pct,total_pedidos,pedidos_atime&order=periodo_id.asc`);
+      const map = {};
+      (rows || []).forEach(r => {
+        if (r.otd_pct == null) return;
+        map[r.periodo_id] = { valor: parseFloat(r.otd_pct), ctx: `${r.pedidos_atime || 0}/${r.total_pedidos || 0} pedidos a tiempo` };
+      });
+      return map;
+    },
+  },
+  {
+    code: 'KPI-DES-008', name: 'Ciclo de Pedido (Lead Time)', icon: '⏱️',
+    unit: '%', metaTxt: '≥ 95% ≤24h', sem: { verde: 95, amarillo: 80 },
+    async load() {
+      const rows = await sb.rest('GET', `kpi_des008_proceso?proceso=eq.${encodeURIComponent('B2B+B2C')}&select=periodo_id,pct_24h,cp_prom,total_pedidos,ok_24h&order=periodo_id.asc`);
+      const map = {};
+      (rows || []).forEach(r => {
+        if (r.pct_24h == null) return;
+        map[r.periodo_id] = { valor: parseFloat(r.pct_24h), ctx: `Prom. ${r.cp_prom != null ? parseFloat(r.cp_prom).toFixed(1) : '—'}h · ${r.ok_24h || 0}/${r.total_pedidos || 0} ≤24h` };
+      });
+      return map;
+    },
+  },
+];
+
+let mesesDisponibles = [];
+
+// ── Semáforo genérico (todas las métricas del consolidado: mayor = mejor) ──
+function semCls(v, s) { return v >= s.verde ? 'verde' : v >= s.amarillo ? 'amarillo' : 'rojo'; }
+function semTxt(v, s) { return v >= s.verde ? '🟢 BIEN' : v >= s.amarillo ? '🟡 ALERTA' : '🔴 CRÍTICO'; }
+
+function labelMes(id) { return (CONFIG.meses.find(m => m.id === id) || {}).label || id; }
+
+// ── Cargar datos de los 6 KPIs en paralelo ──────────────────────────────
+async function cargarTodo() {
+  const btn = document.getElementById('btnRefresh');
+  btn.disabled = true; btn.textContent = '⏳';
+  document.getElementById('statusDatos').textContent = 'Cargando…';
+  try {
+    await Promise.all(KPI_DEFS.map(async k => { k.data = await k.load(); }));
+
+    const set = new Set();
+    KPI_DEFS.forEach(k => Object.keys(k.data).forEach(m => set.add(m)));
+    mesesDisponibles = [...set].sort();
+
+    if (!mesesDisponibles.length) {
+      document.getElementById('sinDatosBox').style.display = '';
+      document.getElementById('contenido').style.display = 'none';
+      document.getElementById('statusDatos').textContent = 'Sin datos';
+      btn.disabled = false; btn.textContent = '🔄 Actualizar';
+      return;
+    }
+
+    document.getElementById('sinDatosBox').style.display = 'none';
+    document.getElementById('contenido').style.display = '';
+
+    const sel = document.getElementById('selMes');
+    sel.innerHTML = mesesDisponibles.map((m, i) =>
+      `<option value="${m}" ${i === mesesDisponibles.length - 1 ? 'selected' : ''}>${labelMes(m)}</option>`
+    ).join('');
+
+    document.getElementById('statusDatos').textContent = `Actualizado ${new Date().toLocaleTimeString('es-CO')}`;
+    renderMes();
+  } catch (e) {
+    document.getElementById('statusDatos').textContent = '⚠️ ' + e.message.slice(0, 80);
+  }
+  btn.disabled = false; btn.textContent = '🔄 Actualizar';
+}
+
+// ── Utilidad: valor del mes anterior DISPONIBLE para ese KPI (su propia línea de tiempo) ──
+function historicoHasta(k, mesId) {
+  return Object.keys(k.data).filter(m => m <= mesId).sort().map(m => ({ mes: m, valor: k.data[m].valor, ctx: k.data[m].ctx }));
+}
+
+// ── Render principal ─────────────────────────────────────────────────────
+function renderMes() {
+  const mesId = document.getElementById('selMes').value;
+  if (!mesId) return;
+
+  const filas = KPI_DEFS.map(k => {
+    const hist = historicoHasta(k, mesId);
+    const actual = hist.length ? hist[hist.length - 1] : null;
+    const anterior = hist.length > 1 ? hist[hist.length - 2] : null;
+    return { k, hist, actual, anterior };
+  });
+
+  // ── Tarjetas ──
+  document.getElementById('gerGrid').innerHTML = filas.map(({ k, actual, anterior }) => {
+    if (!actual || actual.mes !== mesId) {
+      return `<div class="ger-card sindatos">
+        <div class="ger-top"><span class="ger-icon">${k.icon}</span><span class="ger-pill sindatos">SIN DATOS</span></div>
+        <div class="ger-code">${k.code}</div>
+        <div class="ger-name">${k.name}</div>
+        <div class="ger-valor sindatos">—</div>
+        <div class="ger-meta">Meta: ${k.metaTxt}</div>
+      </div>`;
+    }
+    const cls = semCls(actual.valor, k.sem);
+    const delta = anterior ? actual.valor - anterior.valor : null;
+    const deltaCls = delta == null ? '' : delta >= 0 ? 'up' : 'down';
+    const deltaTxt = delta == null ? 'Sin mes anterior para comparar' : `${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta).toFixed(1)}${k.unit === '%' ? ' pp' : k.unit} vs. ${labelMes(anterior.mes)}`;
+    return `<div class="ger-card ${cls}">
+      <div class="ger-top"><span class="ger-icon">${k.icon}</span><span class="ger-pill ${cls}">${semTxt(actual.valor, k.sem)}</span></div>
+      <div class="ger-code">${k.code}</div>
+      <div class="ger-name">${k.name}</div>
+      <div class="ger-valor ${cls}">${actual.valor.toFixed(1)}${k.unit}</div>
+      <div class="ger-delta ${deltaCls}">${deltaTxt}</div>
+      <div class="ger-meta">Meta: ${k.metaTxt} · ${actual.ctx}</div>
+    </div>`;
+  }).join('');
+
+  // ── Tabla consolidada ──
+  document.getElementById('tblConsolidado').innerHTML = filas.map(({ k, actual, anterior }) => {
+    if (!actual || actual.mes !== mesId) {
+      return `<tr><td>${k.icon} ${k.name}</td><td colspan="4" style="text-align:center;color:var(--muted)">Sin datos para este mes</td><td><span class="tag tag-nd">SIN DATOS</span></td></tr>`;
+    }
+    const cls = semCls(actual.valor, k.sem);
+    const tagCls = cls === 'verde' ? 'tag-ok' : cls === 'amarillo' ? 'tag-warn' : 'tag-late';
+    const delta = anterior ? actual.valor - anterior.valor : null;
+    return `<tr>
+      <td>${k.icon} ${k.name}</td>
+      <td class="${cls === 'verde' ? 'c-ok' : cls === 'amarillo' ? 'c-warn' : 'c-err'}"><b>${actual.valor.toFixed(1)}${k.unit}</b></td>
+      <td>${anterior ? anterior.valor.toFixed(1) + k.unit : '—'}</td>
+      <td class="${delta == null ? '' : delta >= 0 ? 'c-ok' : 'c-err'}">${delta == null ? '—' : (delta >= 0 ? '+' : '') + delta.toFixed(1) + (k.unit === '%' ? ' pp' : k.unit)}</td>
+      <td>${k.metaTxt}</td>
+      <td><span class="tag ${tagCls}">${semTxt(actual.valor, k.sem).replace(/^\S+\s/, '')}</span></td>
+    </tr>`;
+  }).join('');
+
+  // ── Narrativa gerencial ──
+  document.getElementById('narrativa').innerHTML = generarNarrativa(mesId, filas);
+}
+
+// ── Narrativa gerencial generada a partir de los datos del mes ──────────
+// Lectura de tendencia simple (últimos 2-3 meses con dato), NO es un
+// modelo predictivo — así lo pide explícitamente la HU.
+function generarNarrativa(mesId, filas) {
+  const mesLbl = labelMes(mesId);
+  const conDato = filas.filter(f => f.actual && f.actual.mes === mesId);
+
+  if (!conDato.length) {
+    return `<p>No hay KPIs con datos cargados para <b>${mesLbl}</b> todavía. Carga la información del mes desde el Panel de Administración para generar la lectura gerencial.</p>`;
+  }
+
+  const mejoran = [], empeoran = [], criticos = [], enMeta = [], prospeccion = [];
+
+  conDato.forEach(({ k, hist, actual, anterior }) => {
+    const cls = semCls(actual.valor, k.sem);
+    if (cls === 'verde') enMeta.push(k.name);
+    if (cls === 'rojo') criticos.push(k.name);
+
+    if (anterior) {
+      const delta1 = actual.valor - anterior.valor;
+      const umbral = k.unit === ' u/p/h' ? 5 : 0.3; // ruido mínimo antes de llamarlo "mejora/empeora"
+      if (delta1 > umbral) mejoran.push({ nombre: k.name, delta: delta1, unit: k.unit });
+      else if (delta1 < -umbral) empeoran.push({ nombre: k.name, delta: delta1, unit: k.unit });
+
+      // Tendencia de 3 puntos para la prospección
+      if (hist.length >= 3) {
+        const prevprev = hist[hist.length - 3];
+        const delta2 = anterior.valor - prevprev.valor;
+        const mismaDireccion = (delta1 > umbral && delta2 > 0) || (delta1 < -umbral && delta2 < 0);
+        if (mismaDireccion) {
+          const proyeccion = actual.valor + delta1;
+          prospeccion.push({ nombre: k.name, direccion: delta1 > 0 ? 'mejorando' : 'deteriorándose', proyeccion, unit: k.unit });
+        }
+      }
+    }
+  });
+
+  const p = [];
+
+  // Párrafo 1 — panorama general
+  const nVerde = conDato.filter(f => semCls(f.actual.valor, f.k.sem) === 'verde').length;
+  const panorama = criticos.length
+    ? `con <span class="c-err">${criticos.length} indicador(es) en estado crítico</span> que requieren atención inmediata`
+    : (nVerde === conDato.length ? `con <span class="c-ok">todos los indicadores dentro de meta</span>` : `con un desempeño mixto`);
+  p.push(`En <b>${mesLbl}</b>, la operación logística cerró ${panorama}, sobre un total de ${conDato.length} indicador(es) con información disponible.`);
+
+  // Párrafo 2 — qué mejoró
+  if (mejoran.length) {
+    const txt = mejoran.map(m => `<b>${m.nombre}</b> (+${Math.abs(m.delta).toFixed(1)}${m.unit === '%' ? ' pp' : m.unit})`).join(', ');
+    p.push(`<span class="c-ok">Mejoró</span> frente al mes anterior: ${txt}.`);
+  }
+
+  // Párrafo 3 — qué empeoró / atención inmediata
+  if (empeoran.length || criticos.length) {
+    const partes = [];
+    if (empeoran.length) partes.push(`retrocedió en ${empeoran.map(m => `<b>${m.nombre}</b> (${m.delta.toFixed(1)}${m.unit === '%' ? ' pp' : m.unit})`).join(', ')}`);
+    const soloCriticosNuevos = criticos.filter(c => !empeoran.some(m => m.nombre === c));
+    if (soloCriticosNuevos.length) partes.push(`se mantiene en zona crítica: <b>${soloCriticosNuevos.join(', ')}</b>`);
+    p.push(`<span class="c-warn">Merece atención inmediata:</span> la operación ${partes.join('; ')}.`);
+  } else if (!mejoran.length) {
+    p.push(`No se observan variaciones relevantes frente al mes anterior en los indicadores con historial disponible.`);
+  }
+
+  // Párrafo 4 — prospección simple del próximo mes
+  if (prospeccion.length) {
+    const txt = prospeccion.map(p2 => `<b>${p2.nombre}</b> ${p2.direccion} (proyección ≈ ${p2.proyeccion.toFixed(1)}${p2.unit === '%' ? '%' : p2.unit})`).join('; ');
+    p.push(`<b>Prospección próximo mes</b> (lectura de tendencia sobre los últimos 3 meses, no es un modelo predictivo): ${txt}.`);
+  } else {
+    p.push(`<b>Prospección próximo mes:</b> no hay suficiente histórico consecutivo para proyectar una tendencia clara — se recomienda seguir monitoreando mes a mes.`);
+  }
+
+  return p.map(txt => `<p>${txt}</p>`).join('');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  const user = await checkAuth(); if (!user) return; // admin y viewer pueden ver esta pantalla
+  renderUser();
+  await cargarTodo();
+  const ol = document.getElementById('overlay');
+  setTimeout(() => ol.classList.add('out'), 100);
+  setTimeout(() => ol.remove(), 500);
+});
+</script>
+</body>
+</html>

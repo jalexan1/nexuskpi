@@ -59,6 +59,30 @@ const CONFIG = Object.freeze({
     { code:'KPI-DEV-006', name:'Tasa de Devoluciones',        icon:'↩️', href:null,           activo:false, hidden:true },
   ],
 
+  // ── HU005 · Consolidado Gerencial x Mes ──────────────────────────────────
+  // Tarjeta dorada, independiente del grid de 7 pasos de `kpis` (no se
+  // renumera nada). Se apoya en los mismos `resumen`/`proceso` que ya usan
+  // las pantallas de detalle — no requiere tablas nuevas.
+  consolidadoGerencial: Object.freeze({
+    code: 'KPI-CONSOLIDADO',
+    name: 'Consolidado Gerencial x Mes',
+    desc: 'Vista ejecutiva única con todos los KPIs de la operación · Reunión Gerencial',
+    icon: '🏆',
+    href: 'consolidado_gerencial.html',
+    activo: true,
+    // KPIs que entran en el consolidado (código = el de CONFIG.kpis) y su
+    // metadato de negocio (meta, semáforo, campo/tabla origen). KPI-INV-007
+    // queda fuera por ahora: no tiene tabla propia con datos reales todavía.
+    kpisIncluidos: [
+      { code:'KPI-REC-001', metaTxt:'≥ 95%',        semaforo:{verde:95, amarillo:80} },
+      { code:'KPI-INV-002', metaTxt:'≥ 99%',        semaforo:{verde:99, amarillo:97} },
+      { code:'KPI-DES-003', metaTxt:'≥ 98%',        semaforo:{verde:98, amarillo:90} },
+      { code:'KPI-ALI-004', metaTxt:'≥ 450 u/p/h',  semaforo:{verde:450, amarillo:200} },
+      { code:'KPI-DES-005', metaTxt:'≥ 95%',        semaforo:{verde:95, amarillo:90} },
+      { code:'KPI-DES-008', metaTxt:'≥ 95% ≤24h',   semaforo:{verde:95, amarillo:80} },
+    ],
+  }),
+
   // ── Fase 2 · Operatividad (prefijo op_ en BD, sufijo OP en páginas) ──────
   // No se toca ninguna clave anterior de este objeto.
   operatividad: Object.freeze({
