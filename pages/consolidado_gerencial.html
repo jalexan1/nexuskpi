@@ -294,6 +294,27 @@ function semColor(cls) { return cls === 'verde' ? '#00FF88' : cls === 'amarillo'
 function labelMes(id) { return (CONFIG.meses.find(m => m.id === id) || {}).label || id; }
 function labelMesCorto(id) { return labelMes(id).split(' ')[0].slice(0, 3); }
 
+// ── Mejora #1: orden por severidad (más crítico primero), no por código KPI.
+// Rango: rojo(0) < amarillo(1) < verde(2) < sin datos(3). Dentro del mismo
+// color, el que le falta un % más grande de su propia meta va primero — así,
+// entre dos críticos, arriba queda el que está objetivamente peor (ej. un
+// 46% se ve antes que un 84.8%, aunque el 84.8% esté "más cerca" en puntos).
+function rankSeveridad(fila) {
+  const { k, actual } = fila;
+  if (!actual) return { grupo: 3, gap: 0 };
+  const cls = semCls(actual.valor, k.sem);
+  const grupo = cls === 'rojo' ? 0 : cls === 'amarillo' ? 1 : 2;
+  const gap = k.sem.verde > 0 ? (k.sem.verde - actual.valor) / k.sem.verde : 0; // % de la meta que falta
+  return { grupo, gap };
+}
+function ordenarPorSeveridad(filas) {
+  return [...filas].sort((a, b) => {
+    const ra = rankSeveridad(a), rb = rankSeveridad(b);
+    if (ra.grupo !== rb.grupo) return ra.grupo - rb.grupo;
+    return rb.gap - ra.gap;
+  });
+}
+
 // ── Plugin Chart.js: banda de fondo verde/amarillo/rojo según meta ─────────
 // (estilo "Few" — el gerente ve de un vistazo si el punto cae en zona buena
 // o mala, sin tener que leer el número).
@@ -461,12 +482,12 @@ function renderMes() {
   const mesId = document.getElementById('selMes').value;
   if (!mesId) return;
 
-  const filas = KPI_DEFS.map(k => {
+  const filas = ordenarPorSeveridad(KPI_DEFS.map(k => {
     const hist = historicoHasta(k, mesId);
     const actual = hist.length ? hist[hist.length - 1] : null;
     const anterior = hist.length > 1 ? hist[hist.length - 2] : null;
     return { k, hist, actual, anterior };
-  });
+  }));
 
   // ── Tarjetas (con mini-gráfico de tendencia + botón Ampliar) ──
   cardsData = {};
