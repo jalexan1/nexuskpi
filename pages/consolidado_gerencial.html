@@ -58,6 +58,12 @@
     .ger-card.amarillo{border-color:rgba(255,176,32,.35)}
     .ger-card.rojo{border-color:rgba(255,77,109,.35)}
     .ger-card.sindatos{opacity:.55}
+    /* Enlace a la pantalla de detalle (kpi001.html, etc.): envuelve ícono +
+       código + nombre — objetivo de clic grande, sin tocar el botón
+       "⤢ Ampliar" que sigue siendo una acción aparte. */
+    .ger-link{display:block;color:inherit;text-decoration:none;margin:-.3rem -.3rem .1rem;padding:.3rem .3rem .1rem;border-radius:var(--r-sm);transition:background .15s}
+    .ger-link:hover{background:rgba(255,255,255,.05)}
+    .ger-link:hover .ger-name{color:var(--ger-gold)}
     .ger-top{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
     .ger-icon{font-size:1.15rem}
     .ger-pill{font-size:.62rem;font-weight:700;padding:.15rem .55rem;border-radius:20px;border:1px solid;white-space:nowrap}
@@ -345,6 +351,14 @@ function semShape(cls) { return cls === 'verde' ? 'circle' : cls === 'amarillo' 
 function semShapeGlifo(cls) { return cls === 'verde' ? '●' : cls === 'amarillo' ? '◆' : '✕'; }
 
 function labelMes(id) { return (CONFIG.meses.find(m => m.id === id) || {}).label || id; }
+
+// ── Enlace de cada tarjeta hacia su pantalla de detalle (kpi001.html, etc.)
+// Se reutiliza el href que ya vive en CONFIG.kpis (misma fuente única de
+// verdad) — no se inventa ninguna URL nueva aquí.
+function hrefDetalle(code) {
+  const def = CONFIG.kpis.find(x => x.code === code);
+  return (def && def.href) || '#';
+}
 function labelMesCorto(id) { return labelMes(id).split(' ')[0].slice(0, 3); }
 
 // ── Mejora #1: orden por severidad (más crítico primero), no por código KPI.
@@ -637,9 +651,11 @@ function renderMes() {
   document.getElementById('gerGrid').innerHTML = filas.map(({ k, actual, anterior }) => {
     if (!actual || actual.mes !== mesId) {
       return `<div class="ger-card sindatos">
-        <div class="ger-top"><span class="ger-icon">${k.icon}</span><span class="ger-pill sindatos">SIN DATOS</span></div>
-        <div class="ger-code">${k.code}</div>
-        <div class="ger-name">${k.name}</div>
+        <a class="ger-link" href="${hrefDetalle(k.code)}" title="Ver detalle completo de ${k.name}">
+          <div class="ger-top"><span class="ger-icon">${k.icon}</span><span class="ger-pill sindatos">SIN DATOS</span></div>
+          <div class="ger-code">${k.code}</div>
+          <div class="ger-name">${k.name}</div>
+        </a>
         <div class="ger-valor sindatos">—</div>
         <div class="ger-meta">Meta: ${k.metaTxt}</div>
       </div>`;
@@ -652,9 +668,11 @@ function renderMes() {
     const canvasId = `cchart-${k.code}`;
     cardsData[k.code] = { k, serie };
     return `<div class="ger-card ${cls}">
-      <div class="ger-top"><span class="ger-icon">${k.icon}</span><span class="ger-pill ${cls}">${semTxt(actual.valor, k.sem)}</span></div>
-      <div class="ger-code">${k.code}</div>
-      <div class="ger-name">${k.name}</div>
+      <a class="ger-link" href="${hrefDetalle(k.code)}" title="Ver detalle completo de ${k.name}">
+        <div class="ger-top"><span class="ger-icon">${k.icon}</span><span class="ger-pill ${cls}">${semTxt(actual.valor, k.sem)}</span></div>
+        <div class="ger-code">${k.code}</div>
+        <div class="ger-name">${k.name}</div>
+      </a>
       <div class="ger-valor ${cls}">${actual.valor.toFixed(1)}${k.unit}</div>
       <div class="ger-delta ${deltaCls}">${deltaTxt}</div>
       ${serie.length > 1 ? `
