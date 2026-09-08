@@ -15,15 +15,15 @@
     .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
     @media(max-width:479px){.nav-btn span{display:none}}
 
-    .kpi-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem;flex-wrap:wrap}
-    .kpi-hdr h1{font-size:clamp(1rem,3vw,1.3rem);font-weight:800;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;color:var(--ger-gold)}
-    .kpi-hdr-sub{font-size:.78rem;color:var(--muted);margin-top:.2rem}
+    /* ajuste: sin título/bajada, el header ahora es una sola franja —
+       proceso compacto a la izquierda, controles de mes/actualizar a la
+       derecha — para no gastar un bloque de alto completo en un título. */
+    .kpi-hdr{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.25rem;flex-wrap:wrap;padding:.6rem .9rem;background:var(--surface);border:1px solid rgba(232,184,75,.25);border-radius:var(--r)}
     .kpi-actions{display:flex;gap:.4rem;align-items:center;flex-shrink:0;flex-wrap:wrap}
 
-    .mes-bar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;padding:.75rem 1rem;background:var(--surface);border:1px solid rgba(232,184,75,.25);border-radius:var(--r);margin-bottom:1.25rem}
-    .mes-bar label{font-size:.68rem;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}
     .mes-sel{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:.82rem;padding:.35rem .65rem;cursor:pointer;outline:none}
     .mes-sel:focus{border-color:var(--ger-gold)}
+    .mes-sel--compact{padding:.3rem .5rem;font-size:.76rem;max-width:9.5rem}
 
     /* ── KPI cards ejecutivas ── */
     .ger-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.85rem;margin-bottom:1.25rem}
@@ -44,6 +44,15 @@
     .ger-proc-estado{font-weight:700;font-size:.85rem;display:flex;align-items:center;gap:.3rem}
     .ger-proc-detalle{margin-left:auto;font-size:.7rem;color:var(--muted);white-space:nowrap}
     @media(max-width:479px){.ger-proceso-strip{gap:.4rem}.ger-proc-chip{flex:1 1 45%;padding:.45rem .6rem}}
+
+    /* ajuste: versión compacta de la franja, para vivir en la misma línea
+       del header (junto al selector de mes) — solo nombre + estado, sin
+       conteos, chips angostos en vez de tarjetas. */
+    .ger-proceso-strip--compact{flex:1 1 auto;gap:.4rem;margin-bottom:0}
+    .ger-proceso-strip--compact .ger-proc-chip{flex:0 0 auto;min-width:0;gap:.35rem;padding:.3rem .55rem;border-left-width:3px}
+    .ger-proceso-strip--compact .ger-proc-nombre{font-size:.62rem}
+    .ger-proceso-strip--compact .ger-proc-estado{font-size:.72rem;white-space:nowrap}
+    @media(max-width:767px){.ger-proceso-strip--compact{width:100%;order:1}.kpi-actions{order:0;width:100%;justify-content:flex-end}}
     .ger-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;display:flex;flex-direction:column;gap:.5rem;position:relative;overflow:hidden;animation:fadeUp .35s ease both}
     .ger-card.verde{border-color:rgba(0,255,136,.3)}
     .ger-card.amarillo{border-color:rgba(255,176,32,.35)}
@@ -130,9 +139,8 @@
     .narr-body p.narr-refer b{color:var(--muted);font-style:normal}
 
     @media(max-width:767px){
-      .kpi-hdr{flex-direction:column;gap:.5rem}
+      .kpi-hdr{flex-direction:column;gap:.5rem;align-items:stretch}
       .kpi-actions{flex-wrap:wrap}
-      .mes-bar{gap:.4rem}
     }
   </style>
 </head>
@@ -171,19 +179,17 @@
 
   <main class="content">
     <div class="kpi-hdr">
-      <div>
-        <h1>🏆 Consolidado Gerencial x Mes</h1>
-        <div class="kpi-hdr-sub">Vista ejecutiva de todos los KPIs de la operación logística · Para la reunión Gerencial</div>
-      </div>
+      <!-- Mejora #7 (ajuste): el título "Consolidado Gerencial x Mes" y su
+           bajada se quitaron (ya están en el breadcrumb del topbar) — este
+           espacio ahora lo usa la franja de proceso, en versión compacta:
+           solo nombre + estado (sin conteos), para que quepa en una sola
+           línea junto a los controles. -->
+      <div class="ger-proceso-strip ger-proceso-strip--compact" id="gerProcesoStrip"></div>
       <div class="kpi-actions">
+        <select class="mes-sel mes-sel--compact" id="selMes" onchange="renderMes()" title="Mes"></select>
         <button class="btn" onclick="cargarTodo()" id="btnRefresh">🔄 Actualizar</button>
+        <span class="flt-count" id="statusDatos" style="font-size:.68rem;color:var(--muted)"></span>
       </div>
-    </div>
-
-    <div class="mes-bar">
-      <label for="selMes">Mes</label>
-      <select class="mes-sel" id="selMes" onchange="renderMes()"></select>
-      <span class="flt-count" id="statusDatos" style="font-size:.72rem;color:var(--muted)"></span>
     </div>
 
     <div id="sinDatosBox" class="empty" style="display:none">
@@ -192,11 +198,6 @@
     </div>
 
     <div id="contenido" style="display:none">
-      <!-- Mejora #7: resumen por proceso — "¿en qué etapa está el problema?",
-           una capa complementaria al orden por severidad de las tarjetas
-           (que responde "¿qué resuelvo primero, sin importar la etapa?"). -->
-      <div class="ger-proceso-strip" id="gerProcesoStrip"></div>
-
       <!-- Tarjetas KPI (siguen ordenadas por severidad, sin cambios) -->
       <div class="ger-grid" id="gerGrid"></div>
 
@@ -394,22 +395,14 @@ function estadoEtiqueta(cls) {
 }
 
 function renderProcesoStrip(filas, mesId) {
+  // ajuste: solo nombre + estado por etapa (sin el desglose de conteos
+  // "2 🔴 · 1 🟡") — versión compacta para vivir en la línea del header.
   const resumen = resumenPorProceso(filas, mesId);
-  document.getElementById('gerProcesoStrip').innerHTML = resumen.map(r => {
-    const partes = [];
-    if (r.conteo.rojo) partes.push(`${r.conteo.rojo} 🔴`);
-    if (r.conteo.amarillo) partes.push(`${r.conteo.amarillo} 🟡`);
-    if (r.conteo.verde) partes.push(`${r.conteo.verde} 🟢`);
-    if (r.sinDatos) partes.push(`${r.sinDatos} ⚪`);
-    const detalle = r.total > 1 ? partes.join(' · ') : '';
-    return `<div class="ger-proc-chip ${r.cls}">
-      <div>
-        <div class="ger-proc-nombre">${r.proceso}</div>
-        <div class="ger-proc-estado">${estadoEtiqueta(r.cls)}</div>
-      </div>
-      ${detalle ? `<div class="ger-proc-detalle">${detalle}</div>` : ''}
-    </div>`;
-  }).join('');
+  document.getElementById('gerProcesoStrip').innerHTML = resumen.map(r => `
+    <div class="ger-proc-chip ${r.cls}">
+      <div class="ger-proc-nombre">${r.proceso}</div>
+      <div class="ger-proc-estado">${estadoEtiqueta(r.cls)}</div>
+    </div>`).join('');
 }
 
 // ── Plugin Chart.js: banda de fondo verde/amarillo/rojo según meta ─────────
@@ -605,7 +598,10 @@ async function cargarTodo() {
       `<option value="${m}" ${i === mesesDisponibles.length - 1 ? 'selected' : ''}>${labelMes(m)}</option>`
     ).join('');
 
-    document.getElementById('statusDatos').textContent = `Actualizado ${new Date().toLocaleTimeString('es-CO')}`;
+    // ajuste: se quitó el texto "Actualizado HH:MM:SS" — no aportaba nada a
+    // la lectura gerencial y ocupaba espacio; se limpia el estado anterior
+    // ("Cargando…") para que no quede pegado en pantalla.
+    document.getElementById('statusDatos').textContent = '';
     renderMes();
   } catch (e) {
     document.getElementById('statusDatos').textContent = '⚠️ ' + e.message.slice(0, 80);
