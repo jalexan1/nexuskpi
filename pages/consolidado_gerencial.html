@@ -28,6 +28,22 @@
     /* ── KPI cards ejecutivas ── */
     .ger-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.85rem;margin-bottom:1.25rem}
     @media(max-width:479px){.ger-grid{grid-template-columns:1fr 1fr;gap:.55rem}}
+
+    /* ── Mejora #7: franja resumen por proceso ────────────────────────────
+       Chips horizontales, uno por etapa (Recibo/Inventario/Alistamiento/
+       Despacho), coloreados por el peor estado dentro de esa etapa. Es una
+       lectura "¿dónde está el problema?" complementaria a las tarjetas
+       (que ya responden "¿qué es lo más urgente?" por severidad). */
+    .ger-proceso-strip{display:flex;flex-wrap:wrap;gap:.6rem;margin-bottom:1.1rem}
+    .ger-proc-chip{flex:1 1 190px;min-width:150px;display:flex;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--border2);border-left:4px solid var(--border2);border-radius:var(--r-sm);padding:.55rem .8rem}
+    .ger-proc-chip.verde{border-left-color:#00FF88}
+    .ger-proc-chip.amarillo{border-left-color:#FFB020}
+    .ger-proc-chip.rojo{border-left-color:#FF4D6D}
+    .ger-proc-chip.sindatos{border-left-color:var(--border2);opacity:.6}
+    .ger-proc-nombre{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+    .ger-proc-estado{font-weight:700;font-size:.85rem;display:flex;align-items:center;gap:.3rem}
+    .ger-proc-detalle{margin-left:auto;font-size:.7rem;color:var(--muted);white-space:nowrap}
+    @media(max-width:479px){.ger-proceso-strip{gap:.4rem}.ger-proc-chip{flex:1 1 45%;padding:.45rem .6rem}}
     .ger-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;display:flex;flex-direction:column;gap:.5rem;position:relative;overflow:hidden;animation:fadeUp .35s ease both}
     .ger-card.verde{border-color:rgba(0,255,136,.3)}
     .ger-card.amarillo{border-color:rgba(255,176,32,.35)}
@@ -176,7 +192,12 @@
     </div>
 
     <div id="contenido" style="display:none">
-      <!-- Tarjetas KPI -->
+      <!-- Mejora #7: resumen por proceso — "¿en qué etapa está el problema?",
+           una capa complementaria al orden por severidad de las tarjetas
+           (que responde "¿qué resuelvo primero, sin importar la etapa?"). -->
+      <div class="ger-proceso-strip" id="gerProcesoStrip"></div>
+
+      <!-- Tarjetas KPI (siguen ordenadas por severidad, sin cambios) -->
       <div class="ger-grid" id="gerGrid"></div>
 
       <!-- Tabla consolidada -->
@@ -222,7 +243,7 @@ applyTheme();
 // mejor"). KPI-INV-007 queda fuera: no tiene tabla propia con datos reales.
 const KPI_DEFS = [
   {
-    code: 'KPI-REC-001', name: 'Recepción a Tiempo', icon: '📦',
+    code: 'KPI-REC-001', name: 'Recepción a Tiempo', icon: '📦', proceso: 'Recibo',
     unit: '%', metaTxt: '≥ 95%', sem: { verde: 95, amarillo: 80 },
     async load() {
       const rows = await sb.rest('GET', 'kpi_recibo_resumen?select=mes_id,trt_12h,total_oc,ok_12h,late_12h&order=mes_id.asc');
@@ -235,7 +256,7 @@ const KPI_DEFS = [
     },
   },
   {
-    code: 'KPI-INV-002', name: 'Exactitud de Inventario', icon: '🗃️',
+    code: 'KPI-INV-002', name: 'Exactitud de Inventario', icon: '🗃️', proceso: 'Inventario',
     unit: '%', metaTxt: '≥ 99%', sem: { verde: 99, amarillo: 97 },
     async load() {
       const rows = await sb.rest('GET', 'kpi_inventario_detalle?select=periodo_id,es_exacto');
@@ -255,7 +276,7 @@ const KPI_DEFS = [
     },
   },
   {
-    code: 'KPI-DES-003', name: 'Nivel de Servicio CEDI', icon: '🏭',
+    code: 'KPI-DES-003', name: 'Nivel de Servicio CEDI', icon: '🏭', proceso: 'Despacho',
     unit: '%', metaTxt: '≥ 98%', sem: { verde: 98, amarillo: 90 },
     async load() {
       const rows = await sb.rest('GET', 'kpi_ns_resumen?semana=is.null&select=periodo_id,ns_pct,und_pedidas,und_desp,num_pedidos&order=periodo_id.asc');
@@ -268,7 +289,7 @@ const KPI_DEFS = [
     },
   },
   {
-    code: 'KPI-ALI-004', name: 'Productividad Alistamiento', icon: '🔧',
+    code: 'KPI-ALI-004', name: 'Productividad Alistamiento', icon: '🔧', proceso: 'Alistamiento',
     unit: ' u/p/h', metaTxt: '≥ 450 u/p/h', sem: { verde: 450, amarillo: 200 },
     async load() {
       const rows = await sb.rest('GET', 'kpi_ali_resumen?semana=is.null&select=periodo_id,pa_und,und_alistadas,cajas_alistadas&order=periodo_id.asc');
@@ -281,7 +302,7 @@ const KPI_DEFS = [
     },
   },
   {
-    code: 'KPI-DES-005', name: 'On-Time Delivery (OTD)', icon: '🚚',
+    code: 'KPI-DES-005', name: 'On-Time Delivery (OTD)', icon: '🚚', proceso: 'Despacho',
     unit: '%', metaTxt: '≥ 95%', sem: { verde: 95, amarillo: 90 },
     async load() {
       const rows = await sb.rest('GET', `kpi_otd_proceso?proceso=eq.${encodeURIComponent('B2B+B2C')}&select=periodo_id,otd_pct,total_pedidos,pedidos_atime&order=periodo_id.asc`);
@@ -294,7 +315,7 @@ const KPI_DEFS = [
     },
   },
   {
-    code: 'KPI-DES-008', name: 'Ciclo de Pedido (Lead Time)', icon: '⏱️',
+    code: 'KPI-DES-008', name: 'Ciclo de Pedido (Lead Time)', icon: '⏱️', proceso: 'Despacho',
     unit: '%', metaTxt: '≥ 95% ≤24h', sem: { verde: 95, amarillo: 80 },
     async load() {
       const rows = await sb.rest('GET', `kpi_des008_proceso?proceso=eq.${encodeURIComponent('B2B+B2C')}&select=periodo_id,pct_24h,cp_prom,total_pedidos,ok_24h&order=periodo_id.asc`);
@@ -344,6 +365,51 @@ function ordenarPorSeveridad(filas) {
     if (ra.grupo !== rb.grupo) return ra.grupo - rb.grupo;
     return rb.gap - ra.gap;
   });
+}
+
+// ── Mejora #7: resumen por etapa del proceso ────────────────────────────
+// Responde "¿en qué eslabón de la cadena está el problema?" — pregunta
+// distinta a la que resuelve el orden por severidad de las tarjetas
+// ("¿qué es lo más urgente, sin importar la etapa?"). Se muestran solo las
+// etapas que hoy tienen al menos un KPI con datos reales (hoy: Recibo,
+// Inventario, Alistamiento, Despacho — Postventa queda fuera hasta que
+// exista un KPI construido para esa etapa, para no mostrar una franja vacía).
+const PROCESOS = ['Recibo', 'Inventario', 'Alistamiento', 'Despacho'];
+
+function resumenPorProceso(filas, mesId) {
+  return PROCESOS.map(proceso => {
+    const deLaEtapa = filas.filter(f => f.k.proceso === proceso);
+    const conDato = deLaEtapa.filter(f => f.actual && f.actual.mes === mesId);
+    if (!conDato.length) return { proceso, cls: 'sindatos', conteo: { verde: 0, amarillo: 0, rojo: 0 }, total: deLaEtapa.length };
+    const conteo = { verde: 0, amarillo: 0, rojo: 0 };
+    conDato.forEach(f => conteo[semCls(f.actual.valor, f.k.sem)]++);
+    // peor estado dentro de la etapa manda el color del chip (rojo > amarillo > verde)
+    const cls = conteo.rojo > 0 ? 'rojo' : conteo.amarillo > 0 ? 'amarillo' : 'verde';
+    return { proceso, cls, conteo, total: deLaEtapa.length, sinDatos: deLaEtapa.length - conDato.length };
+  }).filter(r => r.total > 0); // no mostrar etapas que no tienen ningún KPI definido (ej. Postventa hoy)
+}
+
+function estadoEtiqueta(cls) {
+  return cls === 'verde' ? '🟢 Bien' : cls === 'amarillo' ? '🟡 Alerta' : cls === 'rojo' ? '🔴 Crítico' : '⚪ Sin datos';
+}
+
+function renderProcesoStrip(filas, mesId) {
+  const resumen = resumenPorProceso(filas, mesId);
+  document.getElementById('gerProcesoStrip').innerHTML = resumen.map(r => {
+    const partes = [];
+    if (r.conteo.rojo) partes.push(`${r.conteo.rojo} 🔴`);
+    if (r.conteo.amarillo) partes.push(`${r.conteo.amarillo} 🟡`);
+    if (r.conteo.verde) partes.push(`${r.conteo.verde} 🟢`);
+    if (r.sinDatos) partes.push(`${r.sinDatos} ⚪`);
+    const detalle = r.total > 1 ? partes.join(' · ') : '';
+    return `<div class="ger-proc-chip ${r.cls}">
+      <div>
+        <div class="ger-proc-nombre">${r.proceso}</div>
+        <div class="ger-proc-estado">${estadoEtiqueta(r.cls)}</div>
+      </div>
+      ${detalle ? `<div class="ger-proc-detalle">${detalle}</div>` : ''}
+    </div>`;
+  }).join('');
 }
 
 // ── Plugin Chart.js: banda de fondo verde/amarillo/rojo según meta ─────────
@@ -563,6 +629,9 @@ function renderMes() {
     const anterior = hist.length > 1 ? hist[hist.length - 2] : null;
     return { k, hist, actual, anterior };
   }));
+
+  // ── Mejora #7: franja resumen por proceso (arriba de las tarjetas) ──
+  renderProcesoStrip(filas, mesId);
 
   // ── Tarjetas (con mini-gráfico de tendencia + botón Ampliar) ──
   cardsData = {};
