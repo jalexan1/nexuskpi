@@ -48,6 +48,14 @@
     .ger-delta.up{color:var(--ok)}.ger-delta.down{color:var(--error)}
     .ger-meta{font-size:.66rem;color:var(--dim)}
 
+    /* ── Mejora #2: Top-3 causas de novedad (solo tarjeta KPI-DES-005) ── */
+    .ger-novedades{margin-top:.5rem;padding-top:.5rem;border-top:1px dashed var(--border);display:flex;flex-direction:column;gap:.2rem}
+    .ger-nov-title{font-size:.62rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:.15rem}
+    .ger-nov-row{display:flex;justify-content:space-between;gap:.5rem;font-size:.72rem;color:var(--text)}
+    .ger-nov-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ger-nov-row b{color:var(--warn);flex-shrink:0}
+    .ger-nov-loading{font-size:.68rem;color:var(--dim);font-style:italic}
+
     /* ── Mini-gráfico de tendencia dentro de cada tarjeta (últimos 6 meses,
        banda de color de meta de fondo) + botón Ampliar ── */
     .ger-chart-wrap{position:relative;height:64px;margin:.15rem 0 .05rem}
@@ -419,6 +427,34 @@ const miniCharts = {}; // id de canvas -> instancia Chart.js
 let modalChart = null;
 let cardsData = {}; // code -> { k, serie } — cache para poder "Ampliar"
 
+// ── Mejora #2: Top-3 causas de novedad del mes (solo KPI-DES-005 · OTD) ────
+// El campo `novedad` de kpi_otd_detalle ya existe y no se usaba en ningún
+// reporte. Se consulta aparte (no en la carga inicial) y solo del mes
+// seleccionado, para no bajar el detalle transaccional completo de golpe.
+const novedadesCache = {}; // mesId -> [{causa,count}]
+async function cargarNovedadesOTD(mesId) {
+  if (novedadesCache[mesId] !== undefined) return novedadesCache[mesId];
+  try {
+    const rows = await sb.rest('GET', `kpi_otd_detalle?periodo_id=eq.${encodeURIComponent(mesId)}&select=novedad&novedad=not.is.null`);
+    const counts = {};
+    (rows || []).forEach(r => {
+      const causa = (r.novedad || '').trim();
+      if (!causa) return;
+      counts[causa] = (counts[causa] || 0) + 1;
+    });
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([causa, count]) => ({ causa, count }));
+    novedadesCache[mesId] = top;
+    return top;
+  } catch (e) {
+    return []; // no cachea el error — reintenta la próxima vez que se seleccione el mes
+  }
+}
+function renderNovedadesBox(top) {
+  if (!top.length) return `<div class="ger-nov-title">Novedades OTD</div><div class="ger-nov-loading">Sin causas de novedad registradas este mes</div>`;
+  return `<div class="ger-nov-title">Top causas de novedad</div>` +
+    top.map((t, i) => `<div class="ger-nov-row"><span title="${t.causa}">${i + 1}. ${t.causa}</span><b>${t.count}</b></div>`).join('');
+}
+
 // ── Ampliar / minimizar (mismo patrón que kpi001–kpi008) ───────────────────
 function maximizarGerChart(code) {
   const c = cardsData[code];
@@ -523,6 +559,7 @@ function renderMes() {
         <button class="ger-expand" onclick="maximizarGerChart('${k.code}')">⤢ Ampliar · ${serie.length}m</button>
       </div>` : ''}
       <div class="ger-meta">Meta: ${k.metaTxt} · ${actual.ctx}</div>
+      ${k.code === 'KPI-DES-005' ? `<div class="ger-novedades" id="novedadesBox"><span class="ger-nov-loading">Cargando causas de novedad…</span></div>` : ''}
     </div>`;
   }).join('');
 
@@ -533,6 +570,17 @@ function renderMes() {
     if (!canvas) return;
     miniCharts[`cchart-${code}`] = new Chart(canvas, buildGerChartConfig(k, serie, true));
   });
+
+  // Mejora #2: cargar el top-3 de causas de novedad para la tarjeta OTD
+  const otdCard = filas.find(f => f.k.code === 'KPI-DES-005' && f.actual && f.actual.mes === mesId);
+  if (otdCard) {
+    cargarNovedadesOTD(mesId).then(top => {
+      // Guard: si el usuario ya cambió de mes mientras esto cargaba, no pisar la tarjeta nueva
+      if (document.getElementById('selMes').value !== mesId) return;
+      const box = document.getElementById('novedadesBox');
+      if (box) box.innerHTML = renderNovedadesBox(top);
+    });
+  }
 
   // ── Tabla consolidada ──
   document.getElementById('tblConsolidado').innerHTML = filas.map(({ k, actual, anterior }) => {
