@@ -75,6 +75,14 @@
     .chart-modal-close{background:none;border:1px solid var(--border2);border-radius:var(--r-sm);padding:.35rem .8rem;font-size:.8rem;cursor:pointer;color:var(--text);transition:all .15s;flex-shrink:0}
     .chart-modal-close:hover{border-color:var(--error);color:var(--error)}
     .chart-modal-wrap{flex:1;min-height:0;position:relative;height:min(55vh,420px)}
+    /* Mejora #6: leyenda de formas del semáforo, solo en el modal ampliado
+       (en la mini-tarjeta no hay espacio y ya existe el badge de texto). */
+    .chart-modal-legend{display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;font-size:.75rem;color:var(--muted);border-top:1px solid var(--border2);padding-top:.75rem}
+    .chart-modal-legend span{display:inline-flex;align-items:center;gap:.35rem}
+    .chart-modal-legend b{font-size:.95rem;line-height:1}
+    .chart-modal-legend .cml-verde b{color:#00FF88}
+    .chart-modal-legend .cml-amarillo b{color:#FFB020}
+    .chart-modal-legend .cml-rojo b{color:#FF4D6D}
 
     /* ── Tabla consolidada ── */
     .sec-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem;margin-bottom:1.25rem}
@@ -124,6 +132,7 @@
       <button class="chart-modal-close" onclick="minimizarGerChart()">✕ Minimizar</button>
     </div>
     <div class="chart-modal-wrap"><canvas id="cGerModal"></canvas></div>
+    <div class="chart-modal-legend" id="chartModalGerLegend"></div>
   </div>
 </div>
 
@@ -306,6 +315,12 @@ const MESES_HISTORICO = 6; // últimos N meses en el mini-gráfico de cada tarje
 function semCls(v, s) { return v >= s.verde ? 'verde' : v >= s.amarillo ? 'amarillo' : 'rojo'; }
 function semTxt(v, s) { return v >= s.verde ? '🟢 BIEN' : v >= s.amarillo ? '🟡 ALERTA' : '🔴 CRÍTICO'; }
 function semColor(cls) { return cls === 'verde' ? '#00FF88' : cls === 'amarillo' ? '#FFB020' : '#FF4D6D'; }
+// ── Mejora #6: refuerzo de FORMA además de color en los puntos del gráfico
+// (daltonismo rojo-verde, la confusión más común, no distingue esos dos por
+// color). círculo = bien, rombo = alerta, X = crítico — valores nativos de
+// Chart.js (pointStyle), no requiere íconos ni librerías nuevas.
+function semShape(cls) { return cls === 'verde' ? 'circle' : cls === 'amarillo' ? 'rectRot' : 'crossRot'; }
+function semShapeGlifo(cls) { return cls === 'verde' ? '●' : cls === 'amarillo' ? '◆' : '✕'; }
 
 function labelMes(id) { return (CONFIG.meses.find(m => m.id === id) || {}).label || id; }
 function labelMesCorto(id) { return labelMes(id).split(' ')[0].slice(0, 3); }
@@ -399,6 +414,8 @@ function buildGerChartConfig(k, serie, mini) {
           pointHoverRadius: mini ? 3 : 6,
           pointBackgroundColor: data.map(v => semColor(semCls(v, k.sem))),
           pointBorderColor: data.map(v => semColor(semCls(v, k.sem))),
+          pointStyle: data.map(v => semShape(semCls(v, k.sem))),
+          pointBorderWidth: mini ? 1 : 1.5,
         },
         {
           label: `Meta ${k.metaTxt}`,
@@ -477,10 +494,18 @@ function maximizarGerChart(code) {
   document.getElementById('chartModalGer').classList.add('open');
   if (modalChart) { modalChart.destroy(); modalChart = null; }
   modalChart = new Chart(document.getElementById('cGerModal'), buildGerChartConfig(c.k, c.serie, false));
+  // Mejora #6: leyenda de forma+color+umbral, para que el estado de cada
+  // punto se lea sin depender del color (daltonismo rojo-verde).
+  document.getElementById('chartModalGerLegend').innerHTML = `
+    <span class="cml-verde"><b>${semShapeGlifo('verde')}</b> Bien · ≥ ${c.k.sem.verde}${c.k.unit}</span>
+    <span class="cml-amarillo"><b>${semShapeGlifo('amarillo')}</b> Alerta · ≥ ${c.k.sem.amarillo}${c.k.unit}</span>
+    <span class="cml-rojo"><b>${semShapeGlifo('rojo')}</b> Crítico · &lt; ${c.k.sem.amarillo}${c.k.unit}</span>
+  `;
 }
 function minimizarGerChart() {
   document.getElementById('chartModalGer').classList.remove('open');
   if (modalChart) { modalChart.destroy(); modalChart = null; }
+  document.getElementById('chartModalGerLegend').innerHTML = '';
 }
 function cerrarModalGer(e) {
   if (e.target === document.getElementById('chartModalGer')) minimizarGerChart();
