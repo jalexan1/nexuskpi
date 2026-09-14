@@ -96,6 +96,7 @@ const CONFIG = Object.freeze({
       { code:'OP-PICKING',     name:'Picking',                     icon:'🧰', href:'op_kpi_picking.html' },
       { code:'OP-PROD-PICK',   name:'Productividad Picking',       icon:'⚡', href:'op_kpi_prod_picking.html' },
       { code:'OP-OLAS',        name:'Olas',                        icon:'🌊', href:'op_kpi_olas.html' },
+      { code:'OP-APOYO',       name:'Tiempo de apoyo Operativo',   icon:'🤝', href:'op_kpi_apoyo.html' },
       { code:'OP-ACORDEON',    name:'Acordeón de Productividad',   icon:'📺', href:'op_acordeon.html' },
       { code:'OP-PARAMETROS',  name:'Parametrización',             icon:'⚙️', href:'op_parametros.html' },
     ],

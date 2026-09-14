@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Operatividad · Cargue Tiempo de apoyo Operativo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
+    .page{display:flex;flex-direction:column;min-height:100dvh}
+    .content{flex:1;padding:1.5rem;max-width:960px;margin:0 auto;width:100%}
+    .pg-hdr{margin-bottom:1.5rem}
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--op-accent);font-weight:600;margin-bottom:.3rem}
+    .pg-hdr h1{font-size:clamp(1.2rem,3vw,1.5rem);font-weight:800}
+    .pg-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem;line-height:1.55}
+
+    .cargue-card,.repro-card,.log-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.5rem;margin-bottom:1.25rem}
+    .cargue-card h2,.repro-card h2,.log-card h2{font-size:1rem;font-weight:700;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+    .card-sub{font-size:.78rem;color:var(--muted);margin-top:-.5rem;margin-bottom:.85rem;line-height:1.5}
+
+    .drop-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:1.75rem 1.5rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:1rem;touch-action:manipulation}
+    .drop-zone:hover,.drop-zone.over{border-color:var(--op-accent);background:rgba(242,153,74,.05)}
+    .drop-zone input{display:none}
+    .drop-icon{font-size:1.8rem;margin-bottom:.4rem}
+    .drop-txt{font-size:.85rem;color:var(--muted);margin-bottom:.2rem}
+    .drop-nombre{font-size:.82rem;color:var(--text);font-weight:600;margin-bottom:.25rem}
+    .drop-limite{display:inline-block;background:rgba(255,176,32,.12);color:var(--warn);border:1px solid rgba(255,176,32,.3);border-radius:6px;font-size:.72rem;font-weight:600;padding:.12rem .55rem}
+    .drop-picked{font-size:.8rem;color:var(--op-accent);font-weight:600;margin-top:.5rem;word-break:break-all}
+
+    .btn-cargue{width:100%;padding:.85rem;background:linear-gradient(135deg,var(--op-accent),var(--op-accent2));border:none;border-radius:var(--r-sm);color:#fff;font-family:'Syne',sans-serif;font-size:.9rem;font-weight:700;letter-spacing:.05em;cursor:pointer;transition:transform .15s,opacity .2s;min-height:48px;touch-action:manipulation}
+    .btn-cargue:hover{transform:translateY(-1px);opacity:.92}
+    .btn-cargue:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+    .prog-box{display:none;background:var(--surface2);border-radius:var(--r-sm);padding:.75rem 1rem;margin-top:.75rem;font-size:.8rem}
+    .prog-box.show{display:block}
+    .prog-bar-wrap{height:6px;background:var(--surface3);border-radius:3px;margin-top:.4rem;overflow:hidden}
+    .prog-bar{height:100%;background:linear-gradient(90deg,var(--op-accent),var(--op-accent2));border-radius:3px;transition:width .3s}
+
+    .result-box{display:none;border-radius:var(--r-sm);padding:.8rem 1rem;font-size:.82rem;margin-top:.75rem;line-height:1.65}
+    .result-box.show{display:block}
+    .result-box.ok  {background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.25);color:var(--ok)}
+    .result-box.warn{background:rgba(255,176,32,.08);border:1px solid rgba(255,176,32,.25);color:var(--warn)}
+    .result-box.err {background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.25);color:var(--error)}
+
+    .repro-list{display:flex;flex-direction:column;gap:.45rem;margin-bottom:.85rem}
+    .repro-item{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:.6rem .85rem;gap:.75rem;flex-wrap:wrap}
+    .repro-item-info{display:flex;flex-direction:column;gap:.1rem}
+    .repro-label{font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700}
+    .repro-stats{font-size:.7rem;color:var(--muted)}
+    .repro-stats .exc{color:var(--warn);font-weight:600}
+
+    .log-area{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-sm);padding:.7rem;font-family:'Courier New',monospace;font-size:.7rem;color:var(--muted);max-height:190px;overflow-y:auto;word-break:break-word}
+    .lg-ok{color:var(--ok)}.lg-err{color:var(--error)}.lg-inf{color:var(--op-accent)}.lg-warn{color:var(--warn)}
+    .log-btns{display:flex;gap:.45rem;margin-top:.6rem;flex-wrap:wrap}
+
+    .nav-btns{display:flex;gap:.3rem;align-items:center;flex-shrink:0}
+    .nav-btn{font-size:.72rem !important;padding:.3rem .6rem !important;white-space:nowrap}
+    @media(max-width:479px){.nav-btn span{display:none}}
+
+    /* Igual patrón que WMS: badge permanente del último cargue, no desaparece con timeout */
+    .badge-mes{display:none;align-items:flex-start;gap:.5rem;background:rgba(242,153,74,.08);border:1px solid rgba(242,153,74,.3);border-radius:var(--r-sm);padding:.65rem .85rem;font-size:.78rem;line-height:1.55;margin-top:.75rem}
+    .badge-mes.show{display:flex}
+    .badge-mes b{color:var(--op-accent)}
+
+    .excl-box{display:none;margin-top:.75rem}
+    .excl-box.show{display:block}
+    .excl-toggle{background:none;border:none;color:var(--op-accent);font-size:.76rem;cursor:pointer;padding:0;text-decoration:underline;touch-action:manipulation}
+    .excl-list{margin-top:.5rem;max-height:160px;overflow-y:auto;font-size:.74rem;color:var(--muted);background:var(--surface2);border-radius:var(--r-sm);padding:.5rem .7rem}
+    .excl-list div{padding:.15rem 0;border-bottom:1px dashed var(--border)}
+    .excl-list div:last-child{border-bottom:none}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="op_cargue_menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--op-accent)">🚚 Operatividad</span>
+    <span class="topbar-sep">/</span><span class="topbar-title">🤝 Tiempo de apoyo Operativo</span>
+    <div class="topbar-spacer"></div>
+    <div class="nav-btns">
+      <a href="op_cargue_menu.html" class="btn btn-sm nav-btn" title="Volver a Cargue de Información">📤 <span>Cargue</span></a>
+      <a href="menu.html" class="btn btn-sm nav-btn" title="Volver al menú principal">🏠 <span>Menú</span></a>
+    </div>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="pg-hdr">
+      <div class="eyebrow">📥 Cargue de Información · Operatividad</div>
+      <h1>Tiempo de apoyo Operativo</h1>
+      <p>Carga el archivo <b>Registro_TM_DD_mes_al_DD_mes_AAAA.xlsx</b>. A diferencia de los demás cargues, este archivo puede traer fechas de más de un mes calendario en una sola exportación — el período de cada registro se calcula automáticamente a partir de su propia fecha, así que un solo cargue puede completar varios meses a la vez.</p>
+    </div>
+
+    <!-- ── Cargue ── -->
+    <div class="cargue-card">
+      <h2>⬆️ Cargar Registro de Apoyo Operativo</h2>
+      <div class="drop-zone" id="dropKpi"
+           onclick="document.getElementById('fileKpi').click()"
+           ondragover="onDragOver(event,'dropKpi')"
+           ondragleave="onDragLeave('dropKpi')"
+           ondrop="onDrop(event,'fileKpi','dropKpi')">
+        <input type="file" id="fileKpi" accept=".xlsx,.xls" onchange="onFilePicked(this)"/>
+        <div class="drop-icon">📊</div>
+        <p class="drop-txt">Toca para seleccionar o arrastra el archivo</p>
+        <p class="drop-nombre">Registro_TM_DD_mes_al_DD_mes_AAAA.xlsx</p>
+        <span class="drop-limite">⚠️ Tamaño máximo: 50 MB</span>
+        <p class="drop-picked" id="lblKpi"></p>
+      </div>
+      <button class="btn-cargue" id="btnCargar" onclick="subirKpi()">⬆️ Cargar Registro de Apoyo Operativo</button>
+      <div class="prog-box" id="progKpi"><span id="progKpiTxt">Procesando…</span><div class="prog-bar-wrap"><div class="prog-bar" id="barKpi" style="width:0%"></div></div></div>
+      <div class="result-box" id="resKpi"></div>
+      <div class="excl-box" id="exclBox">
+        <button class="excl-toggle" onclick="toggleExcl()">Ver registros excluidos (<span id="exclCount">0</span>)</button>
+        <div class="excl-list" id="exclList" style="display:none"></div>
+      </div>
+      <div class="badge-mes" id="badgeMes"></div>
+    </div>
+
+    <!-- ── Meses cargados / eliminar ── -->
+    <div class="repro-card">
+      <h2>📅 Meses Cargados</h2>
+      <p class="card-sub">Consulta lo cargado por mes y elimina un mes completo si necesitas volver a procesarlo desde cero.</p>
+      <div class="repro-list" id="reproList">
+        <div style="text-align:center;color:var(--muted);font-size:.8rem;padding:.5rem">Cargando meses…</div>
+      </div>
+      <div class="result-box" id="resRepro"></div>
+    </div>
+
+    <!-- ── Log ── -->
+    <div class="log-card">
+      <h2>📋 Log de Cargues</h2>
+      <div class="log-area" id="etlLog"></div>
+      <div class="log-btns">
+        <button class="btn" onclick="loadEtlLog()">🔄 Refrescar</button>
+        <button class="btn" onclick="document.getElementById('etlLog').innerHTML=''">🗑️ Limpiar vista</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script src="../utils/etl_op_apoyo.js"></script>
+<script>
+applyTheme();
+
+function validarNombre(nombre) { return opaValidarNombreArchivo(nombre).ok; }
+
+function onDragOver(e,id){ e.preventDefault(); document.getElementById(id).classList.add('over'); }
+function onDragLeave(id) { document.getElementById(id).classList.remove('over'); }
+function onDrop(e,inputId,zoneId){
+  e.preventDefault(); onDragLeave(zoneId);
+  const f=e.dataTransfer.files[0]; if(!f) return;
+  const dt=new DataTransfer(); dt.items.add(f);
+  document.getElementById(inputId).files=dt.files;
+  document.getElementById(inputId).dispatchEvent(new Event('change'));
+}
+function onFilePicked(input){
+  const f=input.files[0]; if(!f) return;
+  const val = opaValidarNombreArchivo(f.name);
+  if(!val.ok){
+    alert(`El archivo que va a cargar es incorrecto y tiene nombre diferente (similitud ${val.score}%).\n\nPor favor revisa que el archivo sea el correcto.\nEl nombre del archivo debe ser: Registro_TM_DD_mes_al_DD_mes_AAAA.xlsx`);
+    input.value=''; document.getElementById('lblKpi').textContent=''; return;
+  }
+  document.getElementById('lblKpi').textContent=`📎 ${f.name}  (${(f.size/1024/1024).toFixed(1)} MB) · similitud ${val.score}%`;
+}
+
+function showProg(pId,bId,tId,pct,msg){ document.getElementById(pId).classList.add('show'); document.getElementById(bId).style.width=pct+'%'; document.getElementById(tId).textContent=msg; }
+function hideProg(id){ setTimeout(()=>document.getElementById(id).classList.remove('show'),1200); }
+function showRes(id,type,msg){ const el=document.getElementById(id); el.className=`result-box show ${type}`; el.innerHTML=msg; }
+function addLog(msg,tipo='inf'){
+  const log=document.getElementById('etlLog');
+  const d=document.createElement('div'); d.className='lg-'+tipo;
+  d.textContent=`[${new Date().toLocaleTimeString('es-CO')}] ${msg}`;
+  log.appendChild(d); log.scrollTop=log.scrollHeight;
+}
+function toggleExcl(){
+  const l = document.getElementById('exclList');
+  l.style.display = l.style.display==='none' ? 'block' : 'none';
+}
+
+async function upsertLotesApoyo(records, onProg){
+  if(!records.length){ if(onProg) onProg(100); return; }
+  const BATCH=200;
+  const path = 'op_apoyo_detalle?on_conflict=codigo';
+  for(let i=0;i<records.length;i+=BATCH){
+    const lote=records.slice(i,i+BATCH);
+    await sb.rest('POST',path,lote,{'Prefer':'resolution=merge-duplicates,return=minimal'});
+    if(onProg) onProg(Math.round(((i+lote.length)/records.length)*100));
+  }
+}
+
+async function upsertPeriodoCargueApoyo(periodoId, nombreArchivo, registrosOk){
+  const payload={periodo_id:periodoId,archivo_origen:'APOYO_OPERATIVO',nombre_archivo:nombreArchivo,fecha_carga:new Date().toISOString(),usuario_carga:(getSession()&&getSession().email)||'—',estado:'completado',registros_ok:registrosOk,registros_cuarentena:0,updated_at:new Date().toISOString()};
+  const ex=await sb.rest('GET',`op_periodos_cargue?periodo_id=eq.${periodoId}&archivo_origen=eq.APOYO_OPERATIVO&select=id`);
+  if(ex&&ex.length){ await sb.rest('PATCH',`op_periodos_cargue?periodo_id=eq.${periodoId}&archivo_origen=eq.APOYO_OPERATIVO`,payload,{'Prefer':'return=minimal'}); }
+  else { await sb.rest('POST','op_periodos_cargue',[payload],{'Prefer':'return=minimal'}); }
+}
+
+function traducirError(msg){
+  if(!msg) return 'Error desconocido. Contacta al desarrollador del sistema.';
+  if(msg.includes('no tiene hojas')) return 'El archivo no tiene hojas de datos. Verifica que sea el archivo correcto.';
+  if(msg.includes('zip')||msg.includes('archive')) return 'El archivo está dañado o no es un Excel válido. Intenta guardarlo de nuevo desde Excel.';
+  return `Error técnico: ${msg}`;
+}
+
+async function subirKpi(){
+  const file  = document.getElementById('fileKpi').files[0];
+  if(!file){ showRes('resKpi','warn','⚠️ Selecciona un archivo primero.'); return; }
+  if(!validarNombre(file.name)){
+    showRes('resKpi','err','❌ El archivo es incorrecto. El nombre debe parecerse a <b>Registro_TM_DD_mes_al_DD_mes_AAAA.xlsx</b>.');
+    return;
+  }
+
+  const btn=document.getElementById('btnCargar');
+  btn.disabled=true;
+  const runId=`op-run-${Date.now()}`;
+  addLog(`Iniciando cargue: ${file.name}…`,'inf');
+  showProg('progKpi','barKpi','progKpiTxt',5,'Leyendo archivo…');
+  document.getElementById('exclBox').classList.remove('show');
+
+  try{ await sb.rest('POST','etl_log',[{run_id:runId,archivo:file.name,estado:'iniciado'}],{'Prefer':'return=minimal'}); }
+  catch(e){ addLog('Advertencia etl_log: '+e.message,'warn'); }
+
+  try{
+    let result;
+    try{ result = await procesarApoyoOperativo(file, (pct,msg)=>showProg('progKpi','barKpi','progKpiTxt',10+Math.round(pct*.3),msg)); }
+    catch(e){ throw new Error(traducirError(e.message)); }
+
+    const { records, excluidos, porPeriodo } = result;
+    if(!records.length){
+      hideProg('progKpi');
+      showRes('resKpi','warn','⚠️ El archivo no tiene registros válidos para cargar (revisa los excluidos).');
+      btn.disabled=false;
+      if(excluidos.length){
+        document.getElementById('exclCount').textContent = excluidos.length;
+        document.getElementById('exclList').innerHTML = excluidos.map(e=>`<div>${e.codigo} — ${e.motivo}</div>`).join('');
+        document.getElementById('exclBox').classList.add('show');
+      }
+      return;
+    }
+
+    addLog(`ETL completado — ${records.length} registros válidos, ${excluidos.length} excluidos, ${Object.keys(porPeriodo).length} mes(es) detectado(s)`,'inf');
+
+    showProg('progKpi','barKpi','progKpiTxt',55,'Guardando registros…');
+    await upsertLotesApoyo(records, p=>showProg('progKpi','barKpi','progKpiTxt',55+Math.round(p*.3),'Guardando registros de apoyo…'));
+
+    showProg('progKpi','barKpi','progKpiTxt',90,'Registrando meses…');
+    for (const periodoId of Object.keys(porPeriodo)) {
+      await upsertPeriodoCargueApoyo(periodoId, file.name, porPeriodo[periodoId]);
+    }
+
+    await sb.rest('PATCH',`etl_log?run_id=eq.${runId}`,{estado:'completado',docs_procesados:records.length,docs_insertados:records.length,completado_at:new Date().toISOString()},{'Prefer':'return=minimal'});
+
+    showProg('progKpi','barKpi','progKpiTxt',100,'Completado');
+    hideProg('progKpi');
+
+    const desglose = Object.entries(porPeriodo).sort((a,b)=>a[0].localeCompare(b[0])).map(([p,c])=>{
+      const label = CONFIG.meses.find(m=>m.id===p)?.label || p;
+      return `${label}: <b>${c}</b>`;
+    }).join(' · ');
+
+    showRes('resKpi','ok',
+      `✅ <b>Cargue completado</b><br>`+
+      `🤝 Registros guardados: <b>${records.length}</b> · Excluidos: <b>${excluidos.length}</b><br>`+
+      `Meses registrados — ${desglose}`
+    );
+    addLog(`✓ ${records.length} registros · ${excluidos.length} excluidos · ${desglose.replace(/<\/?b>/g,'')}`,'ok');
+
+    const badge=document.getElementById('badgeMes');
+    badge.innerHTML = `📌 Último archivo registrado — ${desglose}`;
+    badge.classList.add('show');
+
+    if(excluidos.length){
+      document.getElementById('exclCount').textContent = excluidos.length;
+      document.getElementById('exclList').innerHTML = excluidos.map(e=>`<div>${e.codigo} — ${e.motivo}</div>`).join('');
+      document.getElementById('exclBox').classList.add('show');
+    }
+
+    cargarMeses();
+  }catch(e){
+    hideProg('progKpi');
+    showRes('resKpi','err',`❌ <b>Error al cargar</b><br>${e.message}<br><small style="color:var(--muted)">Si el problema persiste, contacta al desarrollador del sistema.</small>`);
+    addLog('✗ '+e.message,'err');
+    try{ await sb.rest('PATCH',`etl_log?run_id=eq.${runId}`,{estado:'error',error_msg:e.message,completado_at:new Date().toISOString()},{'Prefer':'return=minimal'}); }catch{}
+  }
+  btn.disabled=false;
+}
+
+async function eliminarMes(mesId, label){
+  if(!confirm(`⚠️ ¿Eliminar TODOS los registros de Tiempo de apoyo Operativo de "${label}"?\n\nSe borrará op_apoyo_detalle de ese mes. Esta acción es irreversible.`)) return;
+  try{
+    addLog(`Eliminando ${label}…`,'warn');
+    await sb.rest('DELETE',`op_apoyo_detalle?periodo_id=eq.${mesId}`,null,{'Prefer':'return=minimal'});
+    await sb.rest('DELETE',`op_periodos_cargue?periodo_id=eq.${mesId}&archivo_origen=eq.APOYO_OPERATIVO`,null,{'Prefer':'return=minimal'});
+
+    const check = await sb.rest('GET',`op_apoyo_detalle?periodo_id=eq.${mesId}&select=id`);
+    if((check||[]).length>0) throw new Error(`Quedaron ${check.length} registros sin borrar. Verifica las políticas RLS en Supabase.`);
+
+    addLog(`✓ ${label} eliminado completamente`,'warn');
+    cargarMeses();
+  }catch(e){
+    addLog('✗ Error al eliminar: '+e.message,'err');
+    alert('Error al eliminar el mes: '+e.message);
+  }
+}
+
+async function cargarMeses(){
+  const lista=document.getElementById('reproList');
+  try{
+    const res=await sb.rest('GET','op_periodos_cargue?archivo_origen=eq.APOYO_OPERATIVO&order=periodo_id.asc');
+    if(!res||!res.length){ lista.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">No hay meses cargados aún.</div>`; return; }
+    lista.innerHTML=res.map(c=>{
+      const label=CONFIG.meses.find(m=>m.id===c.periodo_id)?.label||c.periodo_id;
+      return `<div class="repro-item">
+        <div class="repro-item-info">
+          <span class="repro-label">${label}</span>
+          <span class="repro-stats">${c.registros_ok||0} registros · Cargado: ${new Date(c.fecha_carga).toLocaleDateString('es-CO')}</span>
+        </div>
+        <div style="display:flex;gap:.35rem">
+          <button class="btn btn-sm btn-danger" onclick="eliminarMes('${c.periodo_id}','${label}')">🗑️ Eliminar mes</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){
+    lista.innerHTML=`<div style="text-align:center;color:var(--muted);font-size:.78rem;padding:.5rem">Sin conexión a Supabase.</div>`;
+  }
+}
+
+async function loadEtlLog(){
+  try{
+    const rows=await sb.rest('GET','etl_log?order=iniciado_at.desc&limit=20');
+    if(!rows||!rows.length){ addLog('Sin registros de cargue aún.','inf'); return; }
+    rows.forEach(r=>{
+      const dt=new Date(r.iniciado_at).toLocaleString('es-CO');
+      const tp=r.estado==='completado'?'ok':r.estado==='error'?'err':'inf';
+      addLog(`[${dt}] ${r.archivo||'—'} | ${r.estado}`,tp);
+    });
+  }catch(e){ addLog('No se pudo cargar el historial: '+e.message,'warn'); }
+}
+
+window.addEventListener('load',async()=>{
+  const user=await checkAuth('admin'); if(!user) return;
+  renderUser();
+  cargarMeses();
+  loadEtlLog();
+  const ol=document.getElementById('overlay');
+  setTimeout(()=>ol.classList.add('out'),200);
+  setTimeout(()=>ol.remove(),600);
+});
+</script>
+</body>
+</html>

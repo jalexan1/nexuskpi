@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>NexusKPI — Operatividad · Tiempo de apoyo Operativo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <style>
+    :root{ --op-accent:#F2994A; --op-accent2:#B5651D; }
+    .content{padding:1.5rem;max-width:1280px;margin:0 auto;width:100%}
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--op-accent);font-weight:600;margin-bottom:.3rem}
+    .pg-hdr h1{font-size:clamp(1.2rem,3vw,1.5rem);font-weight:800}
+    .pg-hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem;margin-bottom:1.25rem;line-height:1.55}
+
+    .tabs-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 1.25rem;gap:.1rem;overflow-x:auto;scrollbar-width:none;position:sticky;top:var(--topbar-h);z-index:90;margin:0 -1.5rem 1.25rem}
+    .tab-btn{padding:.75rem .95rem;font-size:.82rem;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;touch-action:manipulation}
+    .tab-btn.on{color:var(--op-accent);border-bottom-color:var(--op-accent)}
+    .tab-panel{display:none}.tab-panel.on{display:block}
+
+    .filtros{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.85rem 1rem}
+    .filtros select{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:.4rem .65rem;outline:none;cursor:pointer}
+    .filtros select:focus{border-color:var(--op-accent)}
+    .filtros label{font-size:.66rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:.25rem}
+
+    .metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.85rem;margin-bottom:1.25rem}
+    @media(max-width:900px){.metrics-grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:520px){.metrics-grid{grid-template-columns:1fr}}
+    .metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;animation:fadeUp .35s ease both;min-width:0}
+    .metric-label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem}
+    .metric-value{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800}
+    .metric-sub{font-size:.72rem;color:var(--muted);margin-top:.2rem}
+
+    .hallazgos{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem 1.25rem;margin-bottom:1.25rem}
+    .hallazgos h3{font-size:.85rem;font-weight:700;margin-bottom:.7rem}
+    .hallazgo-item{display:flex;gap:.6rem;font-size:.8rem;line-height:1.55;margin-bottom:.6rem}
+    .hallazgo-item:last-child{margin-bottom:0}
+    .hallazgo-item b{color:var(--op-accent)}
+
+    .charts-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:1rem;margin-bottom:1.25rem}
+    @media(max-width:900px){.charts-grid{grid-template-columns:1fr}}
+    .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem;height:340px;display:flex;flex-direction:column;min-width:0;min-height:0;margin-bottom:1rem}
+    .chart-card h3{font-size:.85rem;font-weight:700;margin-bottom:.4rem;display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+    .chart-card .sub{font-size:.7rem;color:var(--muted);margin-bottom:.5rem;margin-top:-.25rem}
+    .chart-card.donut-card{max-width:560px;margin-left:auto;margin-right:auto}
+    .chart-wrap{flex:1;position:relative;min-width:0;min-height:0;overflow:hidden}
+    .btn-maximizar{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);cursor:pointer;font-size:.85rem;padding:.2rem .5rem;line-height:1.3;font-family:'DM Sans',sans-serif;font-weight:600;touch-action:manipulation}
+    .btn-maximizar:hover{border-color:var(--op-accent);color:var(--op-accent)}
+
+    .modal-grafica{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000;padding:2rem}
+    .modal-grafica.on{display:flex}
+    .modal-grafica-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);width:min(1540px,96vw);height:min(774px,92vh);display:flex;flex-direction:column;padding:1.25rem}
+    .modal-grafica-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;font-family:'Syne',sans-serif;font-weight:700;font-size:1rem}
+    .modal-grafica-body{flex:1;position:relative;min-height:0;overflow:hidden}
+
+    .escenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:.85rem;margin-bottom:1.25rem}
+    @media(max-width:760px){.escenarios{grid-template-columns:1fr}}
+    .esc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:1.1rem}
+    .esc-card .esc-label{font-size:.74rem;color:var(--muted);line-height:1.4;margin-bottom:.5rem}
+    .esc-card .esc-value{font-family:'Syne',sans-serif;font-size:1.35rem;font-weight:800;color:var(--op-accent)}
+    .esc-nota{font-size:.74rem;color:var(--muted);line-height:1.5;margin-top:-.5rem;margin-bottom:1.25rem}
+
+    .tbl-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1.25rem}
+    .tbl-scroll{overflow-x:auto;max-height:480px;overflow-y:auto}
+    table{width:100%;border-collapse:collapse;font-size:.78rem}
+    thead th{text-align:left;padding:.5rem .7rem;font-size:.62rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;white-space:nowrap}
+    tbody tr{border-bottom:1px solid var(--border)}
+    tbody tr:hover{background:var(--surface2)}
+    tbody td{padding:.42rem .7rem;white-space:nowrap}
+    .sec-title{font-family:'Syne',sans-serif;font-size:.85rem;font-weight:700;margin:1.25rem 0 .6rem}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="op_dashboard_menu.html" class="brand"><div class="brand-dot"></div>NexusKPI</a>
+    <span class="topbar-sep">/</span><span class="topbar-title" style="color:var(--op-accent)">🚚 Operatividad</span>
+    <span class="topbar-sep">/</span><span class="topbar-title">🤝 Tiempo de apoyo Operativo</span>
+    <div class="topbar-spacer"></div>
+    <a href="op_dashboard_menu.html" class="btn btn-sm">← Dashboard</a>
+    <div class="theme-bar"><button class="theme-btn" onclick="setTheme('')">🌙</button><button class="theme-btn" onclick="setTheme('light')">☀️</button></div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="pg-hdr">
+      <div class="eyebrow">🤝 Operatividad · Tiempo de apoyo Operativo</div>
+      <h1>Tiempo de apoyo Operativo</h1>
+      <p>Este registro NO mide la jornada completa de cada colaborador: mide el tiempo que cada persona destina a apoyar otras actividades del CEDI cuando queda libre de su tarea principal — tiempo muerto convertido en apoyo operativo. Más horas de una persona no significa más carga de trabajo; significa más holgura estructural en su rol fijo.</p>
+    </div>
+
+    <nav class="tabs-nav">
+      <button class="tab-btn on" onclick="tab('resumen',this)">📊 Resumen</button>
+      <button class="tab-btn" onclick="tab('detalle',this)">📋 Detalle</button>
+    </nav>
+
+    <div class="filtros">
+      <div><label>Mes</label><select id="fMes" onchange="render()"></select></div>
+      <div><label>Actividad</label><select id="fActividad" onchange="render()"><option value="">Todas</option></select></div>
+      <div><label>Colaborador</label><select id="fColaborador" onchange="render()"><option value="">Todos</option></select></div>
+    </div>
+
+    <!-- ══ RESUMEN ══ -->
+    <div class="tab-panel on" id="tab-resumen">
+      <div class="metrics-grid" id="metricsGrid"></div>
+
+      <div class="hallazgos">
+        <h3>🔎 Hallazgos principales</h3>
+        <div id="hallazgosBody"></div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card" style="height:380px">
+          <h3><span>Horas por colaborador</span></h3>
+          <div class="sub" id="colabSub"></div>
+          <div class="chart-wrap"><canvas id="cColab"></canvas></div>
+        </div>
+        <div class="chart-card donut-card" style="height:380px">
+          <h3>¿En qué se usa el tiempo de apoyo?</h3>
+          <div class="sub">Distribución de horas por actividad</div>
+          <div class="chart-wrap"><canvas id="cActividad"></canvas></div>
+        </div>
+      </div>
+
+      <div class="sec-title">📈 Prospección — tendencia semanal y proyección al mes siguiente</div>
+      <div class="chart-card" style="height:340px">
+        <h3><span>Horas de apoyo por semana calendario</span>
+          <button class="btn-maximizar" onclick="abrirGraficaModal('cSemana','Horas de apoyo por semana calendario')" title="Maximizar">⛶ Maximizar</button>
+        </h3>
+        <div class="chart-wrap"><canvas id="cSemana"></canvas></div>
+      </div>
+      <div class="escenarios" id="escenariosGrid"></div>
+      <p class="esc-nota" id="escenariosNota"></p>
+
+      <div class="sec-title">🕐 Patrón operativo — ¿cuándo aparece tiempo libre para apoyar?</div>
+      <div class="charts-grid">
+        <div class="chart-card" style="height:320px">
+          <h3><span>Por día de la semana</span>
+            <button class="btn-maximizar" onclick="abrirGraficaModal('cDia','Horas de apoyo por día de la semana')" title="Maximizar">⛶ Maximizar</button>
+          </h3>
+          <div class="chart-wrap"><canvas id="cDia"></canvas></div>
+        </div>
+        <div class="chart-card" style="height:320px">
+          <h3><span>Por hora del día</span>
+            <button class="btn-maximizar" onclick="abrirGraficaModal('cHora','Horas de apoyo por hora del día')" title="Maximizar">⛶ Maximizar</button>
+          </h3>
+          <div class="chart-wrap"><canvas id="cHora"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ DETALLE ══ -->
+    <div class="tab-panel" id="tab-detalle">
+      <div class="tbl-wrap">
+        <div class="tbl-scroll">
+          <table>
+            <thead><tr>
+              <th>Fecha</th><th>Colaborador</th><th>Actividad</th><th>Inicio</th><th>Fin</th>
+              <th>Duración (min)</th><th>Observaciones</th><th>Novedad</th>
+            </tr></thead>
+            <tbody id="detalleBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-grafica" id="modalGrafica" onclick="if(event.target===this) cerrarGraficaModal()">
+  <div class="modal-grafica-box">
+    <div class="modal-grafica-hdr">
+      <span id="modalGraficaTitulo"></span>
+      <button class="btn-maximizar" onclick="cerrarGraficaModal()" title="Minimizar">✕ Cerrar</button>
+    </div>
+    <div class="modal-grafica-body"><canvas id="modalGraficaCanvas"></canvas></div>
+  </div>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script src="../utils/etl_op_apoyo.js"></script>
+<script>
+applyTheme();
+if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
+let allData = [];
+let charts = {};
+let modalChartInstance = null;
+let lastChartConfigs = {};
+const numCO = n => (n||0).toLocaleString('es-CO');
+const horas1 = n => (n||0).toFixed(1);
+const DIAS_SEM = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+
+/**
+ * abrirGraficaModal(chartId, titulo)
+ * Mismo patrón que op_kpi_recibo.html: se reutiliza la config plana guardada
+ * en lastChartConfigs (no la instancia de Chart.js — romper esa regla revienta
+ * con "Canvas is already in use" en Chart.js v4).
+ */
+function abrirGraficaModal(chartId, titulo) {
+  const cfg = lastChartConfigs[chartId];
+  if (!cfg) return;
+  document.getElementById('modalGraficaTitulo').textContent = titulo;
+  document.getElementById('modalGrafica').classList.add('on');
+  const huerfano = Chart.getChart('modalGraficaCanvas');
+  if (huerfano) huerfano.destroy();
+  if (modalChartInstance) { modalChartInstance.destroy(); modalChartInstance = null; }
+  modalChartInstance = new Chart(document.getElementById('modalGraficaCanvas'), {
+    type: cfg.type, data: cfg.data,
+    options: { ...cfg.options, maintainAspectRatio:false, responsive:true }
+  });
+}
+function cerrarGraficaModal() {
+  document.getElementById('modalGrafica').classList.remove('on');
+  if (modalChartInstance) { modalChartInstance.destroy(); modalChartInstance = null; }
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarGraficaModal(); });
+
+function tab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('on'));
+  document.getElementById('tab-' + id).classList.add('on');
+  btn.classList.add('on');
+}
+function destroyChart(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+function colorEjes(){ return getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#E8F0FE'; }
+
+function poblarFiltros() {
+  const meses = [...new Set(allData.map(r=>r.periodo_id))].sort();
+  const selMes = document.getElementById('fMes');
+  selMes.innerHTML = meses.map(m=>{
+    const label = CONFIG.meses.find(x=>x.id===m)?.label || m;
+    return `<option value="${m}">${label}</option>`;
+  }).join('');
+  if (meses.length) selMes.value = meses[meses.length-1];
+
+  const acts = [...new Set(allData.map(r=>r.actividad).filter(Boolean))].sort();
+  document.getElementById('fActividad').innerHTML = `<option value="">Todas</option>` + acts.map(a=>`<option value="${a}">${a}</option>`).join('');
+
+  const colabs = [...new Set(allData.map(r=>r.colaborador).filter(Boolean))].sort();
+  document.getElementById('fColaborador').innerHTML = `<option value="">Todos</option>` + colabs.map(c=>`<option value="${c}">${c}</option>`).join('');
+}
+
+function filtrar() {
+  const mes = document.getElementById('fMes').value;
+  const act = document.getElementById('fActividad').value;
+  const colab = document.getElementById('fColaborador').value;
+  return allData.filter(r =>
+    (!mes || r.periodo_id===mes) &&
+    (!act || r.actividad===act) &&
+    (!colab || r.colaborador===colab)
+  );
+}
+
+// ── ISO week helper: {year, week} de una fecha ──────────────────────────
+function isoWeekInfo(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  return { year: date.getUTCFullYear(), week };
+}
+
+/**
+ * calcularSemanas(data)
+ * Agrupa por semana ISO (dentro del mes filtrado) y cuenta días distintos por
+ * semana — el conteo de días es lo que luego usa calcularEscenarios() para
+ * distinguir semanas "completas" (representativas de la tendencia) de semanas
+ * parciales de arranque/cierre del mes (que distorsionan el promedio).
+ */
+function calcularSemanas(data) {
+  const porSemana = {};
+  data.forEach(r => {
+    const d = new Date(r.inicio);
+    const { year, week } = isoWeekInfo(d);
+    const key = `${year}-S${String(week).padStart(2,'0')}`;
+    if (!porSemana[key]) porSemana[key] = { key, min: 0, dias: new Set() };
+    porSemana[key].min += (r.duracion_min || 0);
+    porSemana[key].dias.add(d.toISOString().slice(0,10));
+  });
+  return Object.values(porSemana)
+    .map(s => ({ key: s.key, horas: s.min/60, dias: s.dias.size }))
+    .sort((a,b) => a.key.localeCompare(b.key));
+}
+
+/**
+ * semanasRepresentativas(semanas)
+ * Descarta la primera y/o última semana de la lista SOLO si su número de días
+ * con registros es menor que el mínimo de las semanas intermedias — eso indica
+ * que es una semana de arranque/cierre parcial (el archivo no cubre esa semana
+ * completa), no que simplemente tuvo menos actividad un día cualquiera. Con
+ * menos de 3 semanas en total no hay "interior" que comparar, así que se usan
+ * todas tal cual (evita quedarse sin semanas para proyectar).
+ */
+function semanasRepresentativas(semanas) {
+  if (semanas.length < 3) return semanas;
+  const interior = semanas.slice(1, -1);
+  const minInterior = Math.min(...interior.map(s=>s.dias));
+  return semanas.filter((s, i) => {
+    const esBorde = i === 0 || i === semanas.length - 1;
+    return !esBorde || s.dias >= minInterior;
+  });
+}
+
+/**
+ * calcularEscenarios(semanas)
+ * Convierte en fórmula repetible el análisis de prospección: se usan solo las
+ * semanas representativas (ver semanasRepresentativas) para no dejar que una
+ * semana parcial de arranque/cierre distorsione el promedio o la tendencia.
+ * Con menos de 2 semanas representativas no hay base para proyectar.
+ */
+function calcularEscenarios(semanas) {
+  if (!semanas.length) return null;
+  const completas = semanasRepresentativas(semanas);
+  if (completas.length < 2) return null;
+
+  const nSemanasProy = semanas.length;
+  const avgTodas = completas.reduce((s,w)=>s+w.horas,0) / completas.length;
+  const ultimas2 = completas.slice(-2);
+  const avgUltimas2 = ultimas2.reduce((s,w)=>s+w.horas,0) / ultimas2.length;
+
+  const deltas = [];
+  for (let i=1;i<completas.length;i++) deltas.push(completas[i].horas - completas[i-1].horas);
+  const deltaProm = deltas.reduce((s,d)=>s+d,0) / deltas.length;
+  let ultimo = completas[completas.length-1].horas;
+  let caidaTotal = 0;
+  for (let i=0;i<nSemanasProy;i++) { ultimo = Math.max(0, ultimo + deltaProm); caidaTotal += ultimo; }
+
+  return {
+    continuaPromedio: avgTodas * nSemanasProy,
+    seEstabiliza: avgUltimas2 * nSemanasProy,
+    siCaeIgual: caidaTotal,
+    nSemanasProy, nCompletas: completas.length,
+  };
+}
+
+function render() {
+  const data = filtrar();
+  const mesId = document.getElementById('fMes').value;
+  const horasTot = data.reduce((s,r)=>s+(r.duracion_min||0),0)/60;
+  const colabs = new Set(data.map(r=>r.colaborador).filter(Boolean));
+
+  const semanas = calcularSemanas(data);
+  const representativas = semanasRepresentativas(semanas);
+  const primComp = representativas[0];
+  const ultComp = representativas[representativas.length-1];
+  const tendTxt = (primComp && ultComp && primComp.key!==ultComp.key)
+    ? (ultComp.horas < primComp.horas ? `↓ ${horas1(primComp.horas-ultComp.horas)}h` : `↑ ${horas1(ultComp.horas-primComp.horas)}h`)
+    : '—';
+
+  document.getElementById('metricsGrid').innerHTML = `
+    <div class="metric-card" style="animation-delay:.02s"><div class="metric-label">Horas de apoyo</div><div class="metric-value">${horas1(horasTot)}<span style="font-size:.9rem"> h</span></div><div class="metric-sub">${data.length} registros de actividad</div></div>
+    <div class="metric-card" style="animation-delay:.05s"><div class="metric-label">Registros de actividad</div><div class="metric-value">${data.length}</div></div>
+    <div class="metric-card" style="animation-delay:.08s"><div class="metric-label">Colaboradores</div><div class="metric-value">${colabs.size}</div><div class="metric-sub">con tiempo libre aprovechado</div></div>
+    <div class="metric-card" style="animation-delay:.11s"><div class="metric-label">Tendencia semanal</div><div class="metric-value">${tendTxt}</div><div class="metric-sub">semana completa inicial vs. final del mes</div></div>
+  `;
+
+  // ── Hallazgos ──
+  const porColab = {};
+  data.forEach(r => { const c=r.colaborador||'—'; porColab[c]=(porColab[c]||0)+(r.duracion_min||0); });
+  const rankColab = Object.entries(porColab).sort((a,b)=>b[1]-a[1]);
+  let acumPct=0, nConcentra=0;
+  for (const [,min] of rankColab) { acumPct += horasTot? (min/60)/horasTot*100 : 0; nConcentra++; if (acumPct>=70) break; }
+  const pctConcentra = horasTot ? (rankColab.slice(0,nConcentra).reduce((s,[,m])=>s+m,0)/60/horasTot*100) : 0;
+
+  const porAct = {};
+  data.forEach(r => { const a=r.actividad||'—'; porAct[a]=(porAct[a]||0)+(r.duracion_min||0); });
+  const rankAct = Object.entries(porAct).sort((a,b)=>b[1]-a[1]);
+  const topAct = rankAct[0];
+  const topActPct = topAct && horasTot ? (topAct[1]/60/horasTot*100) : 0;
+
+  const hallazgos = [];
+  if (rankColab.length) hallazgos.push(`<div class="hallazgo-item">📌 <span><b>Holgura estructural desigual</b> — ${nConcentra} de ${rankColab.length} colaborador${rankColab.length===1?'':'es'} generan el <b>${horas1(pctConcentra)}%</b> del tiempo de apoyo. No es necesariamente sobrecarga: puede ser que su rol fijo les deje más tiempo libre disponible que a los demás. Vale la pena confirmarlo con cada líder de área.</span></div>`);
+  if (primComp && ultComp && primComp.key!==ultComp.key) hallazgos.push(`<div class="hallazgo-item">📈 <span><b>Tendencia dentro del mes</b> — el apoyo pasó de ${horas1(primComp.horas)}h a ${horas1(ultComp.horas)}h entre la primera y la última semana completa. ${ultComp.horas<primComp.horas ? 'Confirmar si las áreas de apoyo ya se estabilizaron, o si el rol fijo está dejando menos tiempo libre.' : 'Vale la pena confirmar si esto refleja más tiempo libre real o una necesidad puntual de apoyo.'}</span></div>`);
+  if (topAct && topActPct > 15) hallazgos.push(`<div class="hallazgo-item">⚠️ <span><b>Posible mes no representativo</b> — <b>${topAct[0]}</b> concentra ${horas1(topActPct)}% del tiempo del mes. Si corresponde a un evento puntual (ej. un conteo de inventario), este mes puede no reflejar el comportamiento estructural — conviene comparar contra otro mes antes de sacar conclusiones.</span></div>`);
+  document.getElementById('hallazgosBody').innerHTML = hallazgos.join('') || `<div class="hallazgo-item" style="color:var(--muted)">Sin datos suficientes para generar hallazgos con los filtros actuales.</div>`;
+
+  // ── Chart: horas por colaborador (barra horizontal) ──
+  destroyChart('cColab');
+  const cColabCfg = {
+    type:'bar',
+    data:{ labels:rankColab.map(c=>c[0]), datasets:[{ label:'Horas', data:rankColab.map(c=>c[1]/60), backgroundColor:'#F2994A' }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false,
+      scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes()}}, y:{grid:{display:false}, ticks:{color:colorEjes()}} },
+      plugins:{ legend:{display:false}, datalabels:{ color:colorEjes(), font:{weight:'700', size:10}, anchor:'end', align:'right', formatter:v=>horas1(v)+'h', clip:false } } }
+  };
+  charts.cColab = new Chart(document.getElementById('cColab'), cColabCfg);
+  lastChartConfigs.cColab = cColabCfg;
+  document.getElementById('colabSub').textContent = rankColab.length ? `${nConcentra} de ${rankColab.length} colaboradores generan el ${horas1(pctConcentra)}% del tiempo de apoyo` : '';
+
+  // ── Chart: dona por actividad ──
+  destroyChart('cActividad');
+  const paleta = ['#F2994A','#00D4FF','#00FF88','#B77CFF','#FF4D6D','#FFB020','#7A8BA6','#00A8E8','#E85D75','#6BCB77'];
+  charts.cActividad = new Chart(document.getElementById('cActividad'), {
+    type:'doughnut',
+    data:{ labels:rankAct.map(a=>a[0]), datasets:[{ data:rankAct.map(a=>a[1]/60), backgroundColor:paleta }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'right', labels:{color:colorEjes(), font:{size:10}, boxWidth:10}},
+        datalabels:{ color:'#0B0F1A', font:{weight:'700', size:10}, formatter:v=>horasTot? Math.round(v/horasTot*100)+'%':'' } } }
+  });
+
+  // ── Chart: horas por semana + escenarios ──
+  destroyChart('cSemana');
+  const cSemanaCfg = {
+    type:'bar',
+    data:{ labels:semanas.map(s=>s.key), datasets:[{ label:'Horas', data:semanas.map(s=>s.horas), backgroundColor: semanas.map(s => representativas.includes(s) ? '#F2994A' : 'rgba(242,153,74,.4)') }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes()}}, y:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes()}} },
+      plugins:{ legend:{display:false}, datalabels:{ color:colorEjes(), font:{weight:'700', size:10}, anchor:'end', align:'top', formatter:v=>horas1(v) } } }
+  };
+  charts.cSemana = new Chart(document.getElementById('cSemana'), cSemanaCfg);
+  lastChartConfigs.cSemana = cSemanaCfg;
+
+  const esc = calcularEscenarios(semanas);
+  const mesLbl = CONFIG.meses.find(m=>m.id===mesId)?.label || mesId;
+  if (esc) {
+    document.getElementById('escenariosGrid').innerHTML = `
+      <div class="esc-card"><div class="esc-label">Si continúa el promedio de ${mesLbl}</div><div class="esc-value">≈ ${horas1(esc.continuaPromedio)} h</div></div>
+      <div class="esc-card"><div class="esc-label">Si se estabiliza al nivel de las últimas 2 semanas completas</div><div class="esc-value">≈ ${horas1(esc.seEstabiliza)} h</div></div>
+      <div class="esc-card"><div class="esc-label">Si la caída/subida semanal se mantiene igual de fuerte</div><div class="esc-value">≈ ${horas1(esc.siCaeIgual)} h</div></div>
+    `;
+    document.getElementById('escenariosNota').textContent = `Proyección para el siguiente mes, calculada sobre ${esc.nCompletas} semana(s) completa(s) de ${mesLbl}. Con pocas semanas de datos, tómala como referencia — no como pronóstico — y remide en 2 semanas para confirmar cuál escenario se está cumpliendo.`;
+  } else {
+    document.getElementById('escenariosGrid').innerHTML = `<div class="esc-card" style="grid-column:1/-1;color:var(--muted);text-align:center">Histórico insuficiente en ${mesLbl} para proyectar (se necesitan al menos 2 semanas completas).</div>`;
+    document.getElementById('escenariosNota').textContent = '';
+  }
+
+  // ── Chart: por día de la semana ──
+  const porDia = Array(7).fill(0);
+  data.forEach(r => { porDia[new Date(r.inicio).getDay()] += (r.duracion_min||0); });
+  destroyChart('cDia');
+  const ordenDias = [1,2,3,4,5,6,0]; // lunes primero
+  const cDiaCfg = {
+    type:'bar',
+    data:{ labels:ordenDias.map(i=>DIAS_SEM[i]), datasets:[{ label:'Horas', data:ordenDias.map(i=>porDia[i]/60), backgroundColor:'#00D4FF' }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes()}}, y:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes()}} },
+      plugins:{ legend:{display:false}, datalabels:{ color:colorEjes(), font:{weight:'700', size:10}, anchor:'end', align:'top', formatter:v=>v>0?horas1(v):'' } } }
+  };
+  charts.cDia = new Chart(document.getElementById('cDia'), cDiaCfg);
+  lastChartConfigs.cDia = cDiaCfg;
+
+  // ── Chart: por hora del día ──
+  const porHora = Array(24).fill(0);
+  data.forEach(r => { porHora[new Date(r.inicio).getHours()] += (r.duracion_min||0); });
+  destroyChart('cHora');
+  const cHoraCfg = {
+    type:'bar',
+    data:{ labels:porHora.map((_,i)=>String(i).padStart(2,'0')+'h'), datasets:[{ label:'Horas', data:porHora.map(m=>m/60), backgroundColor:'#B77CFF' }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      scales:{ x:{grid:{display:false}, ticks:{color:colorEjes(), maxRotation:0, autoSkip:true}}, y:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:colorEjes()}} },
+      plugins:{ legend:{display:false}, datalabels:{display:false} } }
+  };
+  charts.cHora = new Chart(document.getElementById('cHora'), cHoraCfg);
+  lastChartConfigs.cHora = cHoraCfg;
+
+  // ── Detalle ──
+  document.getElementById('detalleBody').innerHTML = data
+    .slice().sort((a,b)=> new Date(b.inicio)-new Date(a.inicio))
+    .slice(0,500).map(r=>{
+      const ini = new Date(r.inicio);
+      return `<tr>
+        <td>${ini.toLocaleDateString('es-CO')}</td><td>${r.colaborador||'—'}</td><td>${r.actividad||'—'}</td>
+        <td>${ini.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}</td>
+        <td>${r.fin ? new Date(r.fin).toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) : '—'}</td>
+        <td>${(r.duracion_min||0).toFixed(1)}</td><td>${r.observaciones||'—'}</td>
+        <td>${r.novedad && r.novedad!=='Ninguna' ? `<span class="badge badge-warn">${r.novedad}</span>` : '—'}</td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:1rem">Sin datos para los filtros seleccionados.</td></tr>`;
+}
+
+async function cargarDatos() {
+  try {
+    allData = await sb.rest('GET', 'op_apoyo_detalle?order=periodo_id.asc,inicio.asc') || [];
+  } catch(e) { allData = []; console.error(e); }
+  poblarFiltros();
+  render();
+}
+
+window.addEventListener('load', async () => {
+  const user = await checkAuth(); if (!user) return;
+  renderUser();
+  await cargarDatos();
+  const ol = document.getElementById('overlay');
+  setTimeout(() => ol.classList.add('out'), 200);
+  setTimeout(() => ol.remove(), 600);
+});
+</script>
+</body>
+</html>
