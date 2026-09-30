@@ -206,7 +206,8 @@
     try {
       const data = await sb.signIn(email, pass);
       saveSession(data);
-      location.href = 'pages/menu.html';
+      try { await cargarAccesos(true); } catch {}
+      location.href = _destino();
     } catch (ex) {
       err.textContent = ex.message || 'Error de autenticación.';
       err.classList.add('show');
@@ -226,8 +227,19 @@
     } catch {}
   }
 
+  // Después del login: ?next=<ruta interna> o el launcher de tarjetas
+  function _destino() {
+    const n = new URLSearchParams(location.search).get('next') || '';
+    return /^\/(pages|despachos)\//.test(n) ? n : 'pages/plataforma.html?desdeLogin=1';
+  }
+
   window.addEventListener('load', async () => {
-    if (_getToken()) { location.href = 'pages/menu.html'; return; }
+    if (_getToken()) { location.href = _destino(); return; }
+    if (new URLSearchParams(location.search).get('motivo') === 'inactividad') {
+      const err = document.getElementById('errBox');
+      err.textContent = 'Tu sesión se cerró por inactividad. Ingresa de nuevo.';
+      err.classList.add('show');
+    }
     loadStats();
     const ol = document.getElementById('overlay');
     setTimeout(() => ol.classList.add('out'), 200);

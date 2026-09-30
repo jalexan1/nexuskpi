@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Plataforma L&amp;S — Aplicaciones</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <style>
+    .hero{padding:clamp(1.4rem,4vw,2.6rem) 0 1.4rem;}
+    .eyebrow{font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:.35rem;}
+    .hero h1{font-size:clamp(1.5rem,4.2vw,2.3rem);font-weight:800;line-height:1.08;}
+    .hero p{color:var(--muted);font-size:.9rem;margin-top:.4rem;max-width:620px;}
+    .apps{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1.1rem;margin-top:.6rem;}
+    .app{--c:#00D4FF;position:relative;display:flex;flex-direction:column;gap:.55rem;min-height:210px;padding:1.35rem 1.35rem 1.2rem;
+      border-radius:20px;text-decoration:none;color:var(--text);overflow:hidden;isolation:isolate;
+      background:linear-gradient(155deg,color-mix(in srgb,var(--c) 22%,var(--surface)) 0%,var(--surface) 58%);
+      border:1px solid color-mix(in srgb,var(--c) 35%,var(--border));
+      box-shadow:0 10px 30px -18px color-mix(in srgb,var(--c) 70%,transparent);
+      transition:transform .25s cubic-bezier(.2,.9,.3,1.2),box-shadow .25s,border-color .25s;opacity:0;animation:entra .5s forwards;}
+    .app::before{content:"";position:absolute;inset:auto -30% -55% auto;width:220px;height:220px;border-radius:50%;
+      background:radial-gradient(circle,color-mix(in srgb,var(--c) 45%,transparent),transparent 70%);z-index:-1;transition:transform .4s;}
+    .app:hover,.app:focus-visible{transform:translateY(-6px);border-color:var(--c);box-shadow:0 22px 44px -18px color-mix(in srgb,var(--c) 80%,transparent);outline:none;}
+    .app:hover::before{transform:scale(1.25) translate(-10px,-10px);}
+    .app-top{display:flex;align-items:center;justify-content:space-between;}
+    .app-icon{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;font-size:1.7rem;
+      background:color-mix(in srgb,var(--c) 20%,transparent);border:1px solid color-mix(in srgb,var(--c) 40%,transparent);}
+    .app-rol{font-size:.62rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:.25rem .6rem;border-radius:20px;
+      color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);border:1px solid color-mix(in srgb,var(--c) 35%,transparent);}
+    .app-name{font-family:'Syne',sans-serif;font-size:1.18rem;font-weight:800;margin-top:.35rem;}
+    .app-desc{font-size:.8rem;color:var(--muted);line-height:1.45;}
+    .app-go{margin-top:auto;display:flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:600;color:var(--c);}
+    .app-go span{transition:transform .25s;} .app:hover .app-go span{transform:translateX(5px);}
+    .app.admin{--c:#FFB020;}
+    .aviso{margin-top:1rem;padding:.8rem 1rem;border-radius:12px;font-size:.82rem;border:1px solid var(--border2);background:var(--surface2);color:var(--text);}
+    .aviso.warn{border-color:color-mix(in srgb,var(--warn) 50%,transparent);background:color-mix(in srgb,var(--warn) 10%,var(--surface));}
+    .vacio{padding:2rem;text-align:center;color:var(--muted);border:1px dashed var(--border2);border-radius:16px;}
+    @keyframes entra{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+    @media (prefers-reduced-motion:reduce){.app{animation:none;opacity:1;transition:none}}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="plataforma.html" class="brand"><div class="brand-dot"></div>Plataforma L&amp;S</a>
+    <div class="topbar-spacer"></div>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')">☀️</button>
+      <button class="theme-btn" onclick="setTheme('sepia')" title="Sepia">📜</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <section class="hero">
+      <div class="eyebrow">Logistics and Services</div>
+      <h1 id="saludo">¿Con qué aplicación quieres operar?</h1>
+      <p>Un solo usuario para toda la plataforma. Elige una tarjeta; puedes volver aquí desde cualquier aplicación con el botón “Plataforma”.</p>
+      <div id="avisos"></div>
+    </section>
+    <section class="apps" id="apps" aria-label="Aplicaciones disponibles"></section>
+  </main>
+</div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+  applyTheme();
+
+  // Modo compatibilidad (esquema core aún no desplegado): tarjetas por defecto
+  const APPS_COMPAT = [
+    { codigo:'KPI',          nombre:'NexusKPI',     descripcion:'Indicadores de gestión y consolidado gerencial', ruta:'/pages/menu.html',                 icono:'📊', color:'#00D4FF' },
+    { codigo:'OPERATIVIDAD', nombre:'Operatividad', descripcion:'Productividad, olas, picking y recibo',          ruta:'/pages/menu.html#tab-operatividad', icono:'⚙️', color:'#7B2FFF' },
+  ];
+
+  const esc = (t) => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const href = (ruta) => /^https?:\/\//.test(ruta) ? ruta : (ruta.startsWith('/') ? ruta : '../' + ruta);
+
+  function tarjeta(a, i, extraClass = '') {
+    const color = a.color || '#00D4FF';
+    return `<a class="app ${extraClass}" href="${esc(href(a.ruta))}" style="--c:${esc(color)};animation-delay:${i * 70}ms">
+      <div class="app-top"><div class="app-icon">${esc(a.icono || '▦')}</div>${a.rol ? `<span class="app-rol">${esc(a.rol)}</span>` : ''}</div>
+      <div class="app-name">${esc(a.nombre)}</div>
+      <div class="app-desc">${esc(a.descripcion || '')}</div>
+      <div class="app-go">Entrar <span>→</span></div>
+    </a>`;
+  }
+
+  function aviso(txt, warn = false) {
+    document.getElementById('avisos').insertAdjacentHTML('beforeend', `<div class="aviso ${warn ? 'warn' : ''}">${txt}</div>`);
+  }
+
+  window.addEventListener('load', async () => {
+    const user = await checkAuth(null, { app: 'PLATAFORMA' }); if (!user) return;
+    renderUser();
+    const nombre = getUserName().split(/[ @]/)[0];
+    document.getElementById('saludo').textContent = `Hola, ${nombre}. ¿Con qué aplicación quieres operar?`;
+
+    const params = new URLSearchParams(location.search);
+    if (params.get('sinAcceso')) aviso(`No tienes acceso a <b>${esc(params.get('sinAcceso'))}</b>. Solicítalo al administrador de la plataforma.`, true);
+
+    let acc = null;
+    try { acc = await cargarAccesos(true); } catch (e) { aviso('No se pudieron leer tus accesos. Revisa la conexión y recarga la página.', true); }
+
+    const cont = document.getElementById('apps');
+    let apps = [];
+    if (acc && acc.modo === 'compat') {
+      apps = APPS_COMPAT.map(a => ({ ...a, rol: getRole(a.codigo) }));
+    } else if (acc) {
+      apps = acc.apps;
+    }
+    let html = apps.map((a, i) => tarjeta(a, i)).join('');
+    if (acc && acc.modo === 'plataforma' && esAdminPlataforma()) {
+      html += tarjeta({ nombre:'Administrar accesos', descripcion:'Qué usuario entra a cada aplicación y con qué rol', ruta:'pages/admin_accesos.html', icono:'🛡️', color:'#FFB020', rol:'admin' }, apps.length, 'admin');
+    }
+    cont.innerHTML = html || `<div class="vacio">Tu usuario aún no tiene aplicaciones asignadas.<br>Solicita el acceso al administrador de la plataforma.</div>`;
+
+    // Recién ingresado y con una sola aplicación: entrar directo (sin pasar por las tarjetas)
+    if (params.get('desdeLogin') && apps.length === 1 && !esAdminPlataforma()) {
+      location.href = href(apps[0].ruta); return;
+    }
+
+    const ol = document.getElementById('overlay');
+    setTimeout(() => ol.classList.add('out'), 150);
+    setTimeout(() => ol.remove(), 550);
+  });
+</script>
+</body>
+</html>

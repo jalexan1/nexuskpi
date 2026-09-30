@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Plataforma L&amp;S — Administrar accesos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <style>
+    .hdr{padding:1.4rem 0 1rem;display:flex;flex-wrap:wrap;gap:1rem;align-items:flex-end;justify-content:space-between;}
+    .hdr h1{font-size:clamp(1.3rem,4vw,1.7rem);font-weight:800;}
+    .hdr p{color:var(--muted);font-size:.82rem;margin-top:.25rem;max-width:640px;}
+    .tools{display:flex;gap:.5rem;flex-wrap:wrap;}
+    .tools input{height:36px;padding:0 .8rem;border-radius:9px;border:1px solid var(--border2);background:var(--surface);color:var(--text);min-width:240px;}
+    .wrap{overflow-x:auto;border:1px solid var(--border);border-radius:14px;background:var(--surface);}
+    table{width:100%;border-collapse:collapse;font-size:.8rem;min-width:820px;}
+    th,td{padding:.6rem .75rem;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle;}
+    th{font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--surface2);position:sticky;top:0;}
+    td .mail{color:var(--muted);font-size:.72rem;}
+    select{height:32px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text);padding:0 .4rem;font-size:.78rem;max-width:150px;}
+    select.on{border-color:var(--accent);color:var(--accent);font-weight:600;}
+    select.saving{opacity:.5;}
+    .sw{cursor:pointer;font-size:.72rem;padding:.25rem .6rem;border-radius:20px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);}
+    .sw.off{color:var(--error);border-color:color-mix(in srgb,var(--error) 45%,transparent);}
+    .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--surface3);color:var(--text);border:1px solid var(--border2);
+      padding:.6rem 1.1rem;border-radius:22px;font-size:.82rem;opacity:0;transition:opacity .25s;pointer-events:none;z-index:50;}
+    .toast.show{opacity:1;}
+    .nota{margin-top:1rem;font-size:.75rem;color:var(--muted);line-height:1.5;}
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+  <header class="topbar">
+    <a href="plataforma.html" class="brand"><div class="brand-dot"></div>Plataforma L&amp;S</a>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+  <main class="content">
+    <div class="hdr">
+      <div>
+        <h1>🛡️ Administrar accesos</h1>
+        <p>Define a qué aplicación entra cada usuario y con qué rol. El cambio aplica en el siguiente ingreso del usuario (máx. 5 minutos si ya está conectado).
+           Los usuarios nuevos se crean en <a href="admin.html">Administración de usuarios</a> y aparecen aquí automáticamente.</p>
+      </div>
+      <div class="tools"><input id="q" placeholder="Buscar por nombre o correo…" oninput="pintar()"/></div>
+    </div>
+    <div class="wrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    <p class="nota">Roles: <b>Despachos</b> solicitante · operador · consulta · admin — <b>Inventario</b> registrador · supervisor · consulta · admin —
+      <b>KPI / Operatividad</b> viewer · admin. “Sin acceso” desactiva el acceso (queda en auditoría; nunca se borra).</p>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+  applyTheme();
+  const CORE_R = { 'Accept-Profile': 'core' };
+  const CORE_W = { 'Content-Profile': 'core', 'Accept-Profile': 'core' };
+  let APPS = [], PERFILES = [], ACCESOS = [];
+  const esc = (t) => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function toast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3000); }
+  const acceso = (pid, app) => ACCESOS.find(a => a.perfil_id === pid && a.aplicacion_codigo === app);
+
+  async function cargar() {
+    [APPS, PERFILES, ACCESOS] = await Promise.all([
+      sb.rest('GET', 'aplicaciones?select=codigo,nombre,roles_validos,orden&activo=eq.true&order=orden', null, CORE_R),
+      sb.rest('GET', 'perfiles?select=id,email,nombre,area,activo,version&order=email', null, CORE_R),
+      sb.rest('GET', 'accesos?select=id,perfil_id,aplicacion_codigo,rol,activo,version', null, CORE_R),
+    ]);
+    pintar();
+  }
+
+  function pintar() {
+    const q = document.getElementById('q').value.trim().toLowerCase();
+    document.getElementById('thead').innerHTML = `<tr><th>Usuario</th><th>Estado</th>${APPS.map(a => `<th>${esc(a.nombre)}</th>`).join('')}</tr>`;
+    const filas = PERFILES.filter(p => !q || (p.email + ' ' + (p.nombre || '')).toLowerCase().includes(q));
+    document.getElementById('tbody').innerHTML = filas.map(p => `
+      <tr>
+        <td><b>${esc(p.nombre || '—')}</b><div class="mail">${esc(p.email)}</div></td>
+        <td><button class="sw ${p.activo ? '' : 'off'}" onclick="toggleActivo('${p.id}')">${p.activo ? 'Activo' : 'Inactivo'}</button></td>
+        ${APPS.map(a => {
+          const ac = acceso(p.id, a.codigo);
+          const val = ac && ac.activo ? ac.rol : '';
+          return `<td><select class="${val ? 'on' : ''}" onchange="cambiar(this,'${p.id}','${a.codigo}')">
+            <option value="">— sin acceso —</option>
+            ${a.roles_validos.map(r => `<option value="${esc(r)}" ${r === val ? 'selected' : ''}>${esc(r)}</option>`).join('')}
+          </select></td>`;
+        }).join('')}
+      </tr>`).join('') || `<tr><td colspan="${APPS.length + 2}" style="text-align:center;color:var(--muted)">Sin resultados</td></tr>`;
+  }
+
+  async function cambiar(sel, perfilId, app) {
+    const rol = sel.value;
+    const ac = acceso(perfilId, app);
+    sel.classList.add('saving'); sel.disabled = true;
+    try {
+      if (ac) {
+        const cambio = rol ? { rol, activo: true } : { activo: false };
+        const r = await sb.rest('PATCH', `accesos?id=eq.${ac.id}&version=eq.${ac.version}`, cambio, CORE_W);
+        if (!r || !r.length) throw new Error('Otro administrador cambió este acceso. Se recargó la tabla.');
+        Object.assign(ac, r[0]);
+      } else if (rol) {
+        const r = await sb.rest('POST', 'accesos', { perfil_id: perfilId, aplicacion_codigo: app, rol, activo: true }, CORE_W);
+        ACCESOS.push(r[0]);
+      }
+      toast('✓ Acceso actualizado');
+    } catch (e) {
+      toast('⚠ ' + e.message.replace(/^Supabase \d+: /, ''));
+      await cargar();
+      return;
+    } finally {
+      sel.classList.remove('saving'); sel.disabled = false;
+    }
+    sel.classList.toggle('on', !!rol);
+  }
+
+  async function toggleActivo(perfilId) {
+    const p = PERFILES.find(x => x.id === perfilId);
+    if (p.id === getSession()?.id) { toast('⚠ No puedes desactivar tu propio usuario'); return; }
+    try {
+      const r = await sb.rest('PATCH', `perfiles?id=eq.${p.id}&version=eq.${p.version}`, { activo: !p.activo }, CORE_W);
+      if (!r || !r.length) throw new Error('El perfil cambió. Se recargó la tabla.');
+      Object.assign(p, r[0]); pintar(); toast(p.activo ? '✓ Usuario activado' : '✓ Usuario desactivado');
+    } catch (e) { toast('⚠ ' + e.message.replace(/^Supabase \d+: /, '')); await cargar(); }
+  }
+
+  window.addEventListener('load', async () => {
+    const user = await checkAuth('admin', { app: 'PLATAFORMA' }); if (!user) return;
+    renderUser();
+    try { await cargar(); }
+    catch (e) { document.getElementById('tbody').innerHTML = `<tr><td style="color:var(--error)">No se pudo cargar: ${esc(e.message)}</td></tr>`; }
+    const ol = document.getElementById('overlay');
+    setTimeout(() => ol.classList.add('out'), 150);
+    setTimeout(() => ol.remove(), 550);
+  });
+</script>
+</body>
+</html>
