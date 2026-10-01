@@ -3,7 +3,7 @@
     { "source": "/despachos", "destination": "/despachos/", "permanent": false }
   ],
   "rewrites": [
-    { "source": "/despachos/:path*", "destination": "https://logistic-portal.vercel.app/despachos/:path*" }
+    { "source": "/despachos/:path*", "destination": "https://logistic-portal-phi.vercel.app/despachos/:path*" }
   ],
   "headers": [
     {
