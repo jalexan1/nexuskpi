@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Gestión Humana — Reglamento Interno de Trabajo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../styles/base.css"/>
+  <style>
+    /* ── Layout de tabs ───────────────────────────────────────── */
+    .tabs-bar {
+      display:flex; gap:.5rem; padding:.75rem 0 0;
+      border-bottom:1px solid var(--border); margin-bottom:1.25rem;
+    }
+    .tab-btn {
+      display:flex; align-items:center; gap:.4rem;
+      padding:.5rem 1rem; border-radius:8px 8px 0 0;
+      font-size:.82rem; font-weight:600; cursor:pointer;
+      border:1px solid transparent; border-bottom:none;
+      background:none; color:var(--muted);
+      transition:color .15s, background .15s;
+    }
+    .tab-btn.active {
+      background:var(--surface); color:var(--accent);
+      border-color:var(--border); margin-bottom:-1px;
+    }
+    .tab-btn:hover:not(.active) { color:var(--text); }
+    .tab-pane { display:none; }
+    .tab-pane.active { display:block; }
+
+    /* ── Visor PDF ────────────────────────────────────────────── */
+    .pdf-header {
+      display:flex; align-items:center; gap:.75rem;
+      padding:.9rem 1.1rem;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--r) var(--r) 0 0;
+    }
+    .pdf-header h2 { font-size:.95rem; font-weight:700; }
+    .pdf-header p  { font-size:.75rem; color:var(--muted); margin-top:.1rem; }
+    .pdf-icon { font-size:1.6rem; flex-shrink:0; }
+    .pdf-meta { display:flex; gap:.5rem; margin-top:.35rem; flex-wrap:wrap; }
+    .pdf-badge {
+      font-size:.64rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+      padding:.2rem .55rem; border-radius:20px;
+      background:rgba(0,212,255,.1); color:var(--accent); border:1px solid rgba(0,212,255,.25);
+    }
+    .pdf-frame-wrap {
+      border:1px solid var(--border); border-top:none;
+      border-radius:0 0 var(--r) var(--r); overflow:hidden;
+      background:var(--surface2);
+    }
+    #pdfFrame {
+      width:100%; height:calc(100vh - 260px); min-height:520px;
+      border:none; display:block;
+    }
+    .pdf-fallback {
+      display:none; padding:2rem; text-align:center; color:var(--muted);
+    }
+    .pdf-fallback a { color:var(--accent); text-decoration:underline; }
+    .pdf-notice {
+      padding:.6rem 1rem; font-size:.78rem; color:var(--muted);
+      background:rgba(0,212,255,.05); border:1px solid rgba(0,212,255,.15);
+      border-radius:var(--r-sm); margin-bottom:1rem;
+      display:flex; gap:.5rem; align-items:flex-start;
+    }
+
+    /* ── Formulario ───────────────────────────────────────────── */
+    .form-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--r); padding:1.4rem;
+    }
+    .form-title {
+      font-size:1.05rem; font-weight:800; margin-bottom:.25rem;
+    }
+    .form-subtitle { font-size:.82rem; color:var(--muted); margin-bottom:1.25rem; }
+    .form-grid {
+      display:grid; grid-template-columns:1fr 1fr; gap:.85rem;
+    }
+    @media(max-width:639px) { .form-grid { grid-template-columns:1fr; } }
+    .form-group { display:flex; flex-direction:column; gap:.3rem; }
+    .form-group.full { grid-column:1/-1; }
+    .form-label {
+      font-size:.72rem; font-weight:600; letter-spacing:.06em;
+      text-transform:uppercase; color:var(--muted);
+    }
+    .form-label .req { color:var(--error); margin-left:.2rem; }
+    .form-input, .form-select {
+      height:40px; padding:0 .85rem;
+      border-radius:var(--r-sm); border:1px solid var(--border2);
+      background:var(--surface2); color:var(--text);
+      font-family:'DM Sans',sans-serif; font-size:.85rem;
+      transition:border-color .15s, box-shadow .15s;
+      width:100%;
+    }
+    .form-input:focus, .form-select:focus {
+      outline:none; border-color:var(--accent);
+      box-shadow:0 0 0 3px rgba(0,212,255,.12);
+    }
+    .form-input.err, .form-select.err { border-color:var(--error); }
+    .form-input::placeholder { color:var(--dim); }
+
+    /* ── Canvas de firma ──────────────────────────────────────── */
+    .firma-wrap {
+      border:2px dashed var(--border2); border-radius:var(--r-sm);
+      background:var(--surface2); position:relative; overflow:hidden;
+      touch-action:none; cursor:crosshair;
+    }
+    .firma-wrap.signed { border-style:solid; border-color:var(--ok); }
+    .firma-wrap.err    { border-color:var(--error); }
+    #firmaCanvas { display:block; width:100%; height:160px; touch-action:none; }
+    .firma-hint {
+      position:absolute; inset:0; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:.3rem;
+      color:var(--dim); font-size:.78rem; pointer-events:none;
+      transition:opacity .2s;
+    }
+    .firma-hint.hidden { opacity:0; }
+    .firma-hint-icon { font-size:1.4rem; }
+    .firma-actions {
+      display:flex; gap:.5rem; margin-top:.5rem; align-items:center;
+    }
+    .firma-badge {
+      display:none; align-items:center; gap:.3rem;
+      font-size:.72rem; color:var(--ok); font-weight:600;
+    }
+    .firma-badge.show { display:flex; }
+
+    /* ── Confirmación legal ───────────────────────────────────── */
+    .check-row {
+      display:flex; align-items:flex-start; gap:.6rem;
+      padding:.75rem; background:var(--surface2);
+      border:1px solid var(--border); border-radius:var(--r-sm);
+    }
+    .check-row input[type="checkbox"] {
+      margin-top:.15rem; width:16px; height:16px;
+      accent-color:var(--accent); flex-shrink:0; cursor:pointer;
+    }
+    .check-row label { font-size:.8rem; color:var(--text); cursor:pointer; line-height:1.4; }
+    .check-row label b { color:var(--accent); }
+
+    /* ── Submit + estados ─────────────────────────────────────── */
+    .submit-row { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-top:.25rem; }
+    #btnSubmit { min-width:200px; height:44px; font-size:.88rem; }
+    .form-error { color:var(--error); font-size:.78rem; display:none; }
+    .form-error.show { display:block; }
+
+    /* ── Éxito ────────────────────────────────────────────────── */
+    #successPanel {
+      display:none; text-align:center; padding:2.5rem 1.5rem;
+    }
+    #successPanel .ok-icon { font-size:3rem; margin-bottom:.75rem; }
+    #successPanel h2 { font-size:1.2rem; font-weight:800; margin-bottom:.35rem; }
+    #successPanel p  { color:var(--muted); font-size:.85rem; max-width:400px; margin:0 auto .75rem; }
+    .constancia-ref {
+      display:inline-block; padding:.4rem .9rem;
+      background:rgba(0,255,136,.1); color:var(--ok);
+      border:1px solid rgba(0,255,136,.3); border-radius:20px;
+      font-size:.75rem; font-weight:600; letter-spacing:.05em;
+      margin-bottom:1rem;
+    }
+
+    /* ── Panel admin (solo role admin) ───────────────────────── */
+    #adminTab { display:none; }
+    .stat-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.75rem; margin-bottom:1.25rem; }
+    .stat {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--r); padding:1rem; text-align:center;
+    }
+    .stat-num { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:800; color:var(--accent); }
+    .stat-lbl { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; }
+    .tbl-acts { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:.75rem; }
+
+    /* ── Header hoja ──────────────────────────────────────────── */
+    .page-hdr { padding:1.25rem 0 .6rem; }
+    .page-hdr h1 { font-size:clamp(1.2rem,3.5vw,1.7rem); font-weight:800; display:flex; align-items:center; gap:.5rem; }
+    .page-hdr p  { color:var(--muted); font-size:.82rem; margin-top:.3rem; max-width:700px; }
+  </style>
+</head>
+<body>
+<div class="overlay" id="overlay"><div><div class="spinner"></div><p class="overlay-txt">Cargando…</p></div></div>
+<div class="page">
+
+  <!-- ── Topbar ───────────────────────────────────────────────── -->
+  <header class="topbar">
+    <a href="plataforma.html" class="brand"><div class="brand-dot"></div>Plataforma L&amp;S</a>
+    <span class="topbar-sep">›</span>
+    <span class="topbar-title">Gestión Humana</span>
+    <div class="topbar-spacer"></div>
+    <div class="theme-bar">
+      <button class="theme-btn" onclick="setTheme('')" title="Oscuro">🌙</button>
+      <button class="theme-btn" onclick="setTheme('light')" title="Claro">☀️</button>
+      <button class="theme-btn" onclick="setTheme('sepia')" title="Sepia">📜</button>
+    </div>
+    <div class="topbar-user" id="topbarUser"></div>
+  </header>
+
+  <main class="content">
+    <div class="page-hdr">
+      <h1>📋 Gestión Humana</h1>
+      <p>Consulta el Reglamento Interno de Trabajo y registra tu constancia de lectura y divulgación.</p>
+    </div>
+
+    <!-- ── Tabs ───────────────────────────────────────────────── -->
+    <div class="tabs-bar">
+      <button class="tab-btn active" id="tab-reglamento-btn" onclick="switchTab('reglamento')">
+        📄 Ver Reglamento
+      </button>
+      <button class="tab-btn" id="tab-firma-btn" onclick="switchTab('firma')">
+        ✍️ Registrar Constancia
+      </button>
+      <button class="tab-btn" id="tab-admin-btn" style="display:none" onclick="switchTab('admin')">
+        📊 Panel RH
+      </button>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         TAB 1 — Visor del Reglamento
+    ════════════════════════════════════════════════════════ -->
+    <div class="tab-pane active" id="tab-reglamento">
+      <div class="pdf-notice">
+        <span>ℹ️</span>
+        <span>Lee el reglamento completo antes de registrar tu constancia. Al finalizar, ve a la pestaña <b>Registrar Constancia</b>.</span>
+      </div>
+      <div class="pdf-header">
+        <span class="pdf-icon">📑</span>
+        <div>
+          <h2 id="regNombre">Reglamento Interno de Trabajo</h2>
+          <p id="regCodigo">Cargando información…</p>
+          <div class="pdf-meta" id="regMeta"></div>
+        </div>
+        <div style="margin-left:auto;flex-shrink:0">
+          <a id="btnDescargar" href="#" target="_blank" class="btn btn-sm" style="display:none">⬇ Descargar PDF</a>
+        </div>
+      </div>
+      <div class="pdf-frame-wrap">
+        <iframe id="pdfFrame" title="Reglamento Interno de Trabajo" allowfullscreen></iframe>
+        <div class="pdf-fallback" id="pdfFallback">
+          <p>Tu navegador no puede mostrar el PDF directamente.<br>
+          <a id="pdfFallbackLink" href="#" target="_blank">Haz clic aquí para abrirlo en una nueva pestaña</a>.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════
+         TAB 2 — Formulario de Constancia
+    ════════════════════════════════════════════════════════ -->
+    <div class="tab-pane" id="tab-firma">
+
+      <!-- Estado de éxito (se muestra al guardar) -->
+      <div id="successPanel">
+        <div class="ok-icon">✅</div>
+        <h2>¡Constancia registrada!</h2>
+        <div class="constancia-ref" id="constanciaRef"></div>
+        <p>Tu constancia de lectura y divulgación del <b>Reglamento Interno de Trabajo</b> quedó registrada correctamente.</p>
+        <p style="font-size:.75rem">Puedes cerrar esta ventana o volver al reglamento.</p>
+        <button class="btn" onclick="switchTab('reglamento')" style="margin-top:.5rem">← Volver al Reglamento</button>
+      </div>
+
+      <!-- Formulario -->
+      <div id="formPanel" class="form-card">
+        <h2 class="form-title">✍️ Constancia de Lectura y Divulgación</h2>
+        <p class="form-subtitle">
+          Diligencia todos los campos y firma en el recuadro. Al enviar, quedará registrado que leíste y recibirás la divulgación del
+          <b>Reglamento Interno de Trabajo</b> — <span id="formRegVersion">v1</span>.
+        </p>
+
+        <form id="constanciaForm" novalidate>
+          <div class="form-grid">
+
+            <!-- Nombre completo -->
+            <div class="form-group full">
+              <label class="form-label" for="fNombre">Nombre completo <span class="req">*</span></label>
+              <input class="form-input" id="fNombre" type="text" placeholder="Ej. María Fernanda López Ríos" autocomplete="name" maxlength="150"/>
+            </div>
+
+            <!-- Cédula -->
+            <div class="form-group">
+              <label class="form-label" for="fCedula">Número de identificación <span class="req">*</span></label>
+              <input class="form-input" id="fCedula" type="text" placeholder="Ej. 1234567890" inputmode="numeric" maxlength="20"/>
+            </div>
+
+            <!-- Cargo -->
+            <div class="form-group">
+              <label class="form-label" for="fCargo">Cargo <span class="req">*</span></label>
+              <input class="form-input" id="fCargo" type="text" placeholder="Ej. Auxiliar de Bodega" maxlength="100"/>
+            </div>
+
+            <!-- Centro de costos -->
+            <div class="form-group full">
+              <label class="form-label" for="fCentro">Centro de costos <span class="req">*</span></label>
+              <select class="form-select" id="fCentro">
+                <option value="">— Selecciona un centro de costos —</option>
+              </select>
+            </div>
+
+            <!-- Firma -->
+            <div class="form-group full">
+              <label class="form-label">Firma como constancia <span class="req">*</span></label>
+              <div class="firma-wrap" id="firmaWrap">
+                <canvas id="firmaCanvas"></canvas>
+                <div class="firma-hint" id="firmaHint">
+                  <span class="firma-hint-icon">✍️</span>
+                  <span>Dibuja tu firma aquí</span>
+                  <span style="font-size:.68rem">(usa el mouse o toca con el dedo)</span>
+                </div>
+              </div>
+              <div class="firma-actions">
+                <button type="button" class="btn btn-sm btn-danger" onclick="clearFirma()">🗑 Limpiar firma</button>
+                <span class="firma-badge" id="firmaBadge">✅ Firma capturada</span>
+              </div>
+            </div>
+
+            <!-- Confirmación legal -->
+            <div class="form-group full">
+              <div class="check-row">
+                <input type="checkbox" id="fAcepto"/>
+                <label for="fAcepto">
+                  Declaro que he leído, entendido y recibido la divulgación del
+                  <b>Reglamento Interno de Trabajo</b> de <b>Logistics &amp; Services S.A.S.</b>
+                  y me comprometo a cumplirlo en su totalidad.
+                </label>
+              </div>
+            </div>
+
+          </div><!-- /form-grid -->
+
+          <div class="submit-row" style="margin-top:1.1rem">
+            <button type="submit" class="btn btn-primary" id="btnSubmit">
+              ✅ Registrar constancia
+            </button>
+            <span class="form-error" id="formError"></span>
+          </div>
+        </form>
+      </div><!-- /formPanel -->
+    </div><!-- /tab-firma -->
+
+    <!-- ════════════════════════════════════════════════════════
+         TAB 3 — Panel RH (solo admin)
+    ════════════════════════════════════════════════════════ -->
+    <div class="tab-pane" id="tab-admin">
+      <div class="stat-row" id="statRow">
+        <div class="stat"><div class="stat-num" id="statTotal">—</div><div class="stat-lbl">Constancias</div></div>
+        <div class="stat"><div class="stat-num" id="statHoy">—</div><div class="stat-lbl">Hoy</div></div>
+        <div class="stat"><div class="stat-num" id="statSemana">—</div><div class="stat-lbl">Esta semana</div></div>
+      </div>
+      <div class="tbl-acts">
+        <button class="btn btn-sm" onclick="loadAdmin()">🔄 Actualizar</button>
+        <button class="btn btn-sm" onclick="exportarCSV()">⬇ Exportar CSV</button>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Fecha firma</th>
+                <th>Nombre completo</th>
+                <th>Identificación</th>
+                <th>Cargo</th>
+                <th>Centro de costos</th>
+                <th>Firma</th>
+              </tr>
+            </thead>
+            <tbody id="adminTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ── Scripts ──────────────────────────────────────────────── -->
+<script src="../config/config.js"></script>
+<script src="../utils/auth.js"></script>
+<script>
+// ════════════════════════════════════════════════════════════
+// GEH — rh_reglamento.js (inline)
+// ════════════════════════════════════════════════════════════
+
+applyTheme();
+
+// ── Esquema y constantes ──────────────────────────────────
+const GEH_SCHEMA_R = { 'Accept-Profile': 'geh' };
+const GEH_SCHEMA_W = { 'Content-Profile': 'geh' };
+const APP_CODIGO   = 'GEH';
+
+let REGLAMENTO     = null;   // objeto del reglamento activo
+let CENTROS        = [];     // lista de centros de costo
+let firmaVacia     = true;
+let isAdmin        = false;
+
+// ── Escape HTML ───────────────────────────────────────────
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ── Toast ────────────────────────────────────────────────
+function toast(msg, dur = 3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+// ── Tabs ─────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  document.getElementById(`tab-${name}-btn`).classList.add('active');
+  if (name === 'admin') loadAdmin();
+}
+
+// ── Init ─────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  // checkAuth redirige a login si no hay sesión válida
+  const user = await checkAuth(null, { app: APP_CODIGO });
+  if (!user) return;
+
+  renderUser();
+
+  // ¿es admin de GEH?
+  const rol = getRole(APP_CODIGO);
+  if (rol === 'admin') {
+    isAdmin = true;
+    document.getElementById('tab-admin-btn').style.display = '';
+  }
+
+  // Cargar datos en paralelo
+  await Promise.all([cargarReglamento(), cargarCentros()]);
+
+  // Registrar inicio de lectura
+  _registrarInicioLectura();
+
+  // Init canvas de firma
+  initCanvas();
+
+  // Ocultar overlay
+  document.getElementById('overlay').classList.add('out');
+});
+
+// ── Cargar reglamento activo ──────────────────────────────
+async function cargarReglamento() {
+  try {
+    const data = await sb.rest('GET',
+      'reglamentos?activo=eq.true&order=id.desc&limit=1',
+      null, GEH_SCHEMA_R);
+
+    if (!data || !data.length) {
+      document.getElementById('regCodigo').textContent = 'No hay reglamento activo configurado.';
+      return;
+    }
+
+    REGLAMENTO = data[0];
+
+    // Header
+    document.getElementById('regNombre').textContent = REGLAMENTO.nombre;
+    document.getElementById('regCodigo').textContent =
+      `Código: ${REGLAMENTO.codigo} · Versión ${REGLAMENTO.version}`;
+
+    document.getElementById('formRegVersion').textContent = `v${REGLAMENTO.version}`;
+
+    // Badges de metadata
+    const meta = document.getElementById('regMeta');
+    const badges = [
+      REGLAMENTO.proceso,
+      REGLAMENTO.fecha_aprobacion ? `Aprobado: ${REGLAMENTO.fecha_aprobacion}` : null,
+      REGLAMENTO.aprobado_por ? `Por: ${REGLAMENTO.aprobado_por}` : null,
+    ].filter(Boolean);
+    meta.innerHTML = badges.map(b => `<span class="pdf-badge">${esc(b)}</span>`).join('');
+
+    // PDF
+    if (REGLAMENTO.pdf_url) {
+      const frame = document.getElementById('pdfFrame');
+      // Para Chrome/Edge se añade #toolbar=0 para ocultar toolbar nativa del PDF
+      frame.src = REGLAMENTO.pdf_url + '#toolbar=1&navpanes=0&view=FitH';
+      frame.onerror = () => {
+        frame.style.display = 'none';
+        const fb = document.getElementById('pdfFallback');
+        fb.style.display = 'block';
+        document.getElementById('pdfFallbackLink').href = REGLAMENTO.pdf_url;
+      };
+      const btnDl = document.getElementById('btnDescargar');
+      btnDl.href = REGLAMENTO.pdf_url;
+      btnDl.style.display = '';
+      document.getElementById('pdfFallbackLink').href = REGLAMENTO.pdf_url;
+    } else {
+      document.getElementById('pdfFrame').style.display = 'none';
+      document.getElementById('pdfFallback').style.display = 'block';
+      document.getElementById('pdfFallback').innerHTML =
+        '<p>⚠️ El PDF del reglamento aún no ha sido cargado. Contacta al administrador.</p>';
+    }
+  } catch(e) {
+    console.error('Error cargando reglamento:', e);
+    document.getElementById('regCodigo').textContent = 'Error al cargar el reglamento.';
+  }
+}
+
+// ── Cargar centros de costo ───────────────────────────────
+async function cargarCentros() {
+  try {
+    const data = await sb.rest('GET',
+      'centros_costo?activo=eq.true&order=orden',
+      null, GEH_SCHEMA_R);
+
+    CENTROS = data || [];
+    const sel = document.getElementById('fCentro');
+    CENTROS.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.nombre} (${c.codigo})`;
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    console.error('Error cargando centros de costo:', e);
+  }
+}
+
+// ── Timestamp de inicio de lectura ───────────────────────
+let _inicioLectura = null;
+function _registrarInicioLectura() {
+  _inicioLectura = new Date().toISOString();
+}
+
+// ════════════════════════════════════════════════════════
+// Canvas de firma
+// ════════════════════════════════════════════════════════
+function initCanvas() {
+  const canvas  = document.getElementById('firmaCanvas');
+  const wrap    = document.getElementById('firmaWrap');
+  const hint    = document.getElementById('firmaHint');
+  const badge   = document.getElementById('firmaBadge');
+  const ctx     = canvas.getContext('2d');
+  let drawing   = false;
+  let lastX = 0, lastY = 0;
+
+  // Tamaño real del canvas (DPR para nitidez en Retina)
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = wrap.getBoundingClientRect();
+    canvas.width  = rect.width  * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width  = rect.width  + 'px';
+    canvas.style.height = rect.height + 'px';
+    ctx.scale(dpr, dpr);
+    ctx.strokeStyle = getComputedStyle(document.documentElement)
+      .getPropertyValue('--text').trim() || '#E8F0FE';
+    ctx.lineWidth   = 2.2;
+    ctx.lineCap     = 'round';
+    ctx.lineJoin    = 'round';
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  // Coordenadas relativas al canvas
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    if (e.touches) {
+      return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+    }
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  function startDraw(e) {
+    e.preventDefault();
+    drawing = true;
+    const pos = getPos(e);
+    lastX = pos.x; lastY = pos.y;
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+  }
+
+  function draw(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    const pos = getPos(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    lastX = pos.x; lastY = pos.y;
+
+    // Primera pincelada: marcar como firmado
+    if (firmaVacia) {
+      firmaVacia = false;
+      hint.classList.add('hidden');
+      wrap.classList.add('signed');
+      badge.classList.add('show');
+      wrap.classList.remove('err');
+    }
+  }
+
+  function endDraw(e) {
+    if (!drawing) return;
+    e.preventDefault();
+    drawing = false;
+    ctx.beginPath();
+  }
+
+  canvas.addEventListener('mousedown',  startDraw);
+  canvas.addEventListener('mousemove',  draw);
+  canvas.addEventListener('mouseup',    endDraw);
+  canvas.addEventListener('mouseleave', endDraw);
+  canvas.addEventListener('touchstart', startDraw, { passive: false });
+  canvas.addEventListener('touchmove',  draw,      { passive: false });
+  canvas.addEventListener('touchend',   endDraw,   { passive: false });
+}
+
+function clearFirma() {
+  const canvas = document.getElementById('firmaCanvas');
+  const ctx    = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  firmaVacia = true;
+  document.getElementById('firmaWrap').classList.remove('signed', 'err');
+  document.getElementById('firmaHint').classList.remove('hidden');
+  document.getElementById('firmaBadge').classList.remove('show');
+}
+
+function getFirmaBase64() {
+  return document.getElementById('firmaCanvas').toDataURL('image/png');
+}
+
+// ════════════════════════════════════════════════════════
+// Envío del formulario
+// ════════════════════════════════════════════════════════
+document.getElementById('constanciaForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!validar()) return;
+
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true;
+  btn.textContent = '⏳ Guardando…';
+
+  try {
+    const centro = document.getElementById('fCentro');
+    const centroId = centro.value ? parseInt(centro.value, 10) : null;
+    const centroTexto = centro.options[centro.selectedIndex]?.textContent || '';
+
+    const sesion   = getSession?.() || null;
+    const sesUid   = sesion?.user?.id   || null;
+    const sesEmail = sesion?.user?.email || null;
+
+    const payload = {
+      reglamento_id:        REGLAMENTO?.id ?? null,
+      nombre_completo:      document.getElementById('fNombre').value.trim(),
+      numero_identificacion:document.getElementById('fCedula').value.trim(),
+      cargo:                document.getElementById('fCargo').value.trim(),
+      centro_costo_id:      centroId,
+      centro_costo_texto:   centroTexto.replace(/\s*\(.*\)\s*$/, '').trim(),
+      firma_b64:            getFirmaBase64(),
+      sesion_uid:           sesUid,
+      email_sesion:         sesEmail,
+      fecha_lectura_inicio: _inicioLectura,
+    };
+
+    const result = await sb.rest('POST', 'constancias_divulgacion',
+      payload, { ...GEH_SCHEMA_W, 'Prefer': 'return=representation' });
+
+    // Mostrar éxito
+    const id = result?.[0]?.id || '—';
+    document.getElementById('constanciaRef').textContent = `Referencia: GEH-CONST-${String(id).padStart(6,'0')}`;
+    document.getElementById('formPanel').style.display   = 'none';
+    document.getElementById('successPanel').style.display = '';
+
+  } catch(err) {
+    console.error('Error guardando constancia:', err);
+    mostrarError('Error al registrar la constancia. Intenta de nuevo o contacta a TI.');
+    btn.disabled    = false;
+    btn.textContent = '✅ Registrar constancia';
+  }
+});
+
+// ── Validación del formulario ─────────────────────────────
+function validar() {
+  let ok = true;
+
+  const campos = [
+    { id: 'fNombre', min: 3,  msg: 'Ingresa tu nombre completo.' },
+    { id: 'fCedula', min: 4,  msg: 'Ingresa tu número de identificación.' },
+    { id: 'fCargo',  min: 2,  msg: 'Ingresa tu cargo.' },
+  ];
+
+  campos.forEach(({ id, min, msg }) => {
+    const el = document.getElementById(id);
+    if (!el.value.trim() || el.value.trim().length < min) {
+      el.classList.add('err');
+      ok = false;
+    } else {
+      el.classList.remove('err');
+    }
+  });
+
+  const centro = document.getElementById('fCentro');
+  if (!centro.value) {
+    centro.classList.add('err');
+    ok = false;
+  } else {
+    centro.classList.remove('err');
+  }
+
+  if (firmaVacia) {
+    document.getElementById('firmaWrap').classList.add('err');
+    ok = false;
+  }
+
+  if (!document.getElementById('fAcepto').checked) {
+    mostrarError('Debes aceptar la declaración de lectura y divulgación.');
+    ok = false;
+  }
+
+  if (!REGLAMENTO) {
+    mostrarError('No se pudo identificar el reglamento activo. Recarga la página.');
+    ok = false;
+  }
+
+  if (!ok && document.querySelector('.err')) {
+    mostrarError('Completa todos los campos obligatorios y firma el formulario.');
+  }
+
+  return ok;
+}
+
+function mostrarError(msg) {
+  const el = document.getElementById('formError');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+// Limpiar error al modificar campos
+['fNombre','fCedula','fCargo','fCentro'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', () => {
+    document.getElementById(id).classList.remove('err');
+  });
+});
+
+// ════════════════════════════════════════════════════════
+// Panel Admin
+// ════════════════════════════════════════════════════════
+let _adminData = [];
+
+async function loadAdmin() {
+  if (!isAdmin) return;
+  try {
+    const data = await sb.rest('GET',
+      'constancias_divulgacion?order=fecha_firma.desc&limit=500',
+      null, GEH_SCHEMA_R);
+
+    _adminData = data || [];
+
+    // Stats
+    const hoy    = new Date().toISOString().slice(0,10);
+    const lunes  = _inicioSemana();
+    document.getElementById('statTotal').textContent  = _adminData.length;
+    document.getElementById('statHoy').textContent    = _adminData.filter(r => r.fecha_firma?.slice(0,10) === hoy).length;
+    document.getElementById('statSemana').textContent = _adminData.filter(r => r.fecha_firma?.slice(0,10) >= lunes).length;
+
+    // Tabla
+    const tbody = document.getElementById('adminTbody');
+    if (!_adminData.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="empty">Sin constancias registradas aún.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = _adminData.map((r, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td style="white-space:nowrap;font-size:.74rem">${fmtFecha(r.fecha_firma)}</td>
+        <td>${esc(r.nombre_completo)}</td>
+        <td>${esc(r.numero_identificacion)}</td>
+        <td>${esc(r.cargo)}</td>
+        <td>${esc(r.centro_costo_texto || '—')}</td>
+        <td>
+          ${r.firma_b64
+            ? `<img src="${esc(r.firma_b64)}" alt="Firma" style="height:36px;border-radius:4px;border:1px solid var(--border2);background:#fff"/>`
+            : '—'}
+        </td>
+      </tr>`).join('');
+  } catch(e) {
+    console.error('Error cargando admin:', e);
+    toast('Error al cargar las constancias.');
+  }
+}
+
+function fmtFecha(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleString('es-CO', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function _inicioSemana() {
+  const d = new Date();
+  const dia = d.getDay(); // 0=Dom
+  d.setDate(d.getDate() - (dia === 0 ? 6 : dia - 1));
+  return d.toISOString().slice(0,10);
+}
+
+function exportarCSV() {
+  if (!_adminData.length) { toast('No hay datos para exportar.'); return; }
+  const cols = ['id','fecha_firma','nombre_completo','numero_identificacion','cargo','centro_costo_texto','email_sesion'];
+  const header = ['#','Fecha firma','Nombre completo','Identificación','Cargo','Centro de costos','Email sesión'].join(';');
+  const rows   = _adminData.map((r, i) =>
+    [i+1, fmtFecha(r.fecha_firma), r.nombre_completo, r.numero_identificacion, r.cargo,
+     r.centro_costo_texto||'', r.email_sesion||''].join(';'));
+  const csv  = '﻿' + [header, ...rows].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), {
+    href: url,
+    download: `constancias_reglamento_${new Date().toISOString().slice(0,10)}.csv`
+  });
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✅ CSV exportado.');
+}
+
+// ── Helper: leer sesión expuesta por auth.js ──────────────
+function getSession() {
+  try {
+    const key = `sb-${new URL(CONFIG.supabase.url).hostname.split('.')[0]}-auth-token`;
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+</script>
+</body>
+</html>
