@@ -666,7 +666,7 @@ document.getElementById('constanciaForm').addEventListener('submit', async (e) =
     const id = result?.[0]?.id || '—';
     document.getElementById('constanciaRef').textContent = `Referencia: GEH-CONST-${String(id).padStart(6,'0')}`;
     document.getElementById('formPanel').style.display   = 'none';
-    document.getElementById('successPanel').style.display = '';
+    document.getElementById('successPanel').style.display = 'block';
 
   } catch(err) {
     console.error('Error guardando constancia:', err);
@@ -777,7 +777,9 @@ async function loadAdmin() {
         <td>${esc(r.centro_costo_texto || '—')}</td>
         <td>
           ${r.firma_b64
-            ? `<img src="${esc(r.firma_b64)}" alt="Firma" style="height:36px;border-radius:4px;border:1px solid var(--border2);background:#fff"/>`
+            ? `<img src="${esc(r.firma_b64)}" alt="Firma"
+                 onclick="verFirma(this.src,'${esc(r.nombre_completo)}')"
+                 style="height:52px;max-width:120px;border-radius:6px;border:1px solid var(--border2);background:#fff;cursor:zoom-in;object-fit:contain;display:block"/>`
             : '—'}
         </td>
       </tr>`).join('');
@@ -798,6 +800,30 @@ function _inicioSemana() {
   const dia = d.getDay(); // 0=Dom
   d.setDate(d.getDate() - (dia === 0 ? 6 : dia - 1));
   return d.toISOString().slice(0,10);
+}
+
+// ── Modal para ver firma completa ────────────────────────
+function verFirma(src, nombre) {
+  let modal = document.getElementById('firmaModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'firmaModal';
+    modal.style.cssText = `
+      position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);
+      display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;
+      cursor:zoom-out;`;
+    modal.innerHTML = `
+      <div style="background:var(--surface);border-radius:12px;padding:1.25rem;max-width:520px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+        <p id="firmaModalNombre" style="font-weight:700;font-size:.85rem;color:var(--muted);margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.04em"></p>
+        <img id="firmaModalImg" src="" alt="Firma" style="width:100%;border-radius:8px;border:1px solid var(--border2);background:#fff"/>
+        <p style="font-size:.72rem;color:var(--dim);margin-top:.5rem;text-align:center">Haz clic en cualquier lugar para cerrar</p>
+      </div>`;
+    modal.addEventListener('click', () => modal.style.display = 'none');
+    document.body.appendChild(modal);
+  }
+  document.getElementById('firmaModalNombre').textContent = `Firma — ${nombre}`;
+  document.getElementById('firmaModalImg').src = src;
+  modal.style.display = 'flex';
 }
 
 function exportarCSV() {
