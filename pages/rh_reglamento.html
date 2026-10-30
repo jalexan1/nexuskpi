@@ -104,10 +104,12 @@
       border:2px dashed var(--border2); border-radius:var(--r-sm);
       background:var(--surface2); position:relative; overflow:hidden;
       touch-action:none; cursor:crosshair;
+      width:100%; max-width:440px; height:180px;
+      box-shadow:0 2px 8px rgba(0,0,0,.18);
     }
     .firma-wrap.signed { border-style:solid; border-color:var(--ok); }
     .firma-wrap.err    { border-color:var(--error); }
-    #firmaCanvas { display:block; width:100%; height:160px; touch-action:none; }
+    #firmaCanvas { display:block; width:100%; height:100%; touch-action:none; }
     .firma-hint {
       position:absolute; inset:0; display:flex; flex-direction:column;
       align-items:center; justify-content:center; gap:.3rem;
