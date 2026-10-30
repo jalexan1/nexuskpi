@@ -170,7 +170,7 @@
     }
     .stat-num { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:800; color:var(--accent); }
     .stat-lbl { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; }
-    .tbl-acts { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:.75rem; }
+    .tbl-acts { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:.75rem; align-items:center; }
 
     /* ── Header hoja ──────────────────────────────────────────── */
     .page-hdr { padding:1.25rem 0 .6rem; }
@@ -348,6 +348,16 @@
       <div class="tbl-acts">
         <button class="btn btn-sm" onclick="loadAdmin()">🔄 Actualizar</button>
         <button class="btn btn-sm" onclick="exportarCSV()">⬇ Exportar CSV</button>
+        <input id="adminFiltro" type="search" placeholder="🔍 Filtrar por nombre, cédula, cargo…"
+          oninput="renderAdminTabla()"
+          style="flex:1;min-width:180px;max-width:340px;padding:.35rem .7rem;border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:.82rem"/>
+        <select id="adminPageSize" onchange="renderAdminTabla()"
+          style="padding:.35rem .6rem;border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:.82rem">
+          <option value="5">5 / pág</option>
+          <option value="10" selected>10 / pág</option>
+          <option value="30">30 / pág</option>
+          <option value="50">50 / pág</option>
+        </select>
       </div>
       <div class="tbl-wrap">
         <div class="tbl-scroll">
@@ -366,6 +376,7 @@
             <tbody id="adminTbody"></tbody>
           </table>
         </div>
+        <div id="adminPager" style="display:flex;align-items:center;justify-content:space-between;margin-top:.6rem;font-size:.78rem;color:var(--muted)"></div>
       </div>
     </div>
 
@@ -413,10 +424,13 @@ function switchTab(name) {
   document.getElementById(`tab-${name}`).classList.add('active');
   document.getElementById(`tab-${name}-btn`).classList.add('active');
   if (name === 'admin') loadAdmin();
-  // El canvas se inicializa mientras el tab estaba oculto (getBoundingClientRect
-  // retorna 0×0 en elementos con display:none). Al activar el tab de firma se
-  // fuerza un resize para que el canvas tome sus dimensiones reales.
-  if (name === 'firma') window.dispatchEvent(new Event('resize'));
+  if (name === 'firma') {
+    // Si el panel de éxito estaba visible (sesión anterior), resetear al formulario
+    document.getElementById('successPanel').style.display = 'none';
+    document.getElementById('formPanel').style.display    = '';
+    // Forzar resize del canvas (fue inicializado mientras el tab estaba oculto)
+    window.dispatchEvent(new Event('resize'));
+  }
 }
 
 // ── Init ─────────────────────────────────────────────────
@@ -551,8 +565,7 @@ function initCanvas() {
     canvas.style.width  = rect.width  + 'px';
     canvas.style.height = rect.height + 'px';
     ctx.scale(dpr, dpr);
-    ctx.strokeStyle = getComputedStyle(document.documentElement)
-      .getPropertyValue('--text').trim() || '#E8F0FE';
+    ctx.strokeStyle = '#1a2f5e';  // tinta oscura: visible en pantalla y en PNG exportado
     ctx.lineWidth   = 2.2;
     ctx.lineCap     = 'round';
     ctx.lineJoin    = 'round';
@@ -659,6 +672,19 @@ document.getElementById('constanciaForm').addEventListener('submit', async (e) =
       fecha_lectura_inicio: _inicioLectura,
     };
 
+    // ── Validar cédula duplicada ──────────────────────────
+    const cedula = payload.numero_identificacion;
+    const existe = await sb.rest('GET',
+      `constancias_divulgacion?numero_identificacion=eq.${encodeURIComponent(cedula)}&select=id&limit=1`,
+      null, GEH_SCHEMA_R);
+    if (existe && existe.length > 0) {
+      const refExistente = `GEH-CONST-${String(existe[0].id).padStart(6,'0')}`;
+      mostrarError(`⚠️ El número de identificación ${cedula} ya tiene una constancia registrada (${refExistente}). Si eres administrador haciendo pruebas, usa un número diferente.`);
+      btn.disabled    = false;
+      btn.textContent = '✅ Registrar constancia';
+      return;
+    }
+
     const result = await sb.rest('POST', 'constancias_divulgacion',
       payload, { ...GEH_SCHEMA_W, 'Prefer': 'return=representation' });
 
@@ -745,11 +771,13 @@ function mostrarError(msg) {
 // ════════════════════════════════════════════════════════
 let _adminData = [];
 
+let _adminPage = 0;   // página actual (0-based)
+
 async function loadAdmin() {
   if (!isAdmin) return;
   try {
     const data = await sb.rest('GET',
-      'constancias_divulgacion?order=fecha_firma.desc&limit=500',
+      'constancias_divulgacion?order=fecha_firma.asc&limit=1000',
       null, GEH_SCHEMA_R);
 
     _adminData = data || [];
@@ -761,32 +789,71 @@ async function loadAdmin() {
     document.getElementById('statHoy').textContent    = _adminData.filter(r => r.fecha_firma?.slice(0,10) === hoy).length;
     document.getElementById('statSemana').textContent = _adminData.filter(r => r.fecha_firma?.slice(0,10) >= lunes).length;
 
-    // Tabla
-    const tbody = document.getElementById('adminTbody');
-    if (!_adminData.length) {
-      tbody.innerHTML = `<tr><td colspan="7" class="empty">Sin constancias registradas aún.</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = _adminData.map((r, i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td style="white-space:nowrap;font-size:.74rem">${fmtFecha(r.fecha_firma)}</td>
-        <td>${esc(r.nombre_completo)}</td>
-        <td>${esc(r.numero_identificacion)}</td>
-        <td>${esc(r.cargo)}</td>
-        <td>${esc(r.centro_costo_texto || '—')}</td>
-        <td>
-          ${r.firma_b64
-            ? `<img src="${esc(r.firma_b64)}" alt="Firma"
-                 onclick="verFirma(this.src,'${esc(r.nombre_completo)}')"
-                 style="height:52px;max-width:120px;border-radius:6px;border:1px solid var(--border2);background:#fff;cursor:zoom-in;object-fit:contain;display:block"/>`
-            : '—'}
-        </td>
-      </tr>`).join('');
+    _adminPage = 0;
+    renderAdminTabla();
   } catch(e) {
     console.error('Error cargando admin:', e);
     toast('Error al cargar las constancias.');
   }
+}
+
+function renderAdminTabla() {
+  const filtro   = (document.getElementById('adminFiltro')?.value || '').toLowerCase();
+  const pageSize = parseInt(document.getElementById('adminPageSize')?.value || '10', 10);
+  const tbody    = document.getElementById('adminTbody');
+  const pager    = document.getElementById('adminPager');
+
+  // Filtrar
+  const filtrado = _adminData.filter(r =>
+    !filtro ||
+    r.nombre_completo?.toLowerCase().includes(filtro) ||
+    r.numero_identificacion?.toLowerCase().includes(filtro) ||
+    r.cargo?.toLowerCase().includes(filtro) ||
+    r.centro_costo_texto?.toLowerCase().includes(filtro)
+  );
+
+  if (!filtrado.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">${filtro ? 'Sin resultados para "'+filtro+'".' : 'Sin constancias registradas aún.'}</td></tr>`;
+    pager.innerHTML = '';
+    return;
+  }
+
+  const totalPags = Math.ceil(filtrado.length / pageSize);
+  if (_adminPage >= totalPags) _adminPage = totalPags - 1;
+  const inicio = _adminPage * pageSize;
+  const pagina = filtrado.slice(inicio, inicio + pageSize);
+
+  tbody.innerHTML = pagina.map((r, i) => `
+    <tr>
+      <td>${inicio + i + 1}</td>
+      <td style="white-space:nowrap;font-size:.74rem">${fmtFecha(r.fecha_firma)}</td>
+      <td>${esc(r.nombre_completo)}</td>
+      <td>${esc(r.numero_identificacion)}</td>
+      <td>${esc(r.cargo)}</td>
+      <td>${esc(r.centro_costo_texto || '—')}</td>
+      <td>
+        ${r.firma_b64
+          ? `<img src="${esc(r.firma_b64)}" alt="Firma"
+               onclick="verFirma(this.src,'${esc(r.nombre_completo)}')"
+               style="height:52px;max-width:120px;border-radius:6px;border:1px solid var(--border2);background:#fff;cursor:zoom-in;object-fit:contain;display:block"/>`
+          : '—'}
+      </td>
+    </tr>`).join('');
+
+  // Paginador
+  const desde = inicio + 1;
+  const hasta = Math.min(inicio + pageSize, filtrado.length);
+  pager.innerHTML = `
+    <span>${desde}–${hasta} de ${filtrado.length} registro${filtrado.length !== 1 ? 's' : ''}</span>
+    <span style="display:flex;gap:.4rem">
+      <button class="btn btn-sm" onclick="_cambiarPag(-1)" ${_adminPage === 0 ? 'disabled' : ''}>‹ Anterior</button>
+      <button class="btn btn-sm" onclick="_cambiarPag(1)"  ${_adminPage >= totalPags - 1 ? 'disabled' : ''}>Siguiente ›</button>
+    </span>`;
+}
+
+function _cambiarPag(delta) {
+  _adminPage += delta;
+  renderAdminTabla();
 }
 
 function fmtFecha(iso) {
