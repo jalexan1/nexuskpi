@@ -413,6 +413,10 @@ function switchTab(name) {
   document.getElementById(`tab-${name}`).classList.add('active');
   document.getElementById(`tab-${name}-btn`).classList.add('active');
   if (name === 'admin') loadAdmin();
+  // El canvas se inicializa mientras el tab estaba oculto (getBoundingClientRect
+  // retorna 0×0 en elementos con display:none). Al activar el tab de firma se
+  // fuerza un resize para que el canvas tome sus dimensiones reales.
+  if (name === 'firma') window.dispatchEvent(new Event('resize'));
 }
 
 // ── Init ─────────────────────────────────────────────────
