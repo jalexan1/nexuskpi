@@ -266,12 +266,18 @@ const KPI_DEFS = [
     code: 'KPI-INV-002', name: 'Exactitud de Inventario', icon: '🗃️', proceso: 'Inventario',
     unit: '%', metaTxt: '≥ 99%', sem: { verde: 99, amarillo: 97 },
     async load() {
-      const rows = await sb.rest('GET', 'kpi_inventario_detalle?select=periodo_id,es_exacto');
+      // FIX nov-2026: antes se leía kpi_inventario_detalle completa (una fila
+      // por referencia×ubicación). Supabase/PostgREST devuelve máx. 1.000 filas
+      // por consulta, así que al acumularse meses los periodos más nuevos
+      // (Septiembre, 714 filas) quedaban fuera y la tarjeta salía "SIN DATOS".
+      // Ahora se lee el resumen kpi_inventario_conteos (1 fila por conteo, ya
+      // trae total_skus y skus_exactos) → mismo resultado, sin tope de filas.
+      const rows = await sb.rest('GET', 'kpi_inventario_conteos?select=periodo_id,total_skus,skus_exactos&order=periodo_id.asc');
       const acc = {};
       (rows || []).forEach(r => {
         if (!acc[r.periodo_id]) acc[r.periodo_id] = { tot: 0, ex: 0 };
-        acc[r.periodo_id].tot++;
-        if (r.es_exacto) acc[r.periodo_id].ex++;
+        acc[r.periodo_id].tot += r.total_skus || 0;
+        acc[r.periodo_id].ex  += r.skus_exactos || 0;
       });
       const map = {};
       Object.keys(acc).forEach(pid => {

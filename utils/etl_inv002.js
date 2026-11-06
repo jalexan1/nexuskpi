@@ -316,8 +316,14 @@ async function reprocesarInventario(periodoId, onProgress) {
   if (typeof onProgress !== 'function') onProgress = () => {};
 
   onProgress('Obteniendo detalles de Supabase…');
-  const detalles = await sb.rest('GET',
-    `kpi_inventario_detalle?periodo_id=eq.${encodeURIComponent(periodoId)}&select=*`);
+  // Paginado: Supabase devuelve máx. 1.000 filas por consulta
+  let detalles = [];
+  for (let off = 0; ; off += 1000) {
+    const lote = await sb.rest('GET',
+      `kpi_inventario_detalle?periodo_id=eq.${encodeURIComponent(periodoId)}&select=*&order=id.asc&limit=1000&offset=${off}`);
+    detalles = detalles.concat(lote || []);
+    if (!lote || lote.length < 1000) break;
+  }
 
   if (!detalles || !detalles.length) {
     throw new Error('No hay registros de detalle para este periodo en Supabase.');

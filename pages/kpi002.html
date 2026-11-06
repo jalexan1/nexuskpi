@@ -441,6 +441,19 @@ async function cargarPeriodos() {
   }
 }
 
+// ── Lectura paginada del detalle (Supabase corta en 1.000 filas por consulta;
+// un mes con más líneas contadas quedaría incompleto sin esto) ───────────────
+async function leerDetalleInvPaginado(periodoId) {
+  const PAG = 1000; let todo = [];
+  for (let off = 0; ; off += PAG) {
+    const lote = await sb.rest('GET',
+      `kpi_inventario_detalle?periodo_id=eq.${encodeURIComponent(periodoId)}&select=*&order=id.asc&limit=${PAG}&offset=${off}`);
+    todo = todo.concat(lote || []);
+    if (!lote || lote.length < PAG) break;
+  }
+  return todo;
+}
+
 // ── Render dashboard (fetch datos) ────────────────────────────────────────
 async function renderDashboard(periodoId) {
   ocultarSecciones();
@@ -450,7 +463,7 @@ async function renderDashboard(periodoId) {
   try {
     const [conteos, detalles] = await Promise.all([
       sb.rest('GET', `kpi_inventario_conteos?periodo_id=eq.${encodeURIComponent(periodoId)}&order=fecha_conteo.asc`),
-      sb.rest('GET', `kpi_inventario_detalle?periodo_id=eq.${encodeURIComponent(periodoId)}&select=*`),
+      leerDetalleInvPaginado(periodoId),
     ]);
 
     if (!conteos || !conteos.length) {
